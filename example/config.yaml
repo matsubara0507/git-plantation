@@ -8,3 +8,9 @@ problems:
   - task-1
   - task-2
   ci_branch: ci
+
+teams:
+- name: sample
+  github: sample-hige
+  member:
+  - matsubara0507
