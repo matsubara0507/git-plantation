@@ -9,11 +9,13 @@ import           RIO
 
 import           Data.Extensible
 import           Git.Plantation.Config
+import qualified GitHub.Auth           as GitHub
 
 type Plant = RIO Env
 
 type Env = Record
   '[ "config" >: Config
+   , "token"  >: GitHub.Token
    , "logger" >: LogFunc
    ]
 

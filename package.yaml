@@ -35,6 +35,8 @@ dependencies:
 - rio >= 0.1.1.0
 - drone
 - extensible >= 0.4.9
+- github
+- shelly
 - yaml >= 0.8.31
 
 library:

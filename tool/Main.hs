@@ -37,7 +37,14 @@ options = hsequence
 
 subcmdParser :: Parser SubCmd
 subcmdParser = variantFrom
-    $ #repo @= (strArgument (metavar "TEAM" <> help "Create repository to TEAM. If arg is all then create repo to all team.") `withInfo` "Create repository")
+    $ #new_repo @= newRepoCmdParser `withInfo` "Create repository to team."
+   <: nil
+
+
+newRepoCmdParser :: Parser NewRepoCmd
+newRepoCmdParser = hsequence
+    $ #repo   <@=> option (Just <$> str) (long "repo" <> value Nothing <> metavar "TEXT" <> help "Sets reopsitory that wont to controll.")
+   <: #team   <@=> strArgument (metavar "TEXT" <> help "Sets team that wont to controll.")
    <: nil
 
 variantFrom ::
