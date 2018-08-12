@@ -19,6 +19,7 @@ import           GitHub.Data.Name       (mkName)
 import           GitHub.Data.Repos      (newRepo)
 import           GitHub.Endpoints.Repos (Auth (..))
 import qualified GitHub.Endpoints.Repos as GitHub
+import           Shelly                 hiding (FilePath, unlessM)
 
 type NewRepoCmd = Record
   '[ "repo"    >: Maybe Text
@@ -49,7 +50,7 @@ createRepoByRepoName team repoName = do
 createRepoInGitHub :: Team -> Problem -> Plant (Text, Text)
 createRepoInGitHub team problem = do
   token <- asks (view #token)
-  let (owner, repo) = splitRepoName $ problem ^. #repo_name
+  let (_, repo) = splitRepoName $ problem ^. #repo_name
   logInfo $ "create repo in github: " <> displayShow (problem ^. #repo_name)
   resp <- liftIO $ GitHub.createOrganizationRepo'
     (OAuth token)
@@ -57,22 +58,18 @@ createRepoInGitHub team problem = do
     (newRepo $ mkName Proxy repo)
   case resp of
     Left err -> logError "Error: create github repo" >> fail (show err)
-    Right _  -> pure (owner, repo)
+    Right _  -> pure (team ^. #github, repo)
 
 updateWorkRepo :: Problem -> Plant ()
 updateWorkRepo problem = do
-  token <- Text.decodeUtf8' <$> asks (view #token) >>= \case
-    Left  _ -> logError "cannot decode token to utf8." >> pure ""
-    Right t -> pure t
+  token <- getTextToken
   workDir <- asks (view #work)
   let (owner, repo) = splitRepoName $ problem ^. #repo_name
-  isExist <- isExistRepoInWorkDir workDir owner repo
-  if isExist then do
-    logInfo $ "repository is exist in work dir."
-    fetchRepo workDir owner repo
-  else do
+      originUrl = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
+  unlessM (isExistRepoInWorkDir workDir owner repo) $ do
     logInfo $ "repository is not exist in work dir."
-    cloneRepo token workDir owner repo
+    shelly $ chdir_p (workDir </> owner) (clone [originUrl, repo])
+  shelly $ chdir_p (workDir </> owner </> repo) (fetch [])
 
 setRemoteRepo :: (Text, Text) -> Problem -> Plant ()
 setRemoteRepo (_owner, _repo) _problem = undefined
@@ -82,3 +79,13 @@ pushBranchs (_owner, _repo) _problem = undefined
 
 splitRepoName :: Text -> (Text, Text)
 splitRepoName = fmap (Text.drop 1) . Text.span(/= '/')
+
+isExistRepoInWorkDir :: MonadIO m => FilePath -> Text -> Text -> m Bool
+isExistRepoInWorkDir workDir owner repo =
+  shelly $ test_d (workDir </> Text.unpack owner </> Text.unpack repo)
+
+getTextToken :: Plant Text
+getTextToken =
+  Text.decodeUtf8' <$> asks (view #token) >>= \case
+    Left  _ -> logError "cannot decode token to utf8." >> pure ""
+    Right t -> pure t
