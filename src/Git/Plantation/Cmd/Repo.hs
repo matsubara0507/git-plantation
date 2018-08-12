@@ -11,7 +11,7 @@ import qualified RIO.List               as L
 import qualified RIO.Text               as Text
 
 import           Data.Extensible
-import           Git.Cmd
+import qualified Git.Cmd                as Git
 import           Git.Plantation.Env     (Plant)
 import           Git.Plantation.Problem (Problem)
 import           Git.Plantation.Team    (Team)
@@ -19,7 +19,7 @@ import           GitHub.Data.Name       (mkName)
 import           GitHub.Data.Repos      (newRepo)
 import           GitHub.Endpoints.Repos (Auth (..))
 import qualified GitHub.Endpoints.Repos as GitHub
-import           Shelly                 hiding (FilePath, unlessM)
+import           Shelly                 hiding (FilePath)
 
 type NewRepoCmd = Record
   '[ "repo"    >: Maybe Text
@@ -29,15 +29,22 @@ type NewRepoCmd = Record
 createRepo :: Team -> Problem -> Plant ()
 createRepo team problem = do
   logInfo $ mconcat
-    [ "create repo: "
-    , displayShow $ problem ^. #repo_name
-    , " to team: "
-    , displayShow $ team ^. #name
+    [ "create repo: ", displayShow $ problem ^. #repo_name
+    , " to team: ", displayShow $ team ^. #name
     ]
-  updateWorkRepo problem
-  (owner, repo) <- createRepoInGitHub team problem
-  setRemoteRepo (owner, repo) problem
-  pushBranchs (owner, repo) problem
+  teamRepo <- createRepoInGitHub team problem
+  token    <- getTextToken
+  workDir  <- asks (view #work)
+  let (owner, repo) = splitRepoName $ problem ^. #repo_name
+      teamUrl       = mconcat ["https://", token, "@github.com/", teamRepo, ".git"]
+      problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
+  shelly $ chdir_p (workDir </> (team ^. #github)) (Git.clone [teamUrl, repo])
+  shelly $ chdir_p (workDir </> (team ^. #github) </> repo) $ do
+    Git.remote ["add", "problem", problemUrl]
+    Git.fetch ["--all"]
+    forM_ (problem ^. #challenge_branches) $
+      \branch -> Git.checkout ["-b", branch, "problem/" <> branch]
+    Git.push $ "-u" : "origin" : problem ^. #challenge_branches
 
 createRepoByRepoName :: Team -> Text -> Plant ()
 createRepoByRepoName team repoName = do
@@ -47,7 +54,7 @@ createRepoByRepoName team repoName = do
     Nothing       -> logError $ "repo is not found: " <> display repoName
     Just problem' -> createRepo team problem'
 
-createRepoInGitHub :: Team -> Problem -> Plant (Text, Text)
+createRepoInGitHub :: Team -> Problem -> Plant Text
 createRepoInGitHub team problem = do
   token <- asks (view #token)
   let (_, repo) = splitRepoName $ problem ^. #repo_name
@@ -58,31 +65,10 @@ createRepoInGitHub team problem = do
     (newRepo $ mkName Proxy repo)
   case resp of
     Left err -> logError "Error: create github repo" >> fail (show err)
-    Right _  -> pure (team ^. #github, repo)
-
-updateWorkRepo :: Problem -> Plant ()
-updateWorkRepo problem = do
-  token <- getTextToken
-  workDir <- asks (view #work)
-  let (owner, repo) = splitRepoName $ problem ^. #repo_name
-      originUrl = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
-  unlessM (isExistRepoInWorkDir workDir owner repo) $ do
-    logInfo $ "repository is not exist in work dir."
-    shelly $ chdir_p (workDir </> owner) (clone [originUrl, repo])
-  shelly $ chdir_p (workDir </> owner </> repo) (fetch [])
-
-setRemoteRepo :: (Text, Text) -> Problem -> Plant ()
-setRemoteRepo (_owner, _repo) _problem = undefined
-
-pushBranchs :: (Text, Text) -> Problem -> Plant ()
-pushBranchs (_owner, _repo) _problem = undefined
+    Right _  -> pure (team ^. #github <> "/" <> repo)
 
 splitRepoName :: Text -> (Text, Text)
 splitRepoName = fmap (Text.drop 1) . Text.span(/= '/')
-
-isExistRepoInWorkDir :: MonadIO m => FilePath -> Text -> Text -> m Bool
-isExistRepoInWorkDir workDir owner repo =
-  shelly $ test_d (workDir </> Text.unpack owner </> Text.unpack repo)
 
 getTextToken :: Plant Text
 getTextToken =
