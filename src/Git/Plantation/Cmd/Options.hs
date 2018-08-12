@@ -15,6 +15,7 @@ import           Git.Plantation.Cmd.Run
 type Options = Record
   '[ "verbose" >: Bool
    , "config"  >: FilePath
+   , "work"    >: FilePath
    , "subcmd"  >: SubCmd
    ]
 

@@ -25,6 +25,7 @@ run opts = do
   withLogFunc logOpts $ \logger -> do
     let env = #config @= config
            <: #token  @= token
+           <: #work   @= opts ^. #work
            <: #logger @= logger
            <: nil
     runRIO env $ matchField

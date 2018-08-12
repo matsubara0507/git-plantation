@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators    #-}
@@ -10,6 +11,7 @@ import qualified RIO.List               as L
 import qualified RIO.Text               as Text
 
 import           Data.Extensible
+import           Git.Cmd
 import           Git.Plantation.Env     (Plant)
 import           Git.Plantation.Problem (Problem)
 import           Git.Plantation.Team    (Team)
@@ -31,8 +33,8 @@ createRepo team problem = do
     , " to team: "
     , displayShow $ team ^. #name
     ]
-  (owner, repo) <- createRepoInGitHub team problem
   updateWorkRepo problem
+  (owner, repo) <- createRepoInGitHub team problem
   setRemoteRepo (owner, repo) problem
   pushBranchs (owner, repo) problem
 
@@ -58,7 +60,19 @@ createRepoInGitHub team problem = do
     Right _  -> pure (owner, repo)
 
 updateWorkRepo :: Problem -> Plant ()
-updateWorkRepo _poreblem = undefined
+updateWorkRepo problem = do
+  token <- Text.decodeUtf8' <$> asks (view #token) >>= \case
+    Left  _ -> logError "cannot decode token to utf8." >> pure ""
+    Right t -> pure t
+  workDir <- asks (view #work)
+  let (owner, repo) = splitRepoName $ problem ^. #repo_name
+  isExist <- isExistRepoInWorkDir workDir owner repo
+  if isExist then do
+    logInfo $ "repository is exist in work dir."
+    fetchRepo workDir owner repo
+  else do
+    logInfo $ "repository is not exist in work dir."
+    cloneRepo token workDir owner repo
 
 setRemoteRepo :: (Text, Text) -> Problem -> Plant ()
 setRemoteRepo (_owner, _repo) _problem = undefined

@@ -16,6 +16,7 @@ type Plant = RIO Env
 type Env = Record
   '[ "config" >: Config
    , "token"  >: GitHub.Token
+   , "work"   >: FilePath
    , "logger" >: LogFunc
    ]
 
