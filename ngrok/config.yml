@@ -1,0 +1,7 @@
+tunnels:
+  app:
+    proto: http
+    addr: 8080
+  drone:
+    proto: http
+    addr: 8000
