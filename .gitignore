@@ -2,3 +2,5 @@
 git-plantation.cabal
 *~
 .temp/
+.env
+*.sqlite
