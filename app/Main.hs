@@ -2,37 +2,75 @@
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLabels      #-}
+{-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeOperators         #-}
 
 module Main where
 
-import           RIO                      hiding (Handler)
+import           Paths_git_plantation     (version)
+import           RIO
+import qualified RIO.ByteString           as B
 
 import           Data.Extensible
+import           Data.Extensible.GetOpt
+import           Data.Version             (Version)
+import qualified Data.Version             as Version
+import           Development.GitRev
 import           Git.Plantation
 import           Git.Plantation.API       (api, server)
 import qualified Network.Wai.Handler.Warp as Warp
 import           Servant
 import qualified Servant.GitHub.Webhook   (GitHubKey, gitHubKey)
-import           System.Environment       (getArgs, getEnv)
+import           System.Environment       (getEnv)
 
 main :: IO ()
-main = (listToMaybe <$> getArgs) >>= \case
-  Nothing   -> error "please input config file path."
-  Just path -> runServer =<< readConfig path
+main = withGetOpt "[options] [config-file]" opts $ \r args ->
+  case (r ^. #version, listToMaybe args) of
+    (True, _)      -> B.putStr $ fromString (showVersion version) <> "\n"
+    (_, Nothing)   -> error "please input config file path."
+    (_, Just path) -> runServer r =<< readConfig path
+  where
+    opts = #port    @= portOpt
+        <: #work    @= workOpt
+        <: #verbose @= verboseOpt
+        <: #version @= versionOpt
+        <: nil
 
-runServer :: Config -> IO ()
-runServer config = do
-  logOpts <- logOptionsHandle stdout False
+type Options = Record
+  '[ "port"    >: Int
+   , "work"    >: FilePath
+   , "verbose" >: Bool
+   , "version" >: Bool
+   ]
+
+portOpt :: OptDescr' Int
+portOpt = optionReqArg
+  (pure . fromMaybe 8080 . (readMaybe <=< listToMaybe))
+  ['p'] ["port"] "PORT" "Set port to PORT instead of 8080."
+
+workOpt :: OptDescr' FilePath
+workOpt = optionReqArg
+  (pure . fromMaybe ".temp" . listToMaybe)
+  [] ["work"] "DIR" "Set workdir to DIR instead of ./.temp"
+
+verboseOpt :: OptDescr' Bool
+verboseOpt = optFlag ['v'] ["verbose"] "Enable verbose mode: verbosity level \"debug\""
+
+versionOpt :: OptDescr' Bool
+versionOpt = optFlag [] ["version"] "Show version"
+
+runServer :: Options -> Config -> IO ()
+runServer opts config = do
+  logOpts <- logOptionsHandle stdout $ opts ^. #verbose
   token   <- liftIO $ fromString <$> getEnv "GH_TOKEN"
   withLogFunc logOpts $ \logger -> do
     let env = #config @= config
            <: #token  @= token
-           <: #work   @= ".temp"
+           <: #work   @= (opts ^. #work)
            <: #logger @= logger
            <: nil :: Env
-    hPutBuilder stdout "Listening on port 8080"
-    Warp.run 8080 $ app env (gitHubKey $ fromString <$> getEnv "GH_SECRET")
+    B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
+    Warp.run (opts ^. #port) $ app env (gitHubKey $ fromString <$> getEnv "GH_SECRET")
 
 app :: Env -> GitHubKey -> Application
 app env key =
@@ -41,6 +79,15 @@ app env key =
 
 context :: Proxy '[ GitHubKey ]
 context = Proxy
+
+showVersion :: Version -> String
+showVersion v = unwords
+  [ "Version"
+  , Version.showVersion v ++ ","
+  , "Git revision"
+  , $(gitHash)
+  , "(" ++ $(gitCommitCount) ++ " commits)"
+  ]
 
 -- HACK
 newtype GitHubKey = GitHubKey (forall result. Servant.GitHub.Webhook.GitHubKey result)
