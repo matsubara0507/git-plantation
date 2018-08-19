@@ -18,3 +18,6 @@ push = command1_ "git" [] "push"
 
 checkout :: [Text] -> Sh ()
 checkout = command1_ "git" [] "checkout"
+
+commit :: [Text] -> Sh ()
+commit = command1_ "git" [] "commit"

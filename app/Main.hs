@@ -24,10 +24,11 @@ main = (listToMaybe <$> getArgs) >>= \case
 runServer :: Config -> IO ()
 runServer config = do
   logOpts <- logOptionsHandle stdout False
+  token   <- liftIO $ fromString <$> getEnv "GH_TOKEN"
   withLogFunc logOpts $ \logger -> do
     let env = #config @= config
-           <: #token  @= ""
-           <: #work   @= ""
+           <: #token  @= token
+           <: #work   @= ".temp"
            <: #logger @= logger
            <: nil :: Env
     hPutBuilder stdout "Listening on port 8080"

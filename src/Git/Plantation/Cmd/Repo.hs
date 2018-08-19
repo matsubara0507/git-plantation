@@ -67,6 +67,20 @@ createRepoInGitHub team problem = do
     Left err -> logError "Error: create github repo" >> fail (show err)
     Right _  -> pure (team ^. #github <> "/" <> repo)
 
+pushForCI :: Team -> Problem -> Plant ()
+pushForCI team problem = do
+  token   <- getTextToken
+  workDir <- asks (view #work)
+  let (owner, repo) = splitRepoName $ problem ^. #repo_name
+      problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
+  shelly $ chdir_p (workDir </> owner) (Git.clone [problemUrl, repo])
+  shelly $ chdir_p (workDir </> owner </> repo) $ do
+    Git.fetch []
+    Git.checkout [team ^. #name]
+    Git.commit ["--allow-empty", "-m", "Empty Commit!!"]
+    Git.push ["origin", team ^. #name]
+  logInfo "Success push"
+
 splitRepoName :: Text -> (Text, Text)
 splitRepoName = fmap (Text.drop 1) . Text.span(/= '/')
 
