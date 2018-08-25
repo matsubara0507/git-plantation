@@ -32,19 +32,34 @@ createRepo team problem = do
     [ "create repo: ", displayShow $ problem ^. #repo_name
     , " to team: ", displayShow $ team ^. #name
     ]
+
   teamRepo <- createRepoInGitHub team problem
   token    <- getTextToken
   workDir  <- asks (view #work)
   let (owner, repo) = splitRepoName $ problem ^. #repo_name
       teamUrl       = mconcat ["https://", token, "@github.com/", teamRepo, ".git"]
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
-  shelly $ chdir_p (workDir </> (team ^. #github)) (Git.clone [teamUrl, repo])
+
+  shelly $ chdir_p (workDir </> (team ^. #github)) (Git.cloneOrFetch teamUrl repo)
   shelly $ chdir_p (workDir </> (team ^. #github) </> repo) $ do
     Git.remote ["add", "problem", problemUrl]
     Git.fetch ["--all"]
     forM_ (problem ^. #challenge_branches) $
       \branch -> Git.checkout ["-b", branch, "problem/" <> branch]
     Git.push $ "-u" : "origin" : problem ^. #challenge_branches
+  logInfo $ "Success: create repo as " <> displayShow teamRepo
+
+  shelly $ chdir_p (workDir </> owner) (Git.cloneOrFetch problemUrl repo)
+  shelly $ chdir_p (workDir </> owner </> repo) $ do
+    Git.checkout [problem ^. #ci_branch]
+    Git.existBranch (team ^. #name) >>= \case
+      False -> Git.checkout ["-b", team ^. #name]
+      True  -> Git.checkout [team ^. #name]
+    writefile ciFileName (team ^. #github <> "/" <> repo)
+    Git.add [ciFileName]
+    Git.commit ["-m", "[CI SKIP] Add ci branch"]
+    Git.push ["-u", "origin", team ^. #name]
+  logInfo $ "Success: create ci branch in " <> displayShow problemUrl
 
 createRepoByRepoName :: Team -> Text -> Plant ()
 createRepoByRepoName team repoName = do
@@ -73,7 +88,7 @@ pushForCI team problem = do
   workDir <- asks (view #work)
   let (owner, repo) = splitRepoName $ problem ^. #repo_name
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
-  shelly $ chdir_p (workDir </> owner) (Git.clone [problemUrl, repo])
+  shelly $ chdir_p (workDir </> owner) (Git.cloneOrFetch problemUrl repo)
   shelly $ chdir_p (workDir </> owner </> repo) $ do
     Git.fetch []
     Git.checkout [team ^. #name]
@@ -89,3 +104,6 @@ getTextToken =
   Text.decodeUtf8' <$> asks (view #token) >>= \case
     Left  _ -> logError "cannot decode token to utf8." >> pure ""
     Right t -> pure t
+
+ciFileName :: IsString s => s
+ciFileName = "REPOSITORY"
