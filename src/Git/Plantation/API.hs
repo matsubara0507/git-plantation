@@ -11,7 +11,7 @@ import           Git.Plantation.API.Webhook (WebhookAPI, webhook)
 import           Git.Plantation.Env         (Plant)
 import           Network.HTTP.Media         ((//), (/:))
 import           Servant
-import           Servant.Utils.StaticFiles  (serveDirectoryFileServer)
+import           Servant.Server.StaticFiles (serveDirectoryFileServer)
 
 type API
       = Get '[HTML] LByteString
