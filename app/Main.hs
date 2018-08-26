@@ -61,8 +61,9 @@ versionOpt = optFlag [] ["version"] "Show version"
 
 runServer :: Options -> Config -> IO ()
 runServer opts config = do
-  logOpts <- logOptionsHandle stdout $ opts ^. #verbose
-  token   <- liftIO $ fromString <$> getEnv "GH_TOKEN"
+  logOpts   <- logOptionsHandle stdout $ opts ^. #verbose
+  token     <- liftIO $ fromString <$> getEnv "GH_TOKEN"
+  indexHtml <- fromStrictBytes <$> readFileBinary "index.html"
   withLogFunc logOpts $ \logger -> do
     let env = #config @= config
            <: #token  @= token
@@ -70,12 +71,13 @@ runServer opts config = do
            <: #logger @= logger
            <: nil :: Env
     B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
-    Warp.run (opts ^. #port) $ app env (gitHubKey $ fromString <$> getEnv "GH_SECRET")
+    Warp.run (opts ^. #port) $
+      app env (gitHubKey $ fromString <$> getEnv "GH_SECRET") indexHtml
 
-app :: Env -> GitHubKey -> Application
-app env key =
+app :: Env -> GitHubKey -> LByteString -> Application
+app env key indexHtml =
   serveWithContext api (key :. EmptyContext) $
-    hoistServerWithContext api context (runRIO env) server
+    hoistServerWithContext api context (runRIO env) (server indexHtml)
 
 context :: Proxy '[ GitHubKey ]
 context = Proxy

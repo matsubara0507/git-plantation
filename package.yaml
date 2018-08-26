@@ -40,8 +40,9 @@ dependencies:
 - extensible >= 0.4.9
 - github
 - github-webhooks
-- servant-server
+- http-media
 - servant-github-webhook
+- servant-server
 - shelly
 - yaml >= 0.8.31
 
