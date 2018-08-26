@@ -37,10 +37,12 @@ dependencies:
 - base >= 4.7 && < 5
 - rio >= 0.1.1.0
 - drone
+- elm-export
 - extensible >= 0.4.9
 - github
 - github-webhooks
 - http-media
+- servant-elm
 - servant-github-webhook
 - servant-server
 - shelly
@@ -85,3 +87,10 @@ tests:
     - git-plantation
     - tasty
     - tasty-hspec
+    other-modules: []
+  generateElm:
+    main:                GenerateElm.hs
+    source-dirs:         test
+    dependencies:
+    - git-plantation
+    other-modules: []
