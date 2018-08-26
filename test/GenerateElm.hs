@@ -1,26 +1,32 @@
+{-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators    #-}
+
 module Main where
 
 import           RIO
 
-import           Data.Proxy     (Proxy (..))
-import           Elm            (Spec (Spec), specsToDir, toElmDecoderSource,
-                                 toElmEncoderSource, toElmTypeSource)
-import           Git.Plantation (Problem, Team)
-import           Servant.Elm    (defElmImports, generateElmForAPI)
-import           Shelly         (run_, shelly)
+import           Data.Proxy              (Proxy (..))
+import           Elm                     (Spec (Spec), specsToDir,
+                                          toElmDecoderSource,
+                                          toElmEncoderSource, toElmTypeSource)
+import           Git.Plantation          (Problem, Team)
+import           Git.Plantation.API.CRUD (CRUD)
+import           Servant                 ((:>))
+import           Servant.Elm             (defElmImports, generateElmForAPI)
+import           Shelly                  (run_, shelly)
 
 
 spec :: Spec
 spec = Spec ["Generated", "API"]
             ( defElmImports
-            : toElmTypeSource    (Proxy :: Proxy Team)
-            : toElmDecoderSource (Proxy :: Proxy Team)
-            : toElmEncoderSource (Proxy :: Proxy Team)
-            : toElmTypeSource    (Proxy :: Proxy Problem)
-            : toElmDecoderSource (Proxy :: Proxy Problem)
-            : toElmEncoderSource (Proxy :: Proxy Problem)
-            -- : generateElmForAPI  (Proxy :: Proxy CRUD)
-            : []
+            : toElmTypeSource    (Proxy @ Team)
+            : toElmDecoderSource (Proxy @ Team)
+            : toElmEncoderSource (Proxy @ Team)
+            : toElmTypeSource    (Proxy @ Problem)
+            : toElmDecoderSource (Proxy @ Problem)
+            : toElmEncoderSource (Proxy @ Problem)
+            : generateElmForAPI  (Proxy @ ("api" :> CRUD))
             )
 
 main :: IO ()

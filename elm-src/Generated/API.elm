@@ -1,4 +1,4 @@
-module Generated.API exposing (Problem, Team, decodeProblem, decodeTeam, encodeProblem, encodeTeam)
+module Generated.API exposing (Problem, Team, decodeProblem, decodeTeam, encodeProblem, encodeTeam, getApiProblems, getApiTeams)
 
 import Http
 import Json.Decode exposing (..)
@@ -59,3 +59,51 @@ encodeProblem x =
         , ( "challenge_branches", (Json.Encode.list << List.map Json.Encode.string) x.challenge_branches )
         , ( "ci_branch", Json.Encode.string x.ci_branch )
         ]
+
+
+getApiTeams : Http.Request (List Team)
+getApiTeams =
+    Http.request
+        { method =
+            "GET"
+        , headers =
+            []
+        , url =
+            String.join "/"
+                [ ""
+                , "api"
+                , "teams"
+                ]
+        , body =
+            Http.emptyBody
+        , expect =
+            Http.expectJson (list decodeTeam)
+        , timeout =
+            Nothing
+        , withCredentials =
+            False
+        }
+
+
+getApiProblems : Http.Request (List Problem)
+getApiProblems =
+    Http.request
+        { method =
+            "GET"
+        , headers =
+            []
+        , url =
+            String.join "/"
+                [ ""
+                , "api"
+                , "problems"
+                ]
+        , body =
+            Http.emptyBody
+        , expect =
+            Http.expectJson (list decodeProblem)
+        , timeout =
+            Nothing
+        , withCredentials =
+            False
+        }

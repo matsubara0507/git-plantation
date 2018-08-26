@@ -6,6 +6,7 @@ module Git.Plantation.API where
 
 import           RIO
 
+import           Git.Plantation.API.CRUD    (CRUD, crud)
 import           Git.Plantation.API.Webhook (WebhookAPI, webhook)
 import           Git.Plantation.Env         (Plant)
 import           Network.HTTP.Media         ((//), (/:))
@@ -15,7 +16,8 @@ import           Servant.Utils.StaticFiles  (serveDirectoryFileServer)
 type API
       = Get '[HTML] LByteString
    :<|> "static" :> Raw
-   :<|> "hook" :> WebhookAPI
+   :<|> "hook"   :> WebhookAPI
+   :<|> "api"    :> CRUD
 
 api :: Proxy API
 api = Proxy
@@ -25,6 +27,7 @@ server indexHtml
       = pure indexHtml
    :<|> serveDirectoryFileServer "static"
    :<|> webhook
+   :<|> crud
 
 data HTML
 
