@@ -4,3 +4,7 @@ git-plantation.cabal
 .temp/
 .env
 *.sqlite
+
+.elm
+main.js
+elm-stuff
