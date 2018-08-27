@@ -16,7 +16,7 @@ type alias Team =
 
 decodeTeam : Decoder Team
 decodeTeam =
-    decode Team
+    Json.Decode.succeed Team
         |> required "name" string
         |> required "github" string
         |> required "member" (list string)
@@ -27,7 +27,7 @@ encodeTeam x =
     Json.Encode.object
         [ ( "name", Json.Encode.string x.name )
         , ( "github", Json.Encode.string x.github )
-        , ( "member", (Json.Encode.list << List.map Json.Encode.string) x.member )
+        , ( "member", Json.Encode.list Json.Encode.string x.member )
         ]
 
 
@@ -42,7 +42,7 @@ type alias Problem =
 
 decodeProblem : Decoder Problem
 decodeProblem =
-    decode Problem
+    Json.Decode.succeed Problem
         |> required "problem_name" string
         |> required "repo_name" string
         |> required "difficulty" int
@@ -56,7 +56,7 @@ encodeProblem x =
         [ ( "problem_name", Json.Encode.string x.problem_name )
         , ( "repo_name", Json.Encode.string x.repo_name )
         , ( "difficulty", Json.Encode.int x.difficulty )
-        , ( "challenge_branches", (Json.Encode.list << List.map Json.Encode.string) x.challenge_branches )
+        , ( "challenge_branches", Json.Encode.list Json.Encode.string x.challenge_branches )
         , ( "ci_branch", Json.Encode.string x.ci_branch )
         ]
 

@@ -5,7 +5,7 @@ import Html exposing (..)
 import Html.Attributes exposing (checked, class, type_)
 import Html.Events exposing (onCheck, onClick)
 import Time exposing (Posix)
-
+import Generated.API as API
 
 main =
     Browser.element
