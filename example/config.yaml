@@ -9,6 +9,23 @@ problems:
   - task-2
   ci_branch: ci
 
+- problem_name: is-order-an-adding
+  repo_name: matsubara0507/git-challenge-is-order-an-adding
+  difficulty: 1
+  challenge_branches:
+  - readme
+  - master
+  ci_branch: ci
+
+- problem_name: minesweeper
+  repo_name: matsubara0507/git-challenge-minesweeper
+  difficulty: 1
+  challenge_branches:
+  - readme
+  - master
+  - checker
+  ci_branch: ci
+
 teams:
 - name: sample
   github: sample-hige
