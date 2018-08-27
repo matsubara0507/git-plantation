@@ -7,27 +7,31 @@ module Main where
 import           RIO
 
 import           Data.Proxy              (Proxy (..))
-import           Elm                     (Spec (Spec), specsToDir,
+import           Elm                     (ElmType, Spec (Spec), specsToDir,
                                           toElmDecoderSource,
                                           toElmEncoderSource, toElmTypeSource)
-import           Git.Plantation          (Problem, Team)
+import           Git.Plantation          (Problem, Score, Status, Team)
 import           Git.Plantation.API.CRUD (CRUD)
 import           Servant                 ((:>))
 import           Servant.Elm             (defElmImports, generateElmForAPI)
 import           Shelly                  (run_, shelly)
 
-
 spec :: Spec
-spec = Spec ["Generated", "API"]
-            ( defElmImports
-            : toElmTypeSource    (Proxy @ Team)
-            : toElmDecoderSource (Proxy @ Team)
-            : toElmEncoderSource (Proxy @ Team)
-            : toElmTypeSource    (Proxy @ Problem)
-            : toElmDecoderSource (Proxy @ Problem)
-            : toElmEncoderSource (Proxy @ Problem)
-            : generateElmForAPI  (Proxy @ ("api" :> CRUD))
-            )
+spec = Spec ["Generated", "API"] $ concat
+            [ [defElmImports]
+            , toElmTypeAll      (Proxy @ Team)
+            , toElmTypeAll      (Proxy @ Problem)
+            , toElmTypeAll      (Proxy @ Score)
+            , toElmTypeAll      (Proxy @ Status)
+            , generateElmForAPI (Proxy @ ("api" :> CRUD))
+            ]
+
+toElmTypeAll :: ElmType a => Proxy a -> [Text]
+toElmTypeAll proxy =
+  [ toElmTypeSource    proxy
+  , toElmDecoderSource proxy
+  , toElmEncoderSource proxy
+  ]
 
 main :: IO ()
 main = do

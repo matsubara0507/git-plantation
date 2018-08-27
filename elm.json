@@ -12,7 +12,8 @@
             "elm/html": "1.0.0",
             "elm/http": "1.0.0",
             "elm/json": "1.0.0",
-            "elm/time": "1.0.0"
+            "elm/time": "1.0.0",
+            "krisajenkins/remotedata": "5.0.0"
         },
         "indirect": {
             "elm/url": "1.0.0",
