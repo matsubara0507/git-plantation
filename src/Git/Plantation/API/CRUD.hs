@@ -6,6 +6,7 @@ module Git.Plantation.API.CRUD where
 
 import           RIO
 
+import           Data.Extensible
 import           Git.Plantation.Env     (Plant)
 import           Git.Plantation.Problem (Problem)
 import           Git.Plantation.Score   (Score)
@@ -30,4 +31,15 @@ getProblems :: Plant [Problem]
 getProblems = asks (view #problems . view #config)
 
 getScores :: Plant [Score]
-getScores = pure []
+getScores = map toScore <$> getTeams
+
+-- ToDo
+toScore :: Team -> Score
+toScore team
+    = #team  @= (team ^. #name)
+   <: #point @= 0
+   <: #stats @= [ stat1, stat2 ]
+   <: nil
+   where
+     stat1 = #problem @= "tutorial"    <: #correct @= True  <: nil
+     stat2 = #problem @= "minesweeper" <: #correct @= False <: nil
