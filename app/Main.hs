@@ -16,6 +16,7 @@ import           Data.Extensible.GetOpt
 import           Data.Version             (Version)
 import qualified Data.Version             as Version
 import           Development.GitRev
+import qualified Drone.Client             as Drone
 import           Git.Plantation
 import           Git.Plantation.API       (api, server)
 import qualified Network.Wai.Handler.Warp as Warp
@@ -63,11 +64,15 @@ runServer :: Options -> Config -> IO ()
 runServer opts config = do
   logOpts   <- logOptionsHandle stdout $ opts ^. #verbose
   token     <- liftIO $ fromString <$> getEnv "GH_TOKEN"
+  dHost     <- liftIO $ fromString <$> getEnv "DRONE_HOST"
+  dToken    <- liftIO $ fromString <$> getEnv "DRONE_TOKEN"
   indexHtml <- fromStrictBytes <$> readFileBinary "index.html"
+  let client = Drone.HttpsClient (#host @= dHost <: #token @= dToken <: nil)
   withLogFunc logOpts $ \logger -> do
     let env = #config @= config
            <: #token  @= token
            <: #work   @= (opts ^. #work)
+           <: #client @= client
            <: #logger @= logger
            <: nil :: Env
     B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"

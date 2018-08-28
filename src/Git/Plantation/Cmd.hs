@@ -11,6 +11,7 @@ module Git.Plantation.Cmd
 import           RIO
 
 import           Data.Extensible
+import qualified Drone.Client               as Drone
 import           Git.Plantation.Cmd.Options as X
 import           Git.Plantation.Cmd.Repo    as X
 import           Git.Plantation.Cmd.Run     as X
@@ -26,6 +27,7 @@ run opts = do
     let env = #config @= config
            <: #token  @= token
            <: #work   @= opts ^. #work
+           <: #client @= Drone.HttpsClient (#host @= "" <: #token @= "" <: nil)
            <: #logger @= logger
            <: nil
     runRIO env $ matchField

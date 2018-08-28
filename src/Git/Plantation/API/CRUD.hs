@@ -41,8 +41,8 @@ getScores :: Plant [Score]
 getScores = do
   teams    <- getTeams
   problems <- getProblems
-  let client = Drone.HttpsClient $ #host @= "localhost" <: #token @= "" <: nil
-  builds <- Map.fromList <$> mapM (fetchBuilds client) problems
+  client   <- asks (view #client)
+  builds   <- Map.fromList <$> mapM (fetchBuilds client) problems
   pure $ map (mkScore problems builds) teams
 
 fetchBuilds :: Drone.Client c => c -> Problem -> Plant (Text, [Drone.Build])
