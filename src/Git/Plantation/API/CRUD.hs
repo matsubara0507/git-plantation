@@ -32,15 +32,20 @@ crud
    :<|> getScores
 
 getTeams :: Plant [Team]
-getTeams = asks (view #teams . view #config)
+getTeams = do
+  logInfo "[GET] /teams"
+  asks (view #teams . view #config)
 
 getProblems :: Plant [Problem]
-getProblems = asks (view #problems . view #config)
+getProblems = do
+  logInfo "[GET] /problems"
+  asks (view #problems . view #config)
 
 getScores :: Plant [Score]
 getScores = do
-  teams    <- getTeams
-  problems <- getProblems
+  logInfo "[GET] /scores"
+  teams    <- asks (view #teams . view #config)
+  problems <- asks (view #problems . view #config)
   client   <- asks (view #client)
   builds   <- Map.fromList <$> mapM (fetchBuilds client) problems
   pure $ map (mkScore problems builds) teams
