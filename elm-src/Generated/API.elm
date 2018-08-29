@@ -1,4 +1,4 @@
-module Generated.API exposing (Problem, Score, Status, Team, decodeProblem, decodeScore, decodeStatus, decodeTeam, encodeProblem, encodeScore, encodeStatus, encodeTeam, getApiProblems, getApiScores, getApiTeams)
+module Generated.API exposing (Config, Problem, Score, Status, Team, decodeConfig, decodeProblem, decodeScore, decodeStatus, decodeTeam, encodeConfig, encodeProblem, encodeScore, encodeStatus, encodeTeam, getApiProblems, getApiScores, getApiTeams)
 
 import Http
 import Json.Decode exposing (..)
@@ -58,6 +58,27 @@ encodeProblem x =
         , ( "difficulty", Json.Encode.int x.difficulty )
         , ( "challenge_branches", Json.Encode.list Json.Encode.string x.challenge_branches )
         , ( "ci_branch", Json.Encode.string x.ci_branch )
+        ]
+
+
+type alias Config =
+    { problems : List Problem
+    , teams : List Team
+    }
+
+
+decodeConfig : Decoder Config
+decodeConfig =
+    Json.Decode.succeed Config
+        |> required "problems" (list decodeProblem)
+        |> required "teams" (list decodeTeam)
+
+
+encodeConfig : Config -> Json.Encode.Value
+encodeConfig x =
+    Json.Encode.object
+        [ ( "problems", Json.Encode.list encodeProblem x.problems )
+        , ( "teams", Json.Encode.list encodeTeam x.teams )
         ]
 
 

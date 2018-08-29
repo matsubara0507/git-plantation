@@ -66,7 +66,6 @@ runServer opts config = do
   token     <- liftIO $ fromString <$> getEnv "GH_TOKEN"
   dHost     <- liftIO $ fromString <$> getEnv "DRONE_HOST"
   dToken    <- liftIO $ fromString <$> getEnv "DRONE_TOKEN"
-  indexHtml <- fromStrictBytes <$> readFileBinary "index.html"
   let client = Drone.HttpsClient (#host @= dHost <: #token @= dToken <: nil)
   withLogFunc logOpts $ \logger -> do
     let env = #config @= config
@@ -77,12 +76,12 @@ runServer opts config = do
            <: nil :: Env
     B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
     Warp.run (opts ^. #port) $
-      app env (gitHubKey $ fromString <$> getEnv "GH_SECRET") indexHtml
+      app env (gitHubKey $ fromString <$> getEnv "GH_SECRET")
 
-app :: Env -> GitHubKey -> LByteString -> Application
-app env key indexHtml =
+app :: Env -> GitHubKey -> Application
+app env key =
   serveWithContext api (key :. EmptyContext) $
-    hoistServerWithContext api context (runRIO env) (server indexHtml)
+    hoistServerWithContext api context (runRIO env) server
 
 context :: Proxy '[ GitHubKey ]
 context = Proxy

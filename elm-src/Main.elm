@@ -22,7 +22,7 @@ main =
 
 type alias Model =
     { reload : Bool
-    , problems : RemoteData String (List API.Problem)
+    , problems : List API.Problem
     , scores : RemoteData String (List API.Score)
     }
 
@@ -31,20 +31,23 @@ type Msg
     = CheckReload Bool
     | Reload
     | Tick Posix
-    | FetchProblems (Result Http.Error (List API.Problem))
     | FetchScores (Result Http.Error (List API.Score))
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
+type alias Flags =
+    { config : API.Config }
+
+
+init : Flags -> ( Model, Cmd Msg )
+init flags =
     let
         model =
             { reload = True
-            , problems = NotAsked
+            , problems = flags.config.problems
             , scores = NotAsked
             }
     in
-    ( model, Cmd.batch [ fetchProblems, fetchScores ] )
+    ( model, Cmd.batch [ fetchScores ] )
 
 
 view : Model -> Html Msg
@@ -94,16 +97,11 @@ viewScores model =
 
 viewHeader : Model -> List (Html msg)
 viewHeader model =
-    case model.problems of
-        Success problems ->
-            List.concat
-                [ [ th [] [] ]
-                , List.map viewHeaderCol problems
-                , [ th [ class "text-center p-2 f4" ] [ text "Score" ] ]
-                ]
-
-        _ ->
-            []
+    List.concat
+        [ [ th [] [] ]
+        , List.map viewHeaderCol model.problems
+        , [ th [ class "text-center p-2 f4" ] [ text "Score" ] ]
+        ]
 
 
 viewHeaderCol : API.Problem -> Html msg
@@ -115,9 +113,9 @@ viewHeaderCol problem =
 
 viewBody : Model -> List (Html msg)
 viewBody model =
-    case ( model.problems, model.scores ) of
-        ( Success problems, Success scores ) ->
-            List.indexedMap (viewScore problems) scores
+    case model.scores of
+        Success scores ->
+            List.indexedMap (viewScore model.problems) scores
 
         _ ->
             []
@@ -200,22 +198,11 @@ update msg model =
                 Cmd.none
             )
 
-        FetchProblems (Ok problems) ->
-            ( { model | problems = Success problems }, Cmd.none )
-
-        FetchProblems (Err _) ->
-            ( { model | problems = Failure "Something went wrong.." }, Cmd.none )
-
         FetchScores (Ok scores) ->
             ( { model | scores = Success scores }, Cmd.none )
 
         FetchScores (Err _) ->
             ( { model | scores = Failure "Something went wrong.." }, Cmd.none )
-
-
-fetchProblems : Cmd Msg
-fetchProblems =
-    Http.send FetchProblems API.getApiProblems
 
 
 fetchScores : Cmd Msg

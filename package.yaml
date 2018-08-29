@@ -36,6 +36,8 @@ default-extensions:
 dependencies:
 - base >= 4.7 && < 5
 - rio >= 0.1.1.0
+- aeson
+- blaze-html
 - data-default-class
 - drone
 - elm-export
@@ -44,6 +46,7 @@ dependencies:
 - github-webhooks
 - http-media
 - req
+- servant-blaze
 - servant-elm
 - servant-github-webhook
 - servant-server

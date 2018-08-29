@@ -10,7 +10,7 @@ import           Data.Proxy              (Proxy (..))
 import           Elm                     (ElmType, Spec (Spec), specsToDir,
                                           toElmDecoderSource,
                                           toElmEncoderSource, toElmTypeSource)
-import           Git.Plantation          (Problem, Score, Status, Team)
+import           Git.Plantation          (Config, Problem, Score, Status, Team)
 import           Git.Plantation.API.CRUD (CRUD)
 import           Servant                 ((:>))
 import           Servant.Elm             (defElmImports, generateElmForAPI)
@@ -21,6 +21,7 @@ spec = Spec ["Generated", "API"] $ concat
             [ [defElmImports]
             , toElmTypeAll      (Proxy @ Team)
             , toElmTypeAll      (Proxy @ Problem)
+            , toElmTypeAll      (Proxy @ Config)
             , toElmTypeAll      (Proxy @ Score)
             , toElmTypeAll      (Proxy @ Status)
             , generateElmForAPI (Proxy @ ("api" :> CRUD))
