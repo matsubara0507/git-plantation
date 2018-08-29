@@ -1,0 +1,98 @@
+name:                git-plantation
+version:             0.1.0.0
+github:              "githubuser/git-plantation"
+license:             BSD3
+author:              "Author name here"
+maintainer:          "example@example.com"
+copyright:           "2018 Author name here"
+
+extra-source-files:
+- README.md
+- CHANGELOG.md
+
+description:         Please see the README on GitHub at <https://github.com/githubuser/git-plantation#readme>
+
+ghc-options:
+- -Wall
+- -Wcompat
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
+- -Wredundant-constraints
+
+default-extensions:
+- NoImplicitPrelude
+
+- ConstraintKinds
+- FlexibleContexts
+- FlexibleInstances
+- GeneralizedNewtypeDeriving
+- OverloadedStrings
+- PolyKinds
+- RankNTypes
+- StandaloneDeriving
+- TypeFamilies
+- TypeSynonymInstances
+
+dependencies:
+- base >= 4.7 && < 5
+- rio >= 0.1.1.0
+- data-default-class
+- drone
+- elm-export
+- extensible >= 0.4.9
+- github
+- github-webhooks
+- http-media
+- req
+- servant-elm
+- servant-github-webhook
+- servant-server
+- shelly
+- yaml >= 0.8.31
+
+library:
+  source-dirs: src
+
+executables:
+  git-plantation-app:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - git-plantation
+    - gitrev
+    - warp
+  git-plantation-tool:
+    main:                Main.hs
+    source-dirs:         tool
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - git-plantation
+    - gitrev
+    - optparse-applicative
+
+tests:
+  git-plantation-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - git-plantation
+    - tasty
+    - tasty-hspec
+    other-modules: []
+  generateElm:
+    main:                GenerateElm.hs
+    source-dirs:         test
+    dependencies:
+    - git-plantation
+    other-modules: []

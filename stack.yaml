@@ -1,0 +1,8 @@
+resolver: lts-12.5
+packages:
+- .
+extra-deps:
+- github: matsubara0507/drone-haskell
+  commit: 6e1f61e625fe04d2d90554ea3fe93894708a4fcf
+- github: matsubara0507/elm-export
+  commit: 7dc72b9eb34a4f126bb37e288534ec9ac7dc4bc3
