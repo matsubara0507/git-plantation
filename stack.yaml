@@ -6,3 +6,10 @@ extra-deps:
   commit: 6e1f61e625fe04d2d90554ea3fe93894708a4fcf
 - github: matsubara0507/elm-export
   commit: 7dc72b9eb34a4f126bb37e288534ec9ac7dc4bc3
+docker:
+  repo: fpco/stack-build
+  enable: false
+image:
+  container:
+    name: git-plantation-bin
+    base: fpco/ubuntu-with-libgmp

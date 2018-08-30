@@ -38,3 +38,14 @@ $ ngrok start --config ngrok/config.yml app drone
 ```
 
 setting ngrok URL in GitHub Webhook.
+
+## Build with Docker
+
+Define environment to `.env` from `.env.template`.
+
+```
+$ stack docker pull
+$ stack build --docker
+$ docker build -t git-plantation .
+$ docker run --rm -it -v `pwd`:/work -p 8080:8080 --env-file .env git-plantation
+```
