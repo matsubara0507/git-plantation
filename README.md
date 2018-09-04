@@ -2,6 +2,13 @@
 
 ![](./image/scoreboard.png)
 
+## Requirement
+
+- [Haskell Stack](https://docs.haskellstack.org/) : use to build application
+- [Elm compiler](http://elm-lang.org/) : use to build scoreboard page
+- Docker and docker-compose : optional, if run Drone on local
+- [ngrok](https://ngrok.com/) : optional, if run Drone and app on local
+
 ## Usage
 
 ### 1. Write config file
