@@ -1,7 +1,10 @@
-resolver: lts-12.5
+resolver: lts-13.1
 packages:
 - .
 extra-deps:
+- extensible-0.5
+- github-0.20
+- servant-github-webhook-0.4.1.0
 - github: matsubara0507/drone-haskell
   commit: 6e1f61e625fe04d2d90554ea3fe93894708a4fcf
 - github: matsubara0507/elm-export
