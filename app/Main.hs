@@ -62,16 +62,17 @@ versionOpt = optFlag [] ["version"] "Show version"
 
 runServer :: Options -> Config -> IO ()
 runServer opts config = do
-  logOpts   <- logOptionsHandle stdout $ opts ^. #verbose
-  token     <- liftIO $ fromString <$> getEnv "GH_TOKEN"
-  dHost     <- liftIO $ fromString <$> getEnv "DRONE_HOST"
-  dToken    <- liftIO $ fromString <$> getEnv "DRONE_TOKEN"
-  let client = Drone.HttpsClient (#host @= dHost <: #token @= dToken <: nil)
+  logOpts <- logOptionsHandle stdout $ opts ^. #verbose
+  token   <- liftIO $ fromString <$> getEnv "GH_TOKEN"
+  dHost   <- liftIO $ fromString <$> getEnv "DRONE_HOST"
+  dToken  <- liftIO $ fromString <$> getEnv "DRONE_TOKEN"
+  dPort   <- liftIO $ readMaybe  <$> getEnv "DRONE_PORT"
+  let client = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
   withLogFunc logOpts $ \logger -> do
     let env = #config @= config
            <: #token  @= token
            <: #work   @= (opts ^. #work)
-           <: #client @= client
+           <: #client @= Drone.HttpsClient client
            <: #logger @= logger
            <: nil :: Env
     B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
