@@ -53,7 +53,7 @@ getScores = do
 fetchBuilds :: Drone.Client c => c -> Problem -> Plant (Text, [Drone.Build])
 fetchBuilds client problem = do
   let (owner, repo) = splitRepoName $ problem ^. #repo_name
-  builds <- responseBody <$> runReq def (Drone.getBuilds client owner repo)
+  builds <- responseBody <$> runReq def (Drone.getBuilds client owner repo Nothing)
   pure (problem ^. #problem_name, builds)
 
 mkScore :: [Problem] -> Map Text [Drone.Build] -> Team -> Score
@@ -63,7 +63,7 @@ mkScore problems builds team
    <: #stats @= stats
    <: nil
   where
-    isTeamBuild b = b ^. #branch == team ^. #name
+    isTeamBuild b = b ^. #source == team ^. #name
     builds' = Map.filter (not . null) $ Map.map (filter isTeamBuild) builds
     stats = Map.elems $ Map.mapWithKey toStatus builds'
 

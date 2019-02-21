@@ -24,10 +24,11 @@ run opts = do
   logOpts <- logOptionsHandle stdout (opts ^. #verbose)
   token   <- liftIO $ fromString <$> getEnv "GH_TOKEN"
   withLogFunc logOpts $ \logger -> do
-    let env = #config @= config
+    let client = #host @= "" <: #port @= Nothing <: #token @= "" <: nil
+        env = #config @= config
            <: #token  @= token
            <: #work   @= opts ^. #work
-           <: #client @= Drone.HttpsClient (#host @= "" <: #token @= "" <: nil)
+           <: #client @= Drone.HttpsClient client
            <: #logger @= logger
            <: nil
     runRIO env $ matchField
