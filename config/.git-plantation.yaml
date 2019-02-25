@@ -32,7 +32,7 @@ teams:
   member:
   - name: MATSUBARA Nobutada
     github: matsubara0507
-  problems:
+  repos:
   - problem: matsubara0507/git-challenge-tutorial
     github: sample-hige/git-challenge-tutorial
   - problem: matsubara0507/git-challenge-is-order-an-adding
