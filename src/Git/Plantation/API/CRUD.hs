@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeOperators    #-}
 
@@ -52,7 +53,9 @@ getScores = do
 fetchBuilds :: Drone.Client c => c -> Problem -> Plant (Text, [Drone.Build])
 fetchBuilds client problem = do
   let (owner, repo) = splitRepoName $ problem ^. #repo_name
-  builds <- responseBody <$> runReq def (Drone.getBuilds client owner repo Nothing)
+  builds <- tryAny (runReq def $ Drone.getBuilds client owner repo Nothing) >>= \case
+    Left err   -> logError (display err) >> pure []
+    Right resp -> pure $ responseBody resp
   pure (problem ^. #problem_name, builds)
 
 mkScore :: [Problem] -> Map Text [Drone.Build] -> Team -> Score
