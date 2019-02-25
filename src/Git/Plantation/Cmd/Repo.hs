@@ -14,7 +14,7 @@ import           Data.Extensible
 import qualified Git.Cmd                  as Git
 import           Git.Plantation.Data      (Problem, Team)
 import qualified Git.Plantation.Data.Team as Team
-import           Git.Plantation.Env       (Plant, maybeWithLogError)
+import           Git.Plantation.Env       (Plant, maybeWithLogError, shelly')
 import           GitHub.Data.Name         (mkName)
 import           GitHub.Data.Repos        (newRepo)
 import           GitHub.Endpoints.Repos   (Auth (..))
@@ -40,8 +40,8 @@ createRepo team problem = do
       teamUrl       = mconcat ["https://", token, "@github.com/", teamRepo, ".git"]
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
-  shelly $ chdir_p (workDir </> (team ^. #name)) (Git.cloneOrFetch teamUrl repo)
-  shelly $ chdir_p (workDir </> (team ^. #name) </> repo) $ do
+  shelly' $ chdir_p (workDir </> (team ^. #name)) (Git.cloneOrFetch teamUrl repo)
+  shelly' $ chdir_p (workDir </> (team ^. #name) </> repo) $ do
     Git.remote ["add", "problem", problemUrl]
     Git.fetch ["--all"]
     forM_ (problem ^. #challenge_branches) $
@@ -49,8 +49,8 @@ createRepo team problem = do
     Git.push $ "-u" : "origin" : problem ^. #challenge_branches
   logInfo $ "Success: create repo as " <> displayShow teamRepo
 
-  shelly $ chdir_p (workDir </> owner) (Git.cloneOrFetch problemUrl repo)
-  shelly $ chdir_p (workDir </> owner </> repo) $ do
+  shelly' $ chdir_p (workDir </> owner) (Git.cloneOrFetch problemUrl repo)
+  shelly' $ chdir_p (workDir </> owner </> repo) $ do
     Git.checkout [problem ^. #ci_branch]
     Git.existBranch (team ^. #name) >>= \case
       False -> Git.checkout ["-b", team ^. #name]
@@ -90,8 +90,8 @@ pushForCI team problem = do
   workDir <- asks (view #work)
   let (owner, repo) = splitRepoName $ problem ^. #repo_name
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
-  shelly $ chdir_p (workDir </> owner) (Git.cloneOrFetch problemUrl repo)
-  shelly $ chdir_p (workDir </> owner </> repo) $ do
+  shelly' $ chdir_p (workDir </> owner) (Git.cloneOrFetch problemUrl repo)
+  shelly' $ chdir_p (workDir </> owner </> repo) $ do
     Git.fetch []
     Git.checkout [team ^. #name]
     Git.commit ["--allow-empty", "-m", "Empty Commit!!"]
