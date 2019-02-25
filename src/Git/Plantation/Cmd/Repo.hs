@@ -75,14 +75,14 @@ createRepoInGitHub team problem = do
   (owner, repo) <- maybeWithLogError
     ((splitRepoName . view #github) <$> Team.lookupRepo problem team)
     (mconcat ["Error: undefined problem ", problem ^. #repo_name,  " in ", team ^. #name])
-  logInfo $ "create repo in github: " <> displayShow (problem ^. #repo_name)
+  logInfo $ "create repo in github: " <> displayShow (owner <> "/" <> repo)
   resp <- liftIO $ GitHub.createOrganizationRepo'
     (OAuth token)
     (mkName Proxy owner)
     (newRepo $ mkName Proxy repo)
   case resp of
     Left err -> logError "Error: create github repo" >> fail (show err)
-    Right _  -> pure (team ^. #name <> "/" <> repo)
+    Right _  -> pure (owner <> "/" <> repo)
 
 pushForCI :: Team -> Problem -> Plant ()
 pushForCI team problem = do
