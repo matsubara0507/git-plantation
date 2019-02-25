@@ -8,9 +8,9 @@ import           RIO
 import qualified RIO.List                     as L
 
 import           Git.Plantation.Cmd.Repo
+import           Git.Plantation.Data          (Problem, Team)
+import qualified Git.Plantation.Data.Team     as Team
 import           Git.Plantation.Env           (Plant)
-import           Git.Plantation.Problem       (Problem)
-import           Git.Plantation.Team          (Team)
 import           GitHub.Data.Webhooks.Events
 import           GitHub.Data.Webhooks.Payload
 import           Servant
@@ -41,9 +41,9 @@ pushWebhook _ (_, ev) = do
     _                -> logError "Team or Problem not found."
 
 findTeamByPushEvent :: PushEvent -> [Team] -> Maybe Team
-findTeamByPushEvent ev ts = do
-  owner <- whOrgLogin <$> evPushOrganization ev
-  L.find (\t -> t ^. #github == owner) ts
+findTeamByPushEvent ev = L.find (isJust . Team.lookupRepo' repoName)
+  where
+    repoName = whRepoFullName $ evPushRepository ev
 
 findProblemByPushEvent :: PushEvent -> [Problem] -> Maybe Problem
 findProblemByPushEvent ev =

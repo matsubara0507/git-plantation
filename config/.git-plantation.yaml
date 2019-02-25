@@ -28,6 +28,14 @@ problems:
 
 teams:
 - name: sample
-  github: sample-hige
+  id: alpha
   member:
-  - matsubara0507
+  - name: MATSUBARA Nobutada
+    github: matsubara0507
+  problems:
+  - problem: matsubara0507/git-challenge-tutorial
+    github: sample-hige/git-challenge-tutorial
+  - problem: matsubara0507/git-challenge-is-order-an-adding
+    github: sample-hige/git-challenge-is-order-an-adding
+  - problem: matsubara0507/git-challenge-minesweeper
+    github: sample-hige/git-challenge-minesweeper

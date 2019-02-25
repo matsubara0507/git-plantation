@@ -7,19 +7,19 @@
 module Git.Plantation.Cmd.Repo where
 
 import           RIO
-import qualified RIO.List               as L
-import qualified RIO.Text               as Text
+import qualified RIO.List                 as L
+import qualified RIO.Text                 as Text
 
 import           Data.Extensible
-import qualified Git.Cmd                as Git
-import           Git.Plantation.Env     (Plant)
-import           Git.Plantation.Problem (Problem)
-import           Git.Plantation.Team    (Team)
-import           GitHub.Data.Name       (mkName)
-import           GitHub.Data.Repos      (newRepo)
-import           GitHub.Endpoints.Repos (Auth (..))
-import qualified GitHub.Endpoints.Repos as GitHub
-import           Shelly                 hiding (FilePath)
+import qualified Git.Cmd                  as Git
+import           Git.Plantation.Data      (Problem, Team)
+import qualified Git.Plantation.Data.Team as Team
+import           Git.Plantation.Env       (Plant, maybeWithLogError)
+import           GitHub.Data.Name         (mkName)
+import           GitHub.Data.Repos        (newRepo)
+import           GitHub.Endpoints.Repos   (Auth (..))
+import qualified GitHub.Endpoints.Repos   as GitHub
+import           Shelly                   hiding (FilePath)
 
 type NewRepoCmd = Record
   '[ "repo"    >: Maybe Text
@@ -40,8 +40,8 @@ createRepo team problem = do
       teamUrl       = mconcat ["https://", token, "@github.com/", teamRepo, ".git"]
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
-  shelly $ chdir_p (workDir </> (team ^. #github)) (Git.cloneOrFetch teamUrl repo)
-  shelly $ chdir_p (workDir </> (team ^. #github) </> repo) $ do
+  shelly $ chdir_p (workDir </> (team ^. #name)) (Git.cloneOrFetch teamUrl repo)
+  shelly $ chdir_p (workDir </> (team ^. #name) </> repo) $ do
     Git.remote ["add", "problem", problemUrl]
     Git.fetch ["--all"]
     forM_ (problem ^. #challenge_branches) $
@@ -55,7 +55,7 @@ createRepo team problem = do
     Git.existBranch (team ^. #name) >>= \case
       False -> Git.checkout ["-b", team ^. #name]
       True  -> Git.checkout [team ^. #name]
-    writefile ciFileName (team ^. #github <> "/" <> repo)
+    writefile ciFileName teamRepo
     Git.add [ciFileName]
     Git.commit ["-m", "[CI SKIP] Add ci branch"]
     Git.push ["-u", "origin", team ^. #name]
@@ -72,15 +72,17 @@ createRepoByRepoName team repoName = do
 createRepoInGitHub :: Team -> Problem -> Plant Text
 createRepoInGitHub team problem = do
   token <- asks (view #token)
-  let (_, repo) = splitRepoName $ problem ^. #repo_name
+  (owner, repo) <- maybeWithLogError
+    ((splitRepoName . view #github) <$> Team.lookupRepo problem team)
+    (mconcat ["Error: undefined problem ", problem ^. #repo_name,  " in ", team ^. #name])
   logInfo $ "create repo in github: " <> displayShow (problem ^. #repo_name)
   resp <- liftIO $ GitHub.createOrganizationRepo'
     (OAuth token)
-    (mkName Proxy $ team ^. #github)
+    (mkName Proxy owner)
     (newRepo $ mkName Proxy repo)
   case resp of
     Left err -> logError "Error: create github repo" >> fail (show err)
-    Right _  -> pure (team ^. #github <> "/" <> repo)
+    Right _  -> pure (team ^. #name <> "/" <> repo)
 
 pushForCI :: Team -> Problem -> Plant ()
 pushForCI team problem = do

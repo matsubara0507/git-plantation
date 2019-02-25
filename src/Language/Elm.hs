@@ -4,7 +4,12 @@
 {-# LANGUAGE TypeOperators       #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Language.Elm where
+module Language.Elm
+  ( ElmType(..)
+  , ToElmValue (..)
+  , elmTypeToElmValue
+  , toElmRecordType
+  ) where
 
 import           RIO
 

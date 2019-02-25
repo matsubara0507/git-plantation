@@ -24,3 +24,7 @@ type Env = Record
 
 instance HasLogFunc Env where
   logFuncL = lens (view #logger) (\x y -> x & #logger `set` y)
+
+maybeWithLogError :: Maybe a -> Text -> Plant a
+maybeWithLogError (Just x) _ = pure x
+maybeWithLogError Nothing e  = logError (display e) >> fail (show e)

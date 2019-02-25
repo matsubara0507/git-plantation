@@ -1,4 +1,4 @@
-module Generated.API exposing (Config, Problem, Score, Status, Team, decodeConfig, decodeProblem, decodeScore, decodeStatus, decodeTeam, encodeConfig, encodeProblem, encodeScore, encodeStatus, encodeTeam, getApiProblems, getApiScores, getApiTeams)
+module Generated.API exposing (Config, Problem, Repo, Score, Status, Team, User, decodeConfig, decodeProblem, decodeRepo, decodeScore, decodeStatus, decodeTeam, decodeUser, encodeConfig, encodeProblem, encodeRepo, encodeScore, encodeStatus, encodeTeam, encodeUser, getApiProblems, getApiScores, getApiTeams)
 
 import Http
 import Json.Decode exposing (..)
@@ -9,8 +9,9 @@ import String
 
 type alias Team =
     { name : String
-    , github : String
-    , member : List String
+    , id : String
+    , repos : List Repo
+    , member : List User
     }
 
 
@@ -18,16 +19,60 @@ decodeTeam : Decoder Team
 decodeTeam =
     Json.Decode.succeed Team
         |> required "name" string
-        |> required "github" string
-        |> required "member" (list string)
+        |> required "id" string
+        |> required "repos" (list decodeRepo)
+        |> required "member" (list decodeUser)
 
 
 encodeTeam : Team -> Json.Encode.Value
 encodeTeam x =
     Json.Encode.object
         [ ( "name", Json.Encode.string x.name )
+        , ( "id", Json.Encode.string x.id )
+        , ( "repos", Json.Encode.list encodeRepo x.repos )
+        , ( "member", Json.Encode.list encodeUser x.member )
+        ]
+
+
+type alias User =
+    { name : String
+    , github : String
+    }
+
+
+decodeUser : Decoder User
+decodeUser =
+    Json.Decode.succeed User
+        |> required "name" string
+        |> required "github" string
+
+
+encodeUser : User -> Json.Encode.Value
+encodeUser x =
+    Json.Encode.object
+        [ ( "name", Json.Encode.string x.name )
         , ( "github", Json.Encode.string x.github )
-        , ( "member", Json.Encode.list Json.Encode.string x.member )
+        ]
+
+
+type alias Repo =
+    { problem : String
+    , github : String
+    }
+
+
+decodeRepo : Decoder Repo
+decodeRepo =
+    Json.Decode.succeed Repo
+        |> required "problem" string
+        |> required "github" string
+
+
+encodeRepo : Repo -> Json.Encode.Value
+encodeRepo x =
+    Json.Encode.object
+        [ ( "problem", Json.Encode.string x.problem )
+        , ( "github", Json.Encode.string x.github )
         ]
 
 
