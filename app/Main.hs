@@ -11,6 +11,7 @@ import           Paths_git_plantation     (version)
 import           RIO
 import qualified RIO.ByteString           as B
 
+import           Configuration.Dotenv     (defaultConfig, loadFile)
 import           Data.Extensible
 import           Data.Extensible.GetOpt
 import           Data.Version             (Version)
@@ -25,7 +26,8 @@ import qualified Servant.GitHub.Webhook   (GitHubKey, gitHubKey)
 import           System.Environment       (getEnv)
 
 main :: IO ()
-main = withGetOpt "[options] [config-file]" opts $ \r args ->
+main = withGetOpt "[options] [config-file]" opts $ \r args -> do
+  _ <- loadFile defaultConfig
   case (r ^. #version, listToMaybe args) of
     (True, _)      -> B.putStr $ fromString (showVersion version) <> "\n"
     (_, Nothing)   -> error "please input config file path."
