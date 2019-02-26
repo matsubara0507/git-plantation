@@ -39,6 +39,7 @@ dependencies:
 - aeson
 - blaze-html
 - data-default-class
+- dotenv
 - drone
 - elm-export
 - extensible >= 0.4.9

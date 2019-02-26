@@ -2,13 +2,11 @@
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Git.Plantation.Problem where
+module Git.Plantation.Data.Problem where
 
 import           RIO
 
 import           Data.Extensible
-import           Elm                 (ElmType (..))
-import           Git.Plantation.Data (Branch)
 import           Language.Elm
 
 type Problem = Record
@@ -21,3 +19,5 @@ type Problem = Record
 
 instance ElmType Problem where
   toElmType = toElmRecordType "Problem"
+
+type Branch = Text

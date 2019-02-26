@@ -7,10 +7,9 @@ module Git.Plantation.Config where
 import           RIO
 
 import           Data.Extensible
-import qualified Data.Yaml              as Y
-import           Elm                    (ElmType (..))
-import           Git.Plantation.Problem (Problem)
-import           Git.Plantation.Team    (Team)
+import qualified Data.Yaml           as Y
+import           Elm                 (ElmType (..))
+import           Git.Plantation.Data (Problem, Team)
 import           Language.Elm
 
 type Config = Record

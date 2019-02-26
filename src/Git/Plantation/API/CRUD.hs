@@ -1,22 +1,22 @@
 {-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeOperators    #-}
 
 module Git.Plantation.API.CRUD where
 
 import           RIO
-import qualified RIO.Map                as Map
+import qualified RIO.Map              as Map
 
 import           Data.Default.Class
 import           Data.Extensible
-import qualified Drone.Client           as Drone
-import qualified Drone.Endpoints        as Drone
-import qualified Drone.Types            as Drone
-import           Git.Plantation.Cmd     (splitRepoName)
-import           Git.Plantation.Env     (Plant)
-import           Git.Plantation.Problem (Problem)
-import           Git.Plantation.Score   (Score, Status)
-import           Git.Plantation.Team    (Team)
+import qualified Drone.Client         as Drone
+import qualified Drone.Endpoints      as Drone
+import qualified Drone.Types          as Drone
+import           Git.Plantation       (Problem, Team)
+import           Git.Plantation.Cmd   (splitRepoName)
+import           Git.Plantation.Env   (Plant)
+import           Git.Plantation.Score (Score, Status)
 import           Network.HTTP.Req
 import           Servant
 
@@ -53,7 +53,9 @@ getScores = do
 fetchBuilds :: Drone.Client c => c -> Problem -> Plant (Text, [Drone.Build])
 fetchBuilds client problem = do
   let (owner, repo) = splitRepoName $ problem ^. #repo_name
-  builds <- responseBody <$> runReq def (Drone.getBuilds client owner repo Nothing)
+  builds <- tryAny (runReq def $ Drone.getBuilds client owner repo Nothing) >>= \case
+    Left err   -> logError (display err) >> pure []
+    Right resp -> pure $ responseBody resp
   pure (problem ^. #problem_name, builds)
 
 mkScore :: [Problem] -> Map Text [Drone.Build] -> Team -> Score

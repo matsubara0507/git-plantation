@@ -13,6 +13,7 @@ module Main where
 import qualified Paths_git_plantation as Meta
 import           RIO
 
+import           Configuration.Dotenv (defaultConfig, loadFile)
 import           Data.Extensible
 import           Data.Version         (Version)
 import qualified Data.Version         as Version
@@ -22,7 +23,9 @@ import           Git.Plantation.Cmd
 import           Options.Applicative
 
 main :: IO ()
-main = run =<< execParser opts
+main = do
+  _ <- loadFile defaultConfig
+  run =<< execParser opts
   where
     opts = info (options <**> version Meta.version <**> helper)
          $ fullDesc
