@@ -11,6 +11,7 @@ import qualified RIO.List                as L
 import           Data.Extensible
 import           Git.Plantation.Cmd.Repo
 import           Git.Plantation.Cmd.Run
+import           Git.Plantation.Env
 
 type Options = Record
   '[ "verbose" >: Bool
@@ -32,4 +33,4 @@ instance Run ("new_repo" >: NewRepoCmd) where
     case (team, args ^. #repo) of
       (Nothing, _)            -> logError $ "team is not found: " <> display (args ^. #team)
       (Just team', Just name) -> createRepoByRepoName team' name
-      (Just team', _)         -> forM_ (conf ^. #problems) $ createRepo team'
+      (Just team', _)         -> forM_ (conf ^. #problems) (tryAnyWithLogError . createRepo team')

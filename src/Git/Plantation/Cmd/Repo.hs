@@ -14,7 +14,7 @@ import           Data.Extensible
 import qualified Git.Cmd                  as Git
 import           Git.Plantation.Data      (Problem, Team)
 import qualified Git.Plantation.Data.Team as Team
-import           Git.Plantation.Env       (Plant, maybeWithLogError, shelly')
+import           Git.Plantation.Env
 import           GitHub.Data.Name         (mkName)
 import           GitHub.Data.Repos        (newRepo)
 import           GitHub.Endpoints.Repos   (Auth (..))
@@ -67,21 +67,21 @@ createRepoByRepoName team repoName = do
   let problem = L.find (\p -> p ^. #repo_name == repoName) $ conf ^. #problems
   case problem of
     Nothing       -> logError $ "repo is not found: " <> display repoName
-    Just problem' -> createRepo team problem'
+    Just problem' -> tryAnyWithLogError $ createRepo team problem'
 
 createRepoInGitHub :: Team -> Problem -> Plant Text
 createRepoInGitHub team problem = do
   token <- asks (view #token)
-  (owner, repo) <- maybeWithLogError
+  (owner, repo) <- fromJustWithThrow
     ((splitRepoName . view #github) <$> Team.lookupRepo problem team)
-    (mconcat ["Error: undefined problem ", problem ^. #repo_name,  " in ", team ^. #name])
+    (UndefinedTeamProblem team problem)
   logInfo $ "create repo in github: " <> displayShow (owner <> "/" <> repo)
   resp <- liftIO $ GitHub.createOrganizationRepo'
     (OAuth token)
     (mkName Proxy owner)
     (newRepo $ mkName Proxy repo)
   case resp of
-    Left err -> logError "Error: create github repo" >> fail (show err)
+    Left err -> throwIO $ CreateRepoError err team problem
     Right _  -> pure (owner <> "/" <> repo)
 
 pushForCI :: Team -> Problem -> Plant ()
