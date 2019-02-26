@@ -9,12 +9,15 @@ module Git.Plantation.Env where
 
 import           RIO
 
+import           Data.Aeson            (ToJSON)
+import qualified Data.Aeson.Text       as Json
 import           Data.Extensible
 import qualified Drone.Client          as Drone
 import           Git.Plantation.Config
 import           Git.Plantation.Data   (Problem, Team)
 import qualified GitHub.Auth           as GitHub
 import qualified GitHub.Data           as GitHub
+import qualified RIO.Text.Lazy         as TL
 import           Shelly                hiding (FilePath)
 
 type Plant = RIO Env
@@ -47,8 +50,14 @@ shelly' sh = do
     $ (log_stderr_with (runRIO env . logDebug . display))
     $ sh
 
-mkLogMessage :: Text -> Record xs -> Record ("message" >: Text ': xs)
-mkLogMessage message r = #message @= message <: r
+mkLogMessage :: Text -> Record xs -> Record ("error_message" >: Text ': xs)
+mkLogMessage message r = #error_message @= message <: r
+
+mkLogMessage' ::
+  Forall (KeyValue KnownSymbol (Instance1 ToJSON Identity)) xs
+  => Text -> Record xs -> String
+mkLogMessage' message =
+  TL.unpack . Json.encodeToLazyText . mkLogMessage message
 
 data GitPlantException
   = UndefinedTeamProblem Team Problem
@@ -60,6 +69,10 @@ instance Exception GitPlantException
 instance Show GitPlantException where
   show = \case
     UndefinedTeamProblem team problem ->
-      show $ mkLogMessage "undefined team repo" (#team @= team <: #problem @= problem <: nil)
-    CreateRepoError err team problem ->
-      show $ mkLogMessage "can't create repository" (#team @= team <: #problem @= problem <: #github_error @= err <: nil)
+      mkLogMessage'
+        "undefined team repo"
+        (#team @= team <: #problem @= problem <: nil)
+    CreateRepoError _err team problem ->
+      mkLogMessage'
+        "can't create repository"
+        (#team @= team <: #problem @= problem <: nil)

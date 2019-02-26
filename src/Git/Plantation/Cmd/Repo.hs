@@ -81,7 +81,7 @@ createRepoInGitHub team problem = do
     (mkName Proxy owner)
     (newRepo $ mkName Proxy repo)
   case resp of
-    Left err -> throwIO $ CreateRepoError err team problem
+    Left err -> logDebug (displayShow err) >> throwIO (CreateRepoError err team problem)
     Right _  -> pure (owner <> "/" <> repo)
 
 pushForCI :: Team -> Problem -> Plant ()
