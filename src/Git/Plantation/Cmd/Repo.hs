@@ -21,10 +21,20 @@ import           GitHub.Endpoints.Repos   (Auth (..))
 import qualified GitHub.Endpoints.Repos   as GitHub
 import           Shelly                   hiding (FilePath)
 
-type NewRepoCmd = Record
+type RepoFields =
   '[ "repo"    >: Maybe Text
    , "team"    >: Text
    ]
+
+type NewRepoCmd = Record RepoFields
+
+actByRepoName :: (Team -> Problem -> Plant ()) -> Team -> Text -> Plant ()
+actByRepoName act team repoName = do
+  conf <- asks (view #config)
+  let problem = L.find (\p -> p ^. #repo_name == repoName) $ conf ^. #problems
+  case problem of
+    Nothing       -> logError $ "repo is not found: " <> display repoName
+    Just problem' -> tryAnyWithLogError $ act team problem'
 
 createRepo :: Team -> Problem -> Plant ()
 createRepo team problem = do
@@ -60,14 +70,6 @@ createRepo team problem = do
     Git.commit ["-m", "[CI SKIP] Add ci branch"]
     Git.push ["-u", "origin", team ^. #name]
   logInfo $ "Success: create ci branch in " <> displayShow problemUrl
-
-createRepoByRepoName :: Team -> Text -> Plant ()
-createRepoByRepoName team repoName = do
-  conf <- asks (view #config)
-  let problem = L.find (\p -> p ^. #repo_name == repoName) $ conf ^. #problems
-  case problem of
-    Nothing       -> logError $ "repo is not found: " <> display repoName
-    Just problem' -> tryAnyWithLogError $ createRepo team problem'
 
 createRepoInGitHub :: Team -> Problem -> Plant Text
 createRepoInGitHub team problem = do

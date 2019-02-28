@@ -11,6 +11,7 @@ import qualified RIO.List                as L
 import           Data.Extensible
 import           Git.Plantation.Cmd.Repo
 import           Git.Plantation.Cmd.Run
+import           Git.Plantation.Data     (Problem, Team)
 import           Git.Plantation.Env
 
 type Options = Record
@@ -27,10 +28,13 @@ type SubCmdFields =
    ]
 
 instance Run ("new_repo" >: NewRepoCmd) where
-  run' _ args = do
-    conf <- asks (view #config)
-    let team = L.find (\t -> t ^. #name == args ^. #team) $ conf ^. #teams
-    case (team, args ^. #repo) of
-      (Nothing, _)            -> logError $ "team is not found: " <> display (args ^. #team)
-      (Just team', Just name) -> createRepoByRepoName team' name
-      (Just team', _)         -> forM_ (conf ^. #problems) (tryAnyWithLogError . createRepo team')
+  run' _ = runRepoCmd createRepo
+
+runRepoCmd :: (Team -> Problem -> Plant ()) -> Record RepoFields -> Plant ()
+runRepoCmd act args = do
+  conf <- asks (view #config)
+  let team = L.find (\t -> t ^. #name == args ^. #team) $ conf ^. #teams
+  case (team, args ^. #repo) of
+    (Nothing, _)            -> logError $ "team is not found: " <> display (args ^. #team)
+    (Just team', Just name) -> actByRepoName act team' name
+    (Just team', _)         -> forM_ (conf ^. #problems) (tryAnyWithLogError . act team')
