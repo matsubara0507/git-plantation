@@ -18,7 +18,7 @@ import           Git.Plantation.Cmd.Run     as X
 import           Git.Plantation.Config      (readConfig)
 import           System.Environment         (getEnv)
 
-run :: (MonadUnliftIO m, MonadThrow m) => Options -> m ()
+run :: MonadUnliftIO m => Options -> m ()
 run opts = do
   config  <- readConfig (opts ^. #config)
   logOpts <- logOptionsHandle stdout (opts ^. #verbose)
