@@ -37,6 +37,8 @@ type InitGitHubRepoCmd = Record RepoCmdFields
 
 type InitCICmd = Record RepoCmdFields
 
+type ResetRepoCmd = Record RepoCmdFields
+
 actByRepoName :: (Team -> Problem -> Plant a) -> Team -> Text -> Plant ()
 actByRepoName act team repoName = do
   conf <- asks (view #config)
@@ -79,11 +81,14 @@ initRepoInGitHub info team problem = do
 
   shelly' $ chdir_p (workDir </> (team ^. #name)) (Git.cloneOrFetch teamUrl repo)
   shelly' $ chdir_p (workDir </> (team ^. #name) </> repo) $ do
+    Git.checkout [ "-b", "temp"]
+    errExit False $ Git.branch $ "-D" : problem ^. #challenge_branches
     Git.remote ["add", "problem", problemUrl]
     Git.fetch ["--all"]
     forM_ (problem ^. #challenge_branches) $
       \branch -> Git.checkout ["-b", branch, "problem/" <> branch]
-    Git.push $ "-u" : "origin" : problem ^. #challenge_branches
+    Git.push $ "-f" : "-u" : "origin" : problem ^. #challenge_branches
+    Git.branch ["-D", "temp"]
   logInfo $ "Success: create repo as " <> displayShow (info ^. #github)
 
 initProblemCI :: Repo -> Team -> Problem -> Plant ()
@@ -104,6 +109,15 @@ initProblemCI info team problem = do
     Git.commit ["-m", "[CI SKIP] Add ci branch"]
     Git.push ["-u", "origin", team ^. #name]
   logInfo $ "Success: create ci branch in " <> displayShow problemUrl
+
+resetRepo :: Repo -> Team -> Problem -> Plant ()
+resetRepo info team problem = do
+  workDir <- asks (view #work)
+  let (_, repo) = splitRepoName $ problem ^. #repo_name
+  paths <- shelly' $ chdir_p (workDir </> (team ^. #name) </> repo) $ ls "."
+  logDebug $ "Remove file: " <> display (Text.intercalate " " $ map toTextIgnore paths)
+  shelly' $ chdir_p (workDir </> (team ^. #name)) $ rm_rf (fromText repo)
+  initRepoInGitHub info team problem
 
 pushForCI :: Team -> Problem -> Plant ()
 pushForCI team problem = do

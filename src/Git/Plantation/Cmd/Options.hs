@@ -30,6 +30,7 @@ type SubCmdFields =
    , "new_github_repo"  >: NewGitHubRepoCmd
    , "init_github_repo" >: InitGitHubRepoCmd
    , "init_ci"          >: InitCICmd
+   , "reset_repo"       >: ResetRepoCmd
    , "invite_member"    >: InviteMemberCmd
    ]
 
@@ -56,6 +57,11 @@ instance Run ("init_ci" >: InitCICmd) where
   run' _ = runRepoCmd $ \team problem -> do
     info <- Team.lookupRepo problem team `fromJustWithThrow` UndefinedTeamProblem team problem
     initProblemCI info team problem
+
+instance Run ("reset_repo" >: ResetRepoCmd) where
+  run' _ = runRepoCmd $ \team problem -> do
+    info <- Team.lookupRepo problem team `fromJustWithThrow` UndefinedTeamProblem team problem
+    resetRepo info team problem
 
 runRepoCmd :: (Team -> Problem -> Plant ()) -> Record RepoCmdFields -> Plant ()
 runRepoCmd act args = do
