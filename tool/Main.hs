@@ -41,10 +41,11 @@ options = hsequence
 
 subcmdParser :: Parser SubCmd
 subcmdParser = variantFrom
-    $ #new_repo         @= newRepoCmdParser    `withInfo` "Create repository for team."
-   <: #new_github_repo  @= singleRepoCmdParser `withInfo` "Create new repository for team in GitHub"
-   <: #init_github_repo @= singleRepoCmdParser `withInfo` "Init repository for team in GitHub"
-   <: #init_ci          @= singleRepoCmdParser `withInfo` "Init CI repository by team repository"
+    $ #new_repo         @= newRepoCmdParser      `withInfo` "Create repository for team."
+   <: #new_github_repo  @= singleRepoCmdParser   `withInfo` "Create new repository for team in GitHub"
+   <: #init_github_repo @= singleRepoCmdParser   `withInfo` "Init repository for team in GitHub"
+   <: #init_ci          @= singleRepoCmdParser   `withInfo` "Init CI repository by team repository"
+   <: #invite_member    @= inviteMemberCmdParser `withInfo` "Invite Member to Team Repository"
    <: nil
 
 newRepoCmdParser :: Parser NewRepoCmd
@@ -57,6 +58,13 @@ singleRepoCmdParser :: Parser (Record RepoCmdFields)
 singleRepoCmdParser = hsequence
     $ #repo <@=> strOption (long "repo" <> metavar "TEXT" <> help "Sets reopsitory that wont to controll.")
    <: #team <@=> strArgument (metavar "TEXT" <> help "Sets team that wont to controll.")
+   <: nil
+
+inviteMemberCmdParser :: Parser InviteMemberCmd
+inviteMemberCmdParser = hsequence
+    $ #team <@=> strArgument (metavar "TEXT" <> help "Sets team that wont to controll.")
+   <: #repo <@=> option (Just <$> str) (long "repo" <> value Nothing <> metavar "TEXT" <> help "Sets reopsitory that wont to controll.")
+   <: #user <@=> option (Just <$> str) (long "user" <> value Nothing <> metavar "TEXT" <> help "Sets user that wont to controll.")
    <: nil
 
 variantFrom ::

@@ -14,7 +14,7 @@ import qualified Data.Aeson.Text       as Json
 import           Data.Extensible
 import qualified Drone.Client          as Drone
 import           Git.Plantation.Config
-import           Git.Plantation.Data   (Problem, Team)
+import           Git.Plantation.Data   (Problem, Repo, Team, User)
 import qualified GitHub.Auth           as GitHub
 import qualified GitHub.Data           as GitHub
 import qualified RIO.Text.Lazy         as TL
@@ -62,6 +62,7 @@ mkLogMessage' message =
 data GitPlantException
   = UndefinedTeamProblem Team Problem
   | CreateRepoError GitHub.Error Team Problem
+  | InviteUserError GitHub.Error User Repo
   deriving (Typeable)
 
 instance Exception GitPlantException
@@ -76,3 +77,7 @@ instance Show GitPlantException where
       mkLogMessage'
         "can't create repository"
         (#team @= team <: #problem @= problem <: nil)
+    InviteUserError _err user repo ->
+      mkLogMessage'
+        "can't invite user to repository"
+        (#user @= user <: #repo @= repo <: nil)

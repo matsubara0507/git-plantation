@@ -6,13 +6,14 @@
 module Git.Plantation.Cmd.Options where
 
 import           RIO
-import qualified RIO.List                 as L
+import qualified RIO.List                  as L
 
 import           Data.Extensible
+import           Git.Plantation.Cmd.Member
 import           Git.Plantation.Cmd.Repo
 import           Git.Plantation.Cmd.Run
-import           Git.Plantation.Data      (Problem, Team)
-import qualified Git.Plantation.Data.Team as Team
+import           Git.Plantation.Data       (Problem, Team)
+import qualified Git.Plantation.Data.Team  as Team
 import           Git.Plantation.Env
 
 type Options = Record
@@ -29,6 +30,7 @@ type SubCmdFields =
    , "new_github_repo"  >: NewGitHubRepoCmd
    , "init_github_repo" >: InitGitHubRepoCmd
    , "init_ci"          >: InitCICmd
+   , "invite_member"    >: InviteMemberCmd
    ]
 
 instance Run ("new_repo" >: NewRepoCmd) where
@@ -62,3 +64,11 @@ runRepoCmd act args = do
   case (team, args ^. #repo) of
     (Nothing, _)       -> logError $ "team is not found: " <> display (args ^. #team)
     (Just team', name) -> actByRepoName act team' name
+
+instance Run ("invite_member" >: InviteMemberCmd) where
+  run' _ args = do
+    conf <- asks (view #config)
+    let team = L.find (\t -> t ^. #name == args ^. #team) $ conf ^. #teams
+    case team of
+      Nothing    -> logError $ "team is not found: " <> display (args ^. #team)
+      Just team' -> inviteMember args team'
