@@ -41,14 +41,22 @@ options = hsequence
 
 subcmdParser :: Parser SubCmd
 subcmdParser = variantFrom
-    $ #new_repo @= newRepoCmdParser `withInfo` "Create repository to team."
+    $ #new_repo         @= newRepoCmdParser    `withInfo` "Create repository for team."
+   <: #new_github_repo  @= singleRepoCmdParser `withInfo` "Create new repository for team in GitHub"
+   <: #init_github_repo @= singleRepoCmdParser `withInfo` "Init repository for team in GitHub"
+   <: #init_ci          @= singleRepoCmdParser `withInfo` "Init CI repository by team repository"
    <: nil
-
 
 newRepoCmdParser :: Parser NewRepoCmd
 newRepoCmdParser = hsequence
-    $ #repo   <@=> option (Just <$> str) (long "repo" <> value Nothing <> metavar "TEXT" <> help "Sets reopsitory that wont to controll.")
-   <: #team   <@=> strArgument (metavar "TEXT" <> help "Sets team that wont to controll.")
+    $ #repo <@=> option (Just <$> str) (long "repo" <> value Nothing <> metavar "TEXT" <> help "Sets reopsitory that wont to controll.")
+   <: #team <@=> strArgument (metavar "TEXT" <> help "Sets team that wont to controll.")
+   <: nil
+
+singleRepoCmdParser :: Parser (Record RepoCmdFields)
+singleRepoCmdParser = hsequence
+    $ #repo <@=> strOption (long "repo" <> metavar "TEXT" <> help "Sets reopsitory that wont to controll.")
+   <: #team <@=> strArgument (metavar "TEXT" <> help "Sets team that wont to controll.")
    <: nil
 
 variantFrom ::

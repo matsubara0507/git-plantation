@@ -12,7 +12,7 @@ import qualified RIO.Text                 as Text
 
 import           Data.Extensible
 import qualified Git.Cmd                  as Git
-import           Git.Plantation.Data      (Problem, Team)
+import           Git.Plantation.Data      (Problem, Repo, Team)
 import qualified Git.Plantation.Data.Team as Team
 import           Git.Plantation.Env
 import           GitHub.Data.Name         (mkName)
@@ -21,14 +21,23 @@ import           GitHub.Endpoints.Repos   (Auth (..))
 import qualified GitHub.Endpoints.Repos   as GitHub
 import           Shelly                   hiding (FilePath)
 
-type RepoFields =
-  '[ "repo"    >: Maybe Text
-   , "team"    >: Text
+type NewRepoCmd = Record
+  '[ "repo" >: Maybe Text
+   , "team" >: Text
    ]
 
-type NewRepoCmd = Record RepoFields
+type RepoCmdFields =
+  '[ "repo" >: Text
+   , "team" >: Text
+   ]
 
-actByRepoName :: (Team -> Problem -> Plant ()) -> Team -> Text -> Plant ()
+type NewGitHubRepoCmd = Record RepoCmdFields
+
+type InitGitHubRepoCmd = Record RepoCmdFields
+
+type InitCICmd = Record RepoCmdFields
+
+actByRepoName :: (Team -> Problem -> Plant a) -> Team -> Text -> Plant ()
 actByRepoName act team repoName = do
   conf <- asks (view #config)
   let problem = L.find (\p -> p ^. #repo_name == repoName) $ conf ^. #problems
@@ -42,12 +51,30 @@ createRepo team problem = do
     [ "create repo: ", displayShow $ problem ^. #repo_name
     , " to team: ", displayShow $ team ^. #name
     ]
+  info <- Team.lookupRepo problem team `fromJustWithThrow` UndefinedTeamProblem team problem
+  createRepoInGitHub info team problem
+  initRepoInGitHub info team problem
+  initProblemCI info team problem
 
-  teamRepo <- createRepoInGitHub team problem
-  token    <- getTextToken
-  workDir  <- asks (view #work)
+createRepoInGitHub :: Repo -> Team -> Problem -> Plant ()
+createRepoInGitHub info team problem = do
+  let (owner, repo) = splitRepoName $ info ^. #github
+  token <- asks (view #token)
+  logInfo $ "create repo in github: " <> displayShow (owner <> "/" <> repo)
+  resp <- liftIO $ GitHub.createOrganizationRepo'
+    (OAuth token)
+    (mkName Proxy owner)
+    (newRepo $ mkName Proxy repo)
+  case resp of
+    Left err -> logDebug (displayShow err) >> throwIO (CreateRepoError err team problem)
+    Right _  -> logInfo "Success: create repository in GitHub"
+
+initRepoInGitHub :: Repo -> Team -> Problem -> Plant ()
+initRepoInGitHub info team problem = do
+  token   <- getTextToken
+  workDir <- asks (view #work)
   let (owner, repo) = splitRepoName $ problem ^. #repo_name
-      teamUrl       = mconcat ["https://", token, "@github.com/", teamRepo, ".git"]
+      teamUrl       = mconcat ["https://", token, "@github.com/", info ^. #github, ".git"]
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
   shelly' $ chdir_p (workDir </> (team ^. #name)) (Git.cloneOrFetch teamUrl repo)
@@ -57,7 +84,14 @@ createRepo team problem = do
     forM_ (problem ^. #challenge_branches) $
       \branch -> Git.checkout ["-b", branch, "problem/" <> branch]
     Git.push $ "-u" : "origin" : problem ^. #challenge_branches
-  logInfo $ "Success: create repo as " <> displayShow teamRepo
+  logInfo $ "Success: create repo as " <> displayShow (info ^. #github)
+
+initProblemCI :: Repo -> Team -> Problem -> Plant ()
+initProblemCI info team problem = do
+  token   <- getTextToken
+  workDir <- asks (view #work)
+  let (owner, repo) = splitRepoName $ problem ^. #repo_name
+      problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
   shelly' $ chdir_p (workDir </> owner) (Git.cloneOrFetch problemUrl repo)
   shelly' $ chdir_p (workDir </> owner </> repo) $ do
@@ -65,26 +99,11 @@ createRepo team problem = do
     Git.existBranch (team ^. #name) >>= \case
       False -> Git.checkout ["-b", team ^. #name]
       True  -> Git.checkout [team ^. #name]
-    writefile ciFileName teamRepo
+    writefile ciFileName $ info ^. #github
     Git.add [ciFileName]
     Git.commit ["-m", "[CI SKIP] Add ci branch"]
     Git.push ["-u", "origin", team ^. #name]
   logInfo $ "Success: create ci branch in " <> displayShow problemUrl
-
-createRepoInGitHub :: Team -> Problem -> Plant Text
-createRepoInGitHub team problem = do
-  token <- asks (view #token)
-  (owner, repo) <- fromJustWithThrow
-    ((splitRepoName . view #github) <$> Team.lookupRepo problem team)
-    (UndefinedTeamProblem team problem)
-  logInfo $ "create repo in github: " <> displayShow (owner <> "/" <> repo)
-  resp <- liftIO $ GitHub.createOrganizationRepo'
-    (OAuth token)
-    (mkName Proxy owner)
-    (newRepo $ mkName Proxy repo)
-  case resp of
-    Left err -> logDebug (displayShow err) >> throwIO (CreateRepoError err team problem)
-    Right _  -> pure (owner <> "/" <> repo)
 
 pushForCI :: Team -> Problem -> Plant ()
 pushForCI team problem = do

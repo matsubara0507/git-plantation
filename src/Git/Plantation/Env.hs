@@ -37,7 +37,7 @@ fromJustWithThrow :: Exception e => Maybe a -> e -> Plant a
 fromJustWithThrow (Just x) _ = pure x
 fromJustWithThrow Nothing  e = throwIO e
 
-tryAnyWithLogError :: Plant () -> Plant ()
+tryAnyWithLogError :: Plant a -> Plant ()
 tryAnyWithLogError act = tryAny act >>= \case
   Left  e -> logError $ display e
   Right _ -> pure ()
