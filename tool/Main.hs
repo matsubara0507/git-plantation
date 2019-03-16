@@ -41,7 +41,8 @@ options = hsequence
 
 subcmdParser :: Parser SubCmd
 subcmdParser = variantFrom
-    $ #new_repo         @= newRepoCmdParser      `withInfo` "Create repository for team."
+    $ #verify           @= pure ()               `withInfo` "Verify config file."
+   <: #new_repo         @= newRepoCmdParser      `withInfo` "Create repository for team."
    <: #new_github_repo  @= singleRepoCmdParser   `withInfo` "Create new repository for team in GitHub"
    <: #init_github_repo @= singleRepoCmdParser   `withInfo` "Init repository for team in GitHub"
    <: #init_ci          @= singleRepoCmdParser   `withInfo` "Init CI repository by team repository"

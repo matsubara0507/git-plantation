@@ -12,6 +12,7 @@ import           Data.Extensible
 import           Git.Plantation.Cmd.Member
 import           Git.Plantation.Cmd.Repo
 import           Git.Plantation.Cmd.Run
+import           Git.Plantation.Config     as Config
 import           Git.Plantation.Data       (Problem, Team)
 import qualified Git.Plantation.Data.Team  as Team
 import           Git.Plantation.Env
@@ -26,13 +27,21 @@ type Options = Record
 type SubCmd = Variant SubCmdFields
 
 type SubCmdFields =
-  '[ "new_repo"         >: NewRepoCmd
+  '[ "verify"           >: ()
+   , "new_repo"         >: NewRepoCmd
    , "new_github_repo"  >: NewGitHubRepoCmd
    , "init_github_repo" >: InitGitHubRepoCmd
    , "init_ci"          >: InitCICmd
    , "reset_repo"       >: ResetRepoCmd
    , "invite_member"    >: InviteMemberCmd
    ]
+
+instance Run ("verify" >: ()) where
+  run' _ args = do
+    conf <- asks (view #config)
+    case Config.verify conf of
+      Left err -> logError $ "invalid config: " <> display err
+      Right _  -> logInfo "valid config"
 
 instance Run ("new_repo" >: NewRepoCmd) where
   run' _ args = do
