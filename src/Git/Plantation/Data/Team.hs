@@ -44,3 +44,7 @@ lookupRepo problem = lookupRepo' (problem ^. #repo_name)
 lookupRepo' :: Text -> Team -> Maybe Repo
 lookupRepo' repoName team =
   L.find (\repo -> repoName == repo ^. #problem) (team ^. #repos)
+
+lookupUser :: Text -> Team -> Maybe User
+lookupUser github team =
+  L.find (\user -> github == user ^. #github) (team ^. #member)

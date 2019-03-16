@@ -26,6 +26,9 @@ commit = command1_ "git" [] "commit"
 add :: [Text] -> Sh ()
 add = command1_ "git" [] "add"
 
+branch :: [Text] -> Sh ()
+branch = command1_ "git" [] "branch"
+
 cloneOrFetch :: Text -> Text -> Sh ()
 cloneOrFetch repoUrl repoName = do
   dir <- pwd

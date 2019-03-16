@@ -3,7 +3,7 @@ packages:
 - .
 extra-deps:
 - extensible-0.5
-- github-0.20
+- github-0.21
 - servant-github-webhook-0.4.1.0
 - github: matsubara0507/drone-haskell
   commit: aa6f5152dd9ea72cb48a32bdc58c91de2bdc21a9
