@@ -16,7 +16,7 @@ import           Git.Plantation.Data      (Problem, Repo, Team)
 import qualified Git.Plantation.Data.Team as Team
 import           Git.Plantation.Env
 import           GitHub.Data.Name         (mkName)
-import           GitHub.Data.Repos        (newRepo)
+import           GitHub.Data.Repos        (newRepo, newRepoPrivate)
 import           GitHub.Endpoints.Repos   (Auth (..))
 import qualified GitHub.Endpoints.Repos   as GitHub
 import           Shelly                   hiding (FilePath)
@@ -42,7 +42,7 @@ type ResetRepoCmd = Record RepoCmdFields
 actByRepoName :: (Team -> Problem -> Plant a) -> Team -> Text -> Plant ()
 actByRepoName act team repoName = do
   conf <- asks (view #config)
-  let problem = L.find (\p -> p ^. #repo_name == repoName) $ conf ^. #problems
+  let problem = L.find (\p -> p ^. #repo == repoName) $ conf ^. #problems
   case problem of
     Nothing       -> logError $ "repo is not found: " <> display repoName
     Just problem' -> tryAnyWithLogError $ act team problem'
@@ -50,7 +50,7 @@ actByRepoName act team repoName = do
 createRepo :: Team -> Problem -> Plant ()
 createRepo team problem = do
   logInfo $ mconcat
-    [ "create repo: ", displayShow $ problem ^. #repo_name
+    [ "create repo: ", displayShow $ problem ^. #repo
     , " to team: ", displayShow $ team ^. #name
     ]
   info <- Team.lookupRepo problem team `fromJustWithThrow` UndefinedTeamProblem team problem
@@ -60,23 +60,28 @@ createRepo team problem = do
 
 createRepoInGitHub :: Repo -> Team -> Problem -> Plant ()
 createRepoInGitHub info team problem = do
-  let (owner, repo) = splitRepoName $ info ^. #github
+  (owner, repo) <- splitRepoName <$> repoGithub info
   token <- asks (view #token)
   logInfo $ "create repo in github: " <> displayShow (owner <> "/" <> repo)
-  resp <- liftIO $ GitHub.createOrganizationRepo'
-    (OAuth token)
-    (mkName Proxy owner)
-    (newRepo $ mkName Proxy repo)
+  resp <- liftIO $ request owner (OAuth token)
+    ((newRepo $ mkName Proxy repo) { newRepoPrivate = Just (info ^. #private) })
   case resp of
     Left err -> logDebug (displayShow err) >> throwIO (CreateRepoError err team problem)
     Right _  -> logInfo "Success: create repository in GitHub"
+  where
+    request owner =
+      if Team.repoIsOrg info then
+        flip GitHub.createOrganizationRepo' (mkName Proxy owner)
+      else
+        GitHub.createRepo'
 
 initRepoInGitHub :: Repo -> Team -> Problem -> Plant ()
 initRepoInGitHub info team problem = do
   token   <- getTextToken
   workDir <- asks (view #work)
-  let (owner, repo) = splitRepoName $ problem ^. #repo_name
-      teamUrl       = mconcat ["https://", token, "@github.com/", info ^. #github, ".git"]
+  github  <- repoGithub info
+  let (owner, repo) = splitRepoName $ problem ^. #repo
+      teamUrl       = mconcat ["https://", token, "@github.com/", github, ".git"]
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
   shelly' $ chdir_p (workDir </> (team ^. #name)) (Git.cloneOrFetch teamUrl repo)
@@ -88,14 +93,15 @@ initRepoInGitHub info team problem = do
     forM_ (problem ^. #challenge_branches) $
       \branch -> Git.checkout ["-b", branch, "problem/" <> branch]
     Git.push $ "-f" : "-u" : "origin" : problem ^. #challenge_branches
-    Git.branch ["-D", "temp"]
-  logInfo $ "Success: create repo as " <> displayShow (info ^. #github)
+    errExit False $ Git.branch ["-D", "temp"]
+  logInfo $ "Success: create repo as " <> displayShow github
 
 initProblemCI :: Repo -> Team -> Problem -> Plant ()
 initProblemCI info team problem = do
   token   <- getTextToken
   workDir <- asks (view #work)
-  let (owner, repo) = splitRepoName $ problem ^. #repo_name
+  github  <- repoGithub info
+  let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
   shelly' $ chdir_p (workDir </> owner) (Git.cloneOrFetch problemUrl repo)
@@ -104,7 +110,7 @@ initProblemCI info team problem = do
     Git.existBranch (team ^. #name) >>= \case
       False -> Git.checkout ["-b", team ^. #name]
       True  -> Git.checkout [team ^. #name]
-    writefile ciFileName $ info ^. #github
+    writefile ciFileName github
     Git.add [ciFileName]
     Git.commit ["-m", "[CI SKIP] Add ci branch"]
     Git.push ["-u", "origin", team ^. #name]
@@ -113,7 +119,7 @@ initProblemCI info team problem = do
 resetRepo :: Repo -> Team -> Problem -> Plant ()
 resetRepo info team problem = do
   workDir <- asks (view #work)
-  let (_, repo) = splitRepoName $ problem ^. #repo_name
+  let (_, repo) = splitRepoName $ problem ^. #repo
   paths <- shelly' $ chdir_p (workDir </> (team ^. #name) </> repo) $ ls "."
   logDebug $ "Remove file: " <> display (Text.intercalate " " $ map toTextIgnore paths)
   shelly' $ chdir_p (workDir </> (team ^. #name)) $ rm_rf (fromText repo)
@@ -123,7 +129,7 @@ pushForCI :: Team -> Problem -> Plant ()
 pushForCI team problem = do
   token   <- getTextToken
   workDir <- asks (view #work)
-  let (owner, repo) = splitRepoName $ problem ^. #repo_name
+  let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
   shelly' $ chdir_p (workDir </> owner) (Git.cloneOrFetch problemUrl repo)
   shelly' $ chdir_p (workDir </> owner </> repo) $ do
@@ -141,6 +147,10 @@ getTextToken =
   Text.decodeUtf8' <$> asks (view #token) >>= \case
     Left  _ -> logError "cannot decode token to utf8." >> pure ""
     Right t -> pure t
+
+repoGithub :: Repo -> Plant Text
+repoGithub repo =
+  Team.repoGithubPath repo `fromJustWithThrow` InvalidRepoConfig repo
 
 ciFileName :: IsString s => s
 ciFileName = "REPOSITORY"

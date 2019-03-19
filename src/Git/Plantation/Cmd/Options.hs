@@ -37,7 +37,7 @@ type SubCmdFields =
    ]
 
 instance Run ("verify" >: ()) where
-  run' _ args = do
+  run' _ _ = do
     conf <- asks (view #config)
     case Config.verify conf of
       Left err -> logError $ "invalid config: " <> display err

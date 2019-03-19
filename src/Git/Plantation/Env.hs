@@ -63,6 +63,7 @@ data GitPlantException
   = UndefinedTeamProblem Team Problem
   | CreateRepoError GitHub.Error Team Problem
   | InviteUserError GitHub.Error User Repo
+  | InvalidRepoConfig Repo
   deriving (Typeable)
 
 instance Exception GitPlantException
@@ -81,3 +82,7 @@ instance Show GitPlantException where
       mkLogMessage'
         "can't invite user to repository"
         (#user @= user <: #repo @= repo <: nil)
+    InvalidRepoConfig repo ->
+      mkLogMessage'
+        "invalid repo config"
+        (#repo @= repo <: nil)

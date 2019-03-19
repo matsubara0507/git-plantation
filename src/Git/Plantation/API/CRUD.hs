@@ -52,11 +52,11 @@ getScores = do
 
 fetchBuilds :: Drone.Client c => c -> Problem -> Plant (Text, [Drone.Build])
 fetchBuilds client problem = do
-  let (owner, repo) = splitRepoName $ problem ^. #repo_name
+  let (owner, repo) = splitRepoName $ problem ^. #repo
   builds <- tryAny (runReq def $ Drone.getBuilds client owner repo Nothing) >>= \case
     Left err   -> logError (display err) >> pure []
     Right resp -> pure $ responseBody resp
-  pure (problem ^. #problem_name, builds)
+  pure (problem ^. #name, builds)
 
 mkScore :: [Problem] -> Map Text [Drone.Build] -> Team -> Score
 mkScore problems builds team
@@ -77,7 +77,7 @@ toStatus name builds
 
 toPoint :: [Status] -> Problem -> Int
 toPoint stats problem =
-  if elem (problem ^. #problem_name) $ map (view #problem) stats then
+  if elem (problem ^. #name) $ map (view #problem) stats then
     problem ^. #difficulty
   else
     0
