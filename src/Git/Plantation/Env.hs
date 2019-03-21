@@ -62,6 +62,7 @@ mkLogMessage' message =
 data GitPlantException
   = UndefinedTeamProblem Team Problem
   | CreateRepoError GitHub.Error Team Problem
+  | DeleteRepoError GitHub.Error Repo
   | InviteUserError GitHub.Error User Repo
   | InvalidRepoConfig Repo
   deriving (Typeable)
@@ -78,6 +79,10 @@ instance Show GitPlantException where
       mkLogMessage'
         "can't create repository"
         (#team @= team <: #problem @= problem <: nil)
+    DeleteRepoError _err repo ->
+      mkLogMessage'
+        "can't delete repository"
+        (#repo @= repo <: nil)
     InviteUserError _err user repo ->
       mkLogMessage'
         "can't invite user to repository"

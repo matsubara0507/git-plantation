@@ -33,6 +33,7 @@ type SubCmdFields =
    , "init_github_repo" >: InitGitHubRepoCmd
    , "init_ci"          >: InitCICmd
    , "reset_repo"       >: ResetRepoCmd
+   , "delete_repo"      >: DeleteRepoCmd
    , "invite_member"    >: InviteMemberCmd
    ]
 
@@ -79,6 +80,15 @@ runRepoCmd act args = do
   case (team, args ^. #repo) of
     (Nothing, _)       -> logError $ "team is not found: " <> display (args ^. #team)
     (Just team', name) -> actByRepoName act team' name
+
+instance Run ("delete_repo" >: DeleteRepoCmd) where
+  run' _ args = do
+    conf <- asks (view #config)
+    let team = L.find (\t -> t ^. #name == args ^. #team) $ conf ^. #teams
+    case (team, args ^. #repo) of
+      (Nothing, _)            -> logError $ "team is not found: " <> display (args ^. #team)
+      (Just team', Just name) -> actByRepoName deleteRepo team' name
+      (Just team', _)         -> forM_ (conf ^. #problems) (tryAnyWithLogError . deleteRepo team')
 
 instance Run ("invite_member" >: InviteMemberCmd) where
   run' _ args = do

@@ -26,6 +26,11 @@ type NewRepoCmd = Record
    , "team" >: Text
    ]
 
+type DeleteRepoCmd = Record
+  '[ "repo" >: Maybe Text
+   , "team" >: Text
+   ]
+
 type RepoCmdFields =
   '[ "repo" >: Text
    , "team" >: Text
@@ -114,7 +119,7 @@ initProblemCI info team problem = do
     Git.add [ciFileName]
     Git.commit ["-m", "[CI SKIP] Add ci branch"]
     Git.push ["-u", "origin", team ^. #name]
-  logInfo $ "Success: create ci branch in " <> displayShow problemUrl
+  logInfo $ "Success: create ci branch in " <> displayShow (problem ^. #repo)
 
 resetRepo :: Repo -> Team -> Problem -> Plant ()
 resetRepo info team problem = do
@@ -138,6 +143,42 @@ pushForCI team problem = do
     Git.commit ["--allow-empty", "-m", "Empty Commit!!"]
     Git.push ["origin", team ^. #name]
   logInfo "Success push"
+
+deleteRepo :: Team -> Problem -> Plant ()
+deleteRepo team problem = do
+  logInfo $ mconcat
+    [ "delete repo: ", displayShow $ problem ^. #repo
+    , " to team: ", displayShow $ team ^. #name
+    ]
+  info <- Team.lookupRepo problem team `fromJustWithThrow` UndefinedTeamProblem team problem
+  deleteRepoInGithub info
+  deleteProblemCI team problem
+
+deleteRepoInGithub :: Repo -> Plant ()
+deleteRepoInGithub info = do
+  (owner, repo) <- splitRepoName <$> repoGithub info
+  token <- asks (view #token)
+  logInfo $ "delete repo in github: " <> displayShow (owner <> "/" <> repo)
+  resp <- liftIO $ GitHub.deleteRepo (OAuth token) (mkName Proxy owner) (mkName Proxy repo)
+  case resp of
+    Left err -> logDebug (displayShow err) >> throwIO (DeleteRepoError err info)
+    Right _  -> logDebug "Success: delete repository in GitHub"
+
+deleteProblemCI :: Team -> Problem -> Plant ()
+deleteProblemCI team problem = do
+  token   <- getTextToken
+  workDir <- asks (view #work)
+  let (owner, repo) = splitRepoName $ problem ^. #repo
+      problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
+
+  shelly' $ chdir_p (workDir </> owner) (Git.cloneOrFetch problemUrl repo)
+  shelly' $ chdir_p (workDir </> owner </> repo) $ do
+    errExit False $ Git.push [ "--delete", "origin", team ^. #name]
+  logInfo $ "Success: delete ci branch in " <> displayShow (problem ^. #repo)
+
+
+-- |
+-- helper functions
 
 splitRepoName :: Text -> (Text, Text)
 splitRepoName = fmap (Text.drop 1) . Text.span(/= '/')
