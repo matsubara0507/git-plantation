@@ -24,7 +24,7 @@ import           Options.Applicative
 
 main :: IO ()
 main = do
-  _ <- loadFile defaultConfig
+  _ <- tryIO $ loadFile defaultConfig
   run =<< execParser opts
   where
     opts = info (options <**> version Meta.version <**> helper)

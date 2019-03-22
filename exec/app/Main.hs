@@ -27,7 +27,7 @@ import           System.Environment       (getEnv)
 
 main :: IO ()
 main = withGetOpt "[options] [config-file]" opts $ \r args -> do
-  _ <- loadFile defaultConfig
+  _ <- tryIO $ loadFile defaultConfig
   case (r ^. #version, listToMaybe args) of
     (True, _)      -> B.putStr $ fromString (showVersion version) <> "\n"
     (_, Nothing)   -> error "please input config file path."
