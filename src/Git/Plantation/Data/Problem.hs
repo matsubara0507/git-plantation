@@ -10,11 +10,12 @@ import           Data.Extensible
 import           Language.Elm
 
 type Problem = Record
-  '[ "problem_name" >: Text
-   , "repo_name" >: Text
-   , "difficulty" >: Int
+  '[ "id"                 >: Int
+   , "name"               >: Text
+   , "repo"               >: Text
+   , "difficulty"         >: Int
    , "challenge_branches" >: [Branch]
-   , "ci_branch" >: Branch
+   , "ci_branch"          >: Branch
    ]
 
 instance ElmType Problem where

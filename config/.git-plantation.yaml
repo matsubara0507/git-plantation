@@ -1,6 +1,7 @@
 problems:
-- problem_name: tutorial
-  repo_name: matsubara0507/git-challenge-tutorial
+- id: 1
+  name: tutorial
+  repo: matsubara0507/git-challenge-tutorial
   difficulty: 1
   challenge_branches:
   - readme
@@ -9,16 +10,18 @@ problems:
   - task-2
   ci_branch: ci
 
-- problem_name: is-order-an-adding
-  repo_name: matsubara0507/git-challenge-is-order-an-adding
+- id: 2
+  name: is-order-an-adding
+  repo: matsubara0507/git-challenge-is-order-an-adding
   difficulty: 1
   challenge_branches:
   - readme
   - master
   ci_branch: ci
 
-- problem_name: minesweeper
-  repo_name: matsubara0507/git-challenge-minesweeper
+- id: 3
+  name: minesweeper
+  repo: matsubara0507/git-challenge-minesweeper
   difficulty: 1
   challenge_branches:
   - readme
@@ -33,9 +36,15 @@ teams:
   - name: MATSUBARA Nobutada
     github: matsubara0507
   repos:
-  - problem: matsubara0507/git-challenge-tutorial
-    github: sample-hige/git-challenge-tutorial
-  - problem: matsubara0507/git-challenge-is-order-an-adding
-    github: sample-hige/git-challenge-is-order-an-adding
-  - problem: matsubara0507/git-challenge-minesweeper
-    github: sample-hige/git-challenge-minesweeper
+  - name: git-challenge-tutorial
+    org: sample-hige
+    problem: 1
+    private: false
+  - name: git-challenge-is-order-an-adding
+    org: sample-hige
+    problem: 2
+    private: false
+  - name: git-challenge-minesweeper
+    org: sample-hige
+    problem: 3
+    private: false

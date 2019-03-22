@@ -22,3 +22,6 @@ readConfig = Y.decodeFileThrow
 
 instance ElmType Config where
   toElmType = toElmRecordType "Config"
+
+verify :: Config -> Either Text Config
+verify = pure

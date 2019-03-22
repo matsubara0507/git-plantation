@@ -41,12 +41,12 @@ pushWebhook _ (_, ev) = do
     _                -> logError "Team or Problem not found."
 
 findTeamByPushEvent :: PushEvent -> [Team] -> Maybe Team
-findTeamByPushEvent ev = L.find (isJust . Team.lookupRepo' repoName)
+findTeamByPushEvent ev = L.find (isJust . Team.lookupRepoByGithub repoName)
   where
     repoName = whRepoFullName $ evPushRepository ev
 
 findProblemByPushEvent :: PushEvent -> [Problem] -> Maybe Problem
 findProblemByPushEvent ev =
-  L.find $ \p -> let (_, repo') = splitRepoName (p ^. #repo_name) in repo' == repo
+  L.find $ \p -> let (_, repo') = splitRepoName (p ^. #repo) in repo' == repo
   where
     repo = whRepoName $ evPushRepository ev

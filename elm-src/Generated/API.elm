@@ -8,8 +8,8 @@ import String
 
 
 type alias Team =
-    { name : String
-    , id : String
+    { id : String
+    , name : String
     , repos : List Repo
     , member : List User
     }
@@ -18,8 +18,8 @@ type alias Team =
 decodeTeam : Decoder Team
 decodeTeam =
     Json.Decode.succeed Team
-        |> required "name" string
         |> required "id" string
+        |> required "name" string
         |> required "repos" (list decodeRepo)
         |> required "member" (list decodeUser)
 
@@ -27,8 +27,8 @@ decodeTeam =
 encodeTeam : Team -> Json.Encode.Value
 encodeTeam x =
     Json.Encode.object
-        [ ( "name", Json.Encode.string x.name )
-        , ( "id", Json.Encode.string x.id )
+        [ ( "id", Json.Encode.string x.id )
+        , ( "name", Json.Encode.string x.name )
         , ( "repos", Json.Encode.list encodeRepo x.repos )
         , ( "member", Json.Encode.list encodeUser x.member )
         ]
@@ -56,29 +56,39 @@ encodeUser x =
 
 
 type alias Repo =
-    { problem : String
-    , github : String
+    { name : String
+    , owner : Maybe String
+    , org : Maybe String
+    , problem : Int
+    , private : Bool
     }
 
 
 decodeRepo : Decoder Repo
 decodeRepo =
     Json.Decode.succeed Repo
-        |> required "problem" string
-        |> required "github" string
+        |> required "name" string
+        |> required "owner" (maybe string)
+        |> required "org" (maybe string)
+        |> required "problem" int
+        |> required "private" bool
 
 
 encodeRepo : Repo -> Json.Encode.Value
 encodeRepo x =
     Json.Encode.object
-        [ ( "problem", Json.Encode.string x.problem )
-        , ( "github", Json.Encode.string x.github )
+        [ ( "name", Json.Encode.string x.name )
+        , ( "owner", (Maybe.withDefault Json.Encode.null << Maybe.map Json.Encode.string) x.owner )
+        , ( "org", (Maybe.withDefault Json.Encode.null << Maybe.map Json.Encode.string) x.org )
+        , ( "problem", Json.Encode.int x.problem )
+        , ( "private", Json.Encode.bool x.private )
         ]
 
 
 type alias Problem =
-    { problem_name : String
-    , repo_name : String
+    { id : Int
+    , name : String
+    , repo : String
     , difficulty : Int
     , challenge_branches : List String
     , ci_branch : String
@@ -88,8 +98,9 @@ type alias Problem =
 decodeProblem : Decoder Problem
 decodeProblem =
     Json.Decode.succeed Problem
-        |> required "problem_name" string
-        |> required "repo_name" string
+        |> required "id" int
+        |> required "name" string
+        |> required "repo" string
         |> required "difficulty" int
         |> required "challenge_branches" (list string)
         |> required "ci_branch" string
@@ -98,8 +109,9 @@ decodeProblem =
 encodeProblem : Problem -> Json.Encode.Value
 encodeProblem x =
     Json.Encode.object
-        [ ( "problem_name", Json.Encode.string x.problem_name )
-        , ( "repo_name", Json.Encode.string x.repo_name )
+        [ ( "id", Json.Encode.int x.id )
+        , ( "name", Json.Encode.string x.name )
+        , ( "repo", Json.Encode.string x.repo )
         , ( "difficulty", Json.Encode.int x.difficulty )
         , ( "challenge_branches", Json.Encode.list Json.Encode.string x.challenge_branches )
         , ( "ci_branch", Json.Encode.string x.ci_branch )

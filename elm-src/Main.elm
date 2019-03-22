@@ -107,8 +107,8 @@ viewHeader model =
 viewHeaderCol : API.Problem -> Html msg
 viewHeaderCol problem =
     th
-        [ id problem.problem_name, class "text-center p-2 f4", style "width" "100px" ]
-        [ text problem.problem_name ]
+        [ id problem.name, class "text-center p-2 f4", style "width" "100px" ]
+        [ text problem.name ]
 
 
 viewBody : Model -> List (Html msg)
@@ -145,7 +145,7 @@ viewStatus : List API.Status -> API.Problem -> Html msg
 viewStatus stats problem =
     let
         status =
-            List.find (\st -> st.problem == problem.problem_name) stats
+            List.find (\st -> st.problem == problem.name) stats
     in
     th
         [ class "text-center p-2" ]
