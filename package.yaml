@@ -60,22 +60,14 @@ library:
 executables:
   git-plantation-app:
     main:                Main.hs
-    source-dirs:         app
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
+    source-dirs:         exec/app
     dependencies:
     - git-plantation
     - gitrev
     - warp
   git-plantation-tool:
     main:                Main.hs
-    source-dirs:         tool
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
+    source-dirs:         exec/tool
     dependencies:
     - git-plantation
     - gitrev
