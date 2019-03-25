@@ -91,9 +91,11 @@ initRepoInGitHub info team problem = do
 
   shelly' $ chdir_p (workDir </> (team ^. #name)) (Git.cloneOrFetch teamUrl repo)
   shelly' $ chdir_p (workDir </> (team ^. #name) </> repo) $ do
-    Git.checkout [ "-b", "temp"]
+    Git.existBranch "temp" >>= \case
+      False -> Git.checkout ["-b", "temp"]
+      True  -> Git.checkout ["temp"]
     errExit False $ Git.branch $ "-D" : problem ^. #challenge_branches
-    Git.remote ["add", "problem", problemUrl]
+    errExit False $ Git.remote ["add", "problem", problemUrl]
     Git.fetch ["--all"]
     forM_ (problem ^. #challenge_branches) $
       \branch -> Git.checkout ["-b", branch, "problem/" <> branch]
