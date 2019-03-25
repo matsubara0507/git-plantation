@@ -45,6 +45,7 @@ subcmdParser = variantFrom
    <: #new_repo         @= newRepoCmdParser      `withInfo` "Create repository for team."
    <: #new_github_repo  @= singleRepoCmdParser   `withInfo` "Create new repository for team in GitHub"
    <: #init_github_repo @= singleRepoCmdParser   `withInfo` "Init repository for team in GitHub"
+   <: #setup_webhook    @= singleRepoCmdParser   `withInfo` "Setup GitHub Webhook to team repository"
    <: #init_ci          @= singleRepoCmdParser   `withInfo` "Init CI repository by team repository"
    <: #reset_repo       @= singleRepoCmdParser   `withInfo` "Reset repository for team"
    <: #delete_repo      @= deleteRepoCmdParser   `withInfo` "Delete repository for team."

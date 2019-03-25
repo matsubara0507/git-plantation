@@ -7,19 +7,24 @@
 module Git.Plantation.Cmd.Repo where
 
 import           RIO
-import qualified RIO.List                 as L
-import qualified RIO.Text                 as Text
+import qualified RIO.List                        as L
+import qualified RIO.Map                         as Map
+import qualified RIO.Text                        as Text
+import qualified RIO.Vector                      as V
 
 import           Data.Extensible
-import qualified Git.Cmd                  as Git
-import           Git.Plantation.Data      (Problem, Repo, Team)
-import qualified Git.Plantation.Data.Team as Team
+import qualified Git.Cmd                         as Git
+import           Git.Plantation.Data             (Problem, Repo, Team)
+import qualified Git.Plantation.Data.Team        as Team
 import           Git.Plantation.Env
-import           GitHub.Data.Name         (mkName)
-import           GitHub.Data.Repos        (newRepo, newRepoPrivate)
-import           GitHub.Endpoints.Repos   (Auth (..))
-import qualified GitHub.Endpoints.Repos   as GitHub
-import           Shelly                   hiding (FilePath)
+import           GitHub.Data.Name                (mkName)
+import           GitHub.Data.Repos               (newRepo, newRepoPrivate)
+import           GitHub.Data.Webhooks            (NewRepoWebhook (..),
+                                                  RepoWebhookEvent (..))
+import           GitHub.Endpoints.Repos          (Auth (..))
+import qualified GitHub.Endpoints.Repos          as GitHub
+import qualified GitHub.Endpoints.Repos.Webhooks as GitHub
+import           Shelly                          hiding (FilePath)
 
 type NewRepoCmd = Record
   '[ "repo" >: Maybe Text
@@ -39,6 +44,8 @@ type RepoCmdFields =
 type NewGitHubRepoCmd = Record RepoCmdFields
 
 type InitGitHubRepoCmd = Record RepoCmdFields
+
+type SetupWebhookCmd = Record RepoCmdFields
 
 type InitCICmd = Record RepoCmdFields
 
@@ -61,6 +68,7 @@ createRepo team problem = do
   info <- Team.lookupRepo problem team `fromJustWithThrow` UndefinedTeamProblem team problem
   createRepoInGitHub info team problem
   initRepoInGitHub info team problem
+  setupWebhook info
   initProblemCI info team problem
 
 createRepoInGitHub :: Repo -> Team -> Problem -> Plant ()
@@ -102,6 +110,25 @@ initRepoInGitHub info team problem = do
     Git.push $ "-f" : "-u" : "origin" : problem ^. #challenge_branches
     errExit False $ Git.branch ["-D", "temp"]
   logInfo $ "Success: create repo as " <> displayShow github
+
+setupWebhook :: Repo -> Plant ()
+setupWebhook info = do
+  (owner, repo) <- splitRepoName <$> repoGithub info
+  token         <- asks (view #token)
+  webhookUrl    <- asks (view #webhook)
+  logInfo $ "setup github webhook to repo: " <> displayShow (owner <> "/" <> repo)
+  resp <- liftIO $ GitHub.createRepoWebhook'
+    (OAuth token) (mkName Proxy owner) (mkName Proxy repo) (webhook webhookUrl)
+  case resp of
+    Left err -> logDebug (displayShow err) >> throwIO (SetupWebhookError err info)
+    Right _  -> logDebug "Success: setup GitHub Webhook to repository"
+  where
+    webhook url = NewRepoWebhook
+      { newRepoWebhookName   = "web"
+      , newRepoWebhookConfig = Map.fromList [("url", url), ("content_type", "json")]
+      , newRepoWebhookEvents = Just $ V.fromList [WebhookPushEvent]
+      , newRepoWebhookActive = Just True
+      }
 
 initProblemCI :: Repo -> Team -> Problem -> Plant ()
 initProblemCI info team problem = do
