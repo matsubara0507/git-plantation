@@ -16,4 +16,4 @@ docker:
 image:
   container:
     name: git-plantation-bin
-    base: fpco/ubuntu-with-libgmp
+    base: matsubara0507/ubuntu-for-haskell:git
