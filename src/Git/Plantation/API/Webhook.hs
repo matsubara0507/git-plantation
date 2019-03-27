@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TupleSections    #-}
 {-# LANGUAGE TypeOperators    #-}
 
 module Git.Plantation.API.Webhook where
@@ -32,21 +33,15 @@ pushWebhook :: RepoWebhookEvent -> ((), PushEvent) -> Plant ()
 pushWebhook _ (_, ev) = do
   logInfo $ "Hook Push Event: " <> displayShow ev
   config <- asks (view #config)
-  let team = findTeamByPushEvent ev $ config ^. #teams
-  logInfo $ "Team: " <> displayShow team
-  let problem = findProblemByPushEvent ev $ config ^. #problems
-  logInfo $ "Problem: " <> displayShow problem
-  case (team, problem) of
-    (Just t, Just p) -> pushForCI t p
-    _                -> logError "Team or Problem not found."
+  case findByPushEvent ev (config ^. #teams) (config ^. #problems) of
+    Just (team, problem) -> pushForCI team problem
+    Nothing              -> logError "team or problem is not found."
 
-findTeamByPushEvent :: PushEvent -> [Team] -> Maybe Team
-findTeamByPushEvent ev = L.find (isJust . Team.lookupRepoByGithub repoName)
+findByPushEvent :: PushEvent -> [Team] -> [Problem] -> Maybe (Team, Problem)
+findByPushEvent ev teams problems = do
+  (team, repo) <- join $ L.find isJust repos
+  problem      <- L.find (\p -> p ^. #id == repo ^. #problem) problems
+  pure (team, problem)
   where
+    repos    = map (\t -> (t,) <$> Team.lookupRepoByGithub repoName t) teams
     repoName = whRepoFullName $ evPushRepository ev
-
-findProblemByPushEvent :: PushEvent -> [Problem] -> Maybe Problem
-findProblemByPushEvent ev =
-  L.find $ \p -> let (_, repo') = splitRepoName (p ^. #repo) in repo' == repo
-  where
-    repo = whRepoName $ evPushRepository ev

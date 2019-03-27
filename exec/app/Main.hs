@@ -27,7 +27,7 @@ import           System.Environment       (getEnv)
 
 main :: IO ()
 main = withGetOpt "[options] [config-file]" opts $ \r args -> do
-  _ <- loadFile defaultConfig
+  _ <- tryIO $ loadFile defaultConfig
   case (r ^. #version, listToMaybe args) of
     (True, _)      -> B.putStr $ fromString (showVersion version) <> "\n"
     (_, Nothing)   -> error "please input config file path."
@@ -71,11 +71,12 @@ runServer opts config = do
   dPort   <- liftIO $ readMaybe  <$> getEnv "DRONE_PORT"
   let client = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
   withLogFunc logOpts $ \logger -> do
-    let env = #config @= config
-           <: #token  @= token
-           <: #work   @= (opts ^. #work)
-           <: #client @= Drone.HttpsClient client
-           <: #logger @= logger
+    let env = #config  @= config
+           <: #token   @= token
+           <: #work    @= (opts ^. #work)
+           <: #client  @= Drone.HttpsClient client
+           <: #webhook @= ""
+           <: #logger  @= logger
            <: nil :: Env
     B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
     Warp.run (opts ^. #port) $

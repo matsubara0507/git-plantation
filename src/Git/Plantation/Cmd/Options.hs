@@ -31,6 +31,7 @@ type SubCmdFields =
    , "new_repo"         >: NewRepoCmd
    , "new_github_repo"  >: NewGitHubRepoCmd
    , "init_github_repo" >: InitGitHubRepoCmd
+   , "setup_webhook"    >: SetupWebhookCmd
    , "init_ci"          >: InitCICmd
    , "reset_repo"       >: ResetRepoCmd
    , "delete_repo"      >: DeleteRepoCmd
@@ -62,6 +63,11 @@ instance Run ("init_github_repo" >: InitGitHubRepoCmd) where
   run' _ = runRepoCmd $ \team problem -> do
     info <- Team.lookupRepo problem team `fromJustWithThrow` UndefinedTeamProblem team problem
     initRepoInGitHub info team problem
+
+instance Run ("setup_webhook" >: SetupWebhookCmd) where
+  run' _ = runRepoCmd $ \team problem -> do
+    info <- Team.lookupRepo problem team `fromJustWithThrow` UndefinedTeamProblem team problem
+    setupWebhook info
 
 instance Run ("init_ci" >: InitCICmd) where
   run' _ = runRepoCmd $ \team problem -> do

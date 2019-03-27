@@ -23,11 +23,12 @@ import           Shelly                hiding (FilePath)
 type Plant = RIO Env
 
 type Env = Record
-  '[ "config" >: Config
-   , "token"  >: GitHub.Token
-   , "work"   >: FilePath
-   , "client" >: Drone.HttpsClient
-   , "logger" >: LogFunc
+  '[ "config"  >: Config
+   , "token"   >: GitHub.Token
+   , "work"    >: FilePath
+   , "client"  >: Drone.HttpsClient
+   , "webhook" >: Text
+   , "logger"  >: LogFunc
    ]
 
 instance HasLogFunc Env where
@@ -63,6 +64,7 @@ data GitPlantException
   = UndefinedTeamProblem Team Problem
   | CreateRepoError GitHub.Error Team Problem
   | DeleteRepoError GitHub.Error Repo
+  | SetupWebhookError GitHub.Error Repo
   | InviteUserError GitHub.Error User Repo
   | InvalidRepoConfig Repo
   deriving (Typeable)
@@ -82,6 +84,10 @@ instance Show GitPlantException where
     DeleteRepoError _err repo ->
       mkLogMessage'
         "can't delete repository"
+        (#repo @= repo <: nil)
+    SetupWebhookError _err repo ->
+      mkLogMessage'
+        "can't setup github webhook"
         (#repo @= repo <: nil)
     InviteUserError _err user repo ->
       mkLogMessage'
