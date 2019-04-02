@@ -28,17 +28,17 @@ import           Shelly                          hiding (FilePath)
 import qualified Shelly                          as S
 
 type NewRepoCmd = Record
-  '[ "repo" >: Maybe Text
+  '[ "repo" >: Maybe Int
    , "team" >: Text
    ]
 
 type DeleteRepoCmd = Record
-  '[ "repo" >: Maybe Text
+  '[ "repo" >: Maybe Int
    , "team" >: Text
    ]
 
 type RepoCmdFields =
-  '[ "repo" >: Text
+  '[ "repo" >: Int
    , "team" >: Text
    ]
 
@@ -52,12 +52,12 @@ type InitCICmd = Record RepoCmdFields
 
 type ResetRepoCmd = Record RepoCmdFields
 
-actByRepoName :: (Team -> Problem -> Plant a) -> Team -> Text -> Plant ()
-actByRepoName act team repoName = do
+actByProblemId :: (Team -> Problem -> Plant a) -> Team -> Int -> Plant ()
+actByProblemId act team pid = do
   conf <- asks (view #config)
-  let problem = L.find (\p -> p ^. #repo == repoName) $ conf ^. #problems
+  let problem = L.find (\p -> p ^. #id == pid) $ conf ^. #problems
   case problem of
-    Nothing       -> logError $ "repo is not found: " <> display repoName
+    Nothing       -> logError $ "repo is not found by problem id: " <> display pid
     Just problem' -> tryAnyWithLogError $ act team problem'
 
 createRepo :: Team -> Problem -> Plant ()
