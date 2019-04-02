@@ -169,6 +169,7 @@ encodeScore x =
 type alias Status =
     { problem : String
     , correct : Bool
+    , pending : Bool
     }
 
 
@@ -177,6 +178,7 @@ decodeStatus =
     Json.Decode.succeed Status
         |> required "problem" string
         |> required "correct" bool
+        |> required "pending" bool
 
 
 encodeStatus : Status -> Json.Encode.Value
@@ -184,6 +186,7 @@ encodeStatus x =
     Json.Encode.object
         [ ( "problem", Json.Encode.string x.problem )
         , ( "correct", Json.Encode.bool x.correct )
+        , ( "pending", Json.Encode.bool x.pending )
         ]
 
 

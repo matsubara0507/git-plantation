@@ -19,6 +19,7 @@ type Score = Record
 type Status = Record
   '[ "problem" >: Text
    , "correct" >: Bool
+   , "pending" >: Bool
    ]
 
 instance ElmType Score where
