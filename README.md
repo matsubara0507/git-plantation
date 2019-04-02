@@ -41,6 +41,7 @@ ref. `.env.template`
 - `DRONE_TOKEN` は Drone CI のトークン
 - `GH_TOKEN` は GitHub のトークン
 - `GH_SECRET` は GitHub Webhook のシークレットキー
+- `APP_SERVER` は `git-plantation-app` が動作してる URL (例: `https://example.com`)
 
 ### 3. Create team's repository in team
 
@@ -55,7 +56,7 @@ $ stack exec -- git-plantation-tool -c .git-plantation.yaml --work .temp new_rep
 run app:
 
 ```
-$ stack exec -- git-plantation-app --port 8080 --work ".temp" --verbose example/config.yaml
+$ stack exec -- git-plantation-app --port 8080 --work ".temp" --verbose .git-plantation.yaml
 ```
 
 ## Build with Docker
@@ -63,9 +64,10 @@ $ stack exec -- git-plantation-app --port 8080 --work ".temp" --verbose example/
 Define environment to `.env` from `.env.template`.
 
 ```
+$ stack test # ganerate elm code
 $ stack docker pull
 $ stack --docker --no-terminal build -j 1 Cabal # if `out of memory`
-$ stack test --docker
+$ stack --docker image container
 $ docker build -t git-plantation .
 $ docker run --rm -it -v `pwd`/config.yaml:/work/config.yaml -p 8080:8080 --env-file .env git-plantation
 ```
