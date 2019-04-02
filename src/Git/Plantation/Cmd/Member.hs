@@ -40,7 +40,7 @@ inviteUserToRepo user target = do
     (OAuth token)
     (mkName Proxy owner)
     (mkName Proxy repo)
-    (mkName Proxy github)
+    (mkName Proxy $ user ^. #github)
   case resp of
     Left err -> logDebug (displayShow err) >> throwIO (InviteUserError err user target)
     Right _  -> logInfo $ display (success github)
