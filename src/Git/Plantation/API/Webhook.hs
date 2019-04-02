@@ -41,7 +41,10 @@ findByPushEvent :: PushEvent -> [Team] -> [Problem] -> Maybe (Team, Problem)
 findByPushEvent ev teams problems = do
   (team, repo) <- join $ L.find isJust repos
   problem      <- L.find (\p -> p ^. #id == repo ^. #problem) problems
-  pure (team, problem)
+  if evPushRef ev == "refs/heads/" <> problem ^. #answer_branch then
+    pure (team, problem)
+  else
+    Nothing
   where
     repos    = map (\t -> (t,) <$> Team.lookupRepoByGithub repoName t) teams
     repoName = whRepoFullName $ evPushRepository ev

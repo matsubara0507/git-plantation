@@ -15,6 +15,7 @@ type Problem = Record
    , "repo"               >: Text
    , "difficulty"         >: Int
    , "challenge_branches" >: [Branch]
+   , "answer_branch"      >: Branch
    , "ci_branch"          >: Branch
    ]
 

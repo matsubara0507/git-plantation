@@ -11,6 +11,9 @@ clone = command1_ "git" [] "clone"
 fetch :: [Text] -> Sh ()
 fetch = command1_ "git" [] "fetch"
 
+pull :: [Text] -> Sh ()
+pull = command1_ "git" [] "pull"
+
 remote :: [Text] -> Sh ()
 remote = command1_ "git" [] "remote"
 

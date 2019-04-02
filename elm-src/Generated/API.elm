@@ -91,6 +91,7 @@ type alias Problem =
     , repo : String
     , difficulty : Int
     , challenge_branches : List String
+    , answer_branch : String
     , ci_branch : String
     }
 
@@ -103,6 +104,7 @@ decodeProblem =
         |> required "repo" string
         |> required "difficulty" int
         |> required "challenge_branches" (list string)
+        |> required "answer_branch" string
         |> required "ci_branch" string
 
 
@@ -114,6 +116,7 @@ encodeProblem x =
         , ( "repo", Json.Encode.string x.repo )
         , ( "difficulty", Json.Encode.int x.difficulty )
         , ( "challenge_branches", Json.Encode.list Json.Encode.string x.challenge_branches )
+        , ( "answer_branch", Json.Encode.string x.answer_branch )
         , ( "ci_branch", Json.Encode.string x.ci_branch )
         ]
 

@@ -54,14 +54,14 @@ subcmdParser = variantFrom
 
 newRepoCmdParser :: Parser NewRepoCmd
 newRepoCmdParser = hsequence
-    $ #repo <@=> option (Just <$> str) (long "repo" <> value Nothing <> metavar "TEXT" <> help "Sets reopsitory that wont to controll.")
-   <: #team <@=> strArgument (metavar "TEXT" <> help "Sets team that wont to controll.")
+    $ #repo <@=> option (Just <$> auto) (long "repo" <> value Nothing <> metavar "ID" <> help "Sets reopsitory that want to controll by problem id.")
+   <: #team <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
    <: nil
 
 singleRepoCmdParser :: Parser (Record RepoCmdFields)
 singleRepoCmdParser = hsequence
-    $ #repo <@=> strOption (long "repo" <> metavar "TEXT" <> help "Sets reopsitory that wont to controll.")
-   <: #team <@=> strArgument (metavar "TEXT" <> help "Sets team that wont to controll.")
+    $ #repo <@=> option auto (long "repo" <> metavar "ID" <> help "Sets reopsitory that want to controll by problem id.")
+   <: #team <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
    <: nil
 
 deleteRepoCmdParser :: Parser DeleteRepoCmd
@@ -69,9 +69,9 @@ deleteRepoCmdParser = newRepoCmdParser
 
 inviteMemberCmdParser :: Parser InviteMemberCmd
 inviteMemberCmdParser = hsequence
-    $ #team <@=> strArgument (metavar "TEXT" <> help "Sets team that wont to controll.")
-   <: #repo <@=> option (Just <$> auto) (long "repo" <> value Nothing <> metavar "ID" <> help "Sets reopsitory by problem id that wont to controll.")
-   <: #user <@=> option (Just <$> str) (long "user" <> value Nothing <> metavar "TEXT" <> help "Sets user that wont to controll.")
+    $ #team <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
+   <: #repo <@=> option (Just <$> auto) (long "repo" <> value Nothing <> metavar "ID" <> help "Sets reopsitory that want to controll by problem id.")
+   <: #user <@=> option (Just <$> str) (long "user" <> value Nothing <> metavar "TEXT" <> help "Sets user that want to controll.")
    <: nil
 
 variantFrom ::

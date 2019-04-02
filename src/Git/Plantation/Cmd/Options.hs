@@ -50,9 +50,9 @@ instance Run ("new_repo" >: NewRepoCmd) where
     conf <- asks (view #config)
     let team = L.find (\t -> t ^. #name == args ^. #team) $ conf ^. #teams
     case (team, args ^. #repo) of
-      (Nothing, _)            -> logError $ "team is not found: " <> display (args ^. #team)
-      (Just team', Just name) -> actByRepoName createRepo team' name
-      (Just team', _)         -> forM_ (conf ^. #problems) (tryAnyWithLogError . createRepo team')
+      (Nothing, _)           -> logError $ "team is not found: " <> display (args ^. #team)
+      (Just team', Just pid) -> actByProblemId createRepo team' pid
+      (Just team', _)        -> forM_ (conf ^. #problems) (tryAnyWithLogError . createRepo team')
 
 instance Run ("new_github_repo" >: NewGitHubRepoCmd) where
   run' _ = runRepoCmd $ \team problem -> do
@@ -84,8 +84,8 @@ runRepoCmd act args = do
   conf <- asks (view #config)
   let team = L.find (\t -> t ^. #name == args ^. #team) $ conf ^. #teams
   case (team, args ^. #repo) of
-    (Nothing, _)       -> logError $ "team is not found: " <> display (args ^. #team)
-    (Just team', name) -> actByRepoName act team' name
+    (Nothing, _)      -> logError $ "team is not found: " <> display (args ^. #team)
+    (Just team', pid) -> actByProblemId act team' pid
 
 instance Run ("delete_repo" >: DeleteRepoCmd) where
   run' _ args = do
@@ -93,7 +93,7 @@ instance Run ("delete_repo" >: DeleteRepoCmd) where
     let team = L.find (\t -> t ^. #name == args ^. #team) $ conf ^. #teams
     case (team, args ^. #repo) of
       (Nothing, _)            -> logError $ "team is not found: " <> display (args ^. #team)
-      (Just team', Just name) -> actByRepoName deleteRepo team' name
+      (Just team', Just pid) -> actByProblemId deleteRepo team' pid
       (Just team', _)         -> forM_ (conf ^. #problems) (tryAnyWithLogError . deleteRepo team')
 
 instance Run ("invite_member" >: InviteMemberCmd) where

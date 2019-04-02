@@ -25,19 +25,20 @@ import           GitHub.Endpoints.Repos          (Auth (..))
 import qualified GitHub.Endpoints.Repos          as GitHub
 import qualified GitHub.Endpoints.Repos.Webhooks as GitHub
 import           Shelly                          hiding (FilePath)
+import qualified Shelly                          as S
 
 type NewRepoCmd = Record
-  '[ "repo" >: Maybe Text
+  '[ "repo" >: Maybe Int
    , "team" >: Text
    ]
 
 type DeleteRepoCmd = Record
-  '[ "repo" >: Maybe Text
+  '[ "repo" >: Maybe Int
    , "team" >: Text
    ]
 
 type RepoCmdFields =
-  '[ "repo" >: Text
+  '[ "repo" >: Int
    , "team" >: Text
    ]
 
@@ -51,12 +52,12 @@ type InitCICmd = Record RepoCmdFields
 
 type ResetRepoCmd = Record RepoCmdFields
 
-actByRepoName :: (Team -> Problem -> Plant a) -> Team -> Text -> Plant ()
-actByRepoName act team repoName = do
+actByProblemId :: (Team -> Problem -> Plant a) -> Team -> Int -> Plant ()
+actByProblemId act team pid = do
   conf <- asks (view #config)
-  let problem = L.find (\p -> p ^. #repo == repoName) $ conf ^. #problems
+  let problem = L.find (\p -> p ^. #id == pid) $ conf ^. #problems
   case problem of
-    Nothing       -> logError $ "repo is not found: " <> display repoName
+    Nothing       -> logError $ "repo is not found by problem id: " <> display pid
     Just problem' -> tryAnyWithLogError $ act team problem'
 
 createRepo :: Team -> Problem -> Plant ()
@@ -91,14 +92,14 @@ createRepoInGitHub info team problem = do
 initRepoInGitHub :: Repo -> Team -> Problem -> Plant ()
 initRepoInGitHub info team problem = do
   token   <- getTextToken
-  workDir <- asks (view #work)
+  workDir <- getWorkDir team
   github  <- repoGithub info
   let (owner, repo) = splitRepoName $ problem ^. #repo
       teamUrl       = mconcat ["https://", token, "@github.com/", github, ".git"]
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
-  shelly' $ chdir_p (workDir </> (team ^. #name)) (Git.cloneOrFetch teamUrl repo)
-  shelly' $ chdir_p (workDir </> (team ^. #name) </> repo) $ do
+  shelly' $ chdir_p workDir (Git.cloneOrFetch teamUrl repo)
+  shelly' $ chdir_p (workDir </> repo) $ do
     Git.existBranch "temp" >>= \case
       False -> Git.checkout ["-b", "temp"]
       True  -> Git.checkout ["temp"]
@@ -115,17 +116,17 @@ setupWebhook :: Repo -> Plant ()
 setupWebhook info = do
   (owner, repo) <- splitRepoName <$> repoGithub info
   token         <- asks (view #token)
-  webhookUrl    <- asks (view #webhook)
+  webhookConfig <- asks (view #webhook)
   logInfo $ "setup github webhook to repo: " <> displayShow (owner <> "/" <> repo)
   resp <- liftIO $ GitHub.createRepoWebhook'
-    (OAuth token) (mkName Proxy owner) (mkName Proxy repo) (webhook webhookUrl)
+    (OAuth token) (mkName Proxy owner) (mkName Proxy repo) (webhook webhookConfig)
   case resp of
     Left err -> logDebug (displayShow err) >> throwIO (SetupWebhookError err info)
     Right _  -> logDebug "Success: setup GitHub Webhook to repository"
   where
-    webhook url = NewRepoWebhook
+    webhook conf = NewRepoWebhook
       { newRepoWebhookName   = "web"
-      , newRepoWebhookConfig = Map.fromList [("url", url), ("content_type", "json")]
+      , newRepoWebhookConfig = Map.fromList conf
       , newRepoWebhookEvents = Just $ V.fromList [WebhookPushEvent]
       , newRepoWebhookActive = Just True
       }
@@ -133,14 +134,15 @@ setupWebhook info = do
 initProblemCI :: Repo -> Team -> Problem -> Plant ()
 initProblemCI info team problem = do
   token   <- getTextToken
-  workDir <- asks (view #work)
+  workDir <- getWorkDir team
   github  <- repoGithub info
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
-  shelly' $ chdir_p (workDir </> owner) (Git.cloneOrFetch problemUrl repo)
-  shelly' $ chdir_p (workDir </> owner </> repo) $ do
+  shelly' $ chdir_p workDir (Git.cloneOrFetch problemUrl repo)
+  shelly' $ chdir_p (workDir </> repo) $ do
     Git.checkout [problem ^. #ci_branch]
+    Git.pull []
     Git.existBranch (team ^. #name) >>= \case
       False -> Git.checkout ["-b", team ^. #name]
       True  -> Git.checkout [team ^. #name]
@@ -152,23 +154,23 @@ initProblemCI info team problem = do
 
 resetRepo :: Repo -> Team -> Problem -> Plant ()
 resetRepo info team problem = do
-  workDir <- asks (view #work)
+  workDir <- getWorkDir team
   let (_, repo) = splitRepoName $ problem ^. #repo
-  paths <- shelly' $ chdir_p (workDir </> (team ^. #name) </> repo) $ ls "."
+  paths <- shelly' $ chdir_p (workDir </> repo) $ ls "."
   logDebug $ "Remove file: " <> display (Text.intercalate " " $ map toTextIgnore paths)
-  shelly' $ chdir_p (workDir </> (team ^. #name)) $ rm_rf (fromText repo)
+  shelly' $ chdir_p workDir $ rm_rf (fromText repo)
   initRepoInGitHub info team problem
 
 pushForCI :: Team -> Problem -> Plant ()
 pushForCI team problem = do
   token   <- getTextToken
-  workDir <- asks (view #work)
+  workDir <- getWorkDir team
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
-  shelly' $ chdir_p (workDir </> owner) (Git.cloneOrFetch problemUrl repo)
-  shelly' $ chdir_p (workDir </> owner </> repo) $ do
-    Git.fetch []
+  shelly' $ chdir_p workDir (Git.cloneOrFetch problemUrl repo)
+  shelly' $ chdir_p (workDir </> repo) $ do
     Git.checkout [team ^. #name]
+    Git.pull []
     Git.commit ["--allow-empty", "-m", "Empty Commit!!"]
     Git.push ["origin", team ^. #name]
   logInfo "Success push"
@@ -196,12 +198,12 @@ deleteRepoInGithub info = do
 deleteProblemCI :: Team -> Problem -> Plant ()
 deleteProblemCI team problem = do
   token   <- getTextToken
-  workDir <- asks (view #work)
+  workDir <- getWorkDir team
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
-  shelly' $ chdir_p (workDir </> owner) (Git.cloneOrFetch problemUrl repo)
-  shelly' $ chdir_p (workDir </> owner </> repo) $ do
+  shelly' $ chdir_p workDir (Git.cloneOrFetch problemUrl repo)
+  shelly' $ chdir_p (workDir </> repo) $ do
     errExit False $ Git.push [ "--delete", "origin", team ^. #name]
   logInfo $ "Success: delete ci branch in " <> displayShow (problem ^. #repo)
 
@@ -224,3 +226,8 @@ repoGithub repo =
 
 ciFileName :: IsString s => s
 ciFileName = "REPOSITORY"
+
+getWorkDir :: Team -> Plant S.FilePath
+getWorkDir team = do
+  base <- asks (view #work)
+  pure $ base </> (team ^. #name)

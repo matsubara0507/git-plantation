@@ -75,7 +75,7 @@ runServer opts config = do
            <: #token   @= token
            <: #work    @= (opts ^. #work)
            <: #client  @= Drone.HttpsClient client
-           <: #webhook @= ""
+           <: #webhook @= mempty
            <: #logger  @= logger
            <: nil :: Env
     B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"

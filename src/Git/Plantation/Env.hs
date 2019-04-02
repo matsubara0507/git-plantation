@@ -27,9 +27,18 @@ type Env = Record
    , "token"   >: GitHub.Token
    , "work"    >: FilePath
    , "client"  >: Drone.HttpsClient
-   , "webhook" >: Text
+   , "webhook" >: WebhookConfig
    , "logger"  >: LogFunc
    ]
+
+type WebhookConfig = [(Text, Text)]
+
+mkWebhookConf :: Text -> Text -> WebhookConfig
+mkWebhookConf url secret =
+  [ ("url", url)
+  , ("content_type", "json")
+  , ("secret", secret)
+  ]
 
 instance HasLogFunc Env where
   logFuncL = lens (view #logger) (\x y -> x & #logger `set` y)
