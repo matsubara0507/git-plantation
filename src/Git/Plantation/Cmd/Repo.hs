@@ -25,6 +25,7 @@ import           GitHub.Endpoints.Repos          (Auth (..))
 import qualified GitHub.Endpoints.Repos          as GitHub
 import qualified GitHub.Endpoints.Repos.Webhooks as GitHub
 import           Shelly                          hiding (FilePath)
+import qualified Shelly                          as S
 
 type NewRepoCmd = Record
   '[ "repo" >: Maybe Text
@@ -91,14 +92,14 @@ createRepoInGitHub info team problem = do
 initRepoInGitHub :: Repo -> Team -> Problem -> Plant ()
 initRepoInGitHub info team problem = do
   token   <- getTextToken
-  workDir <- asks (view #work)
+  workDir <- getWorkDir team
   github  <- repoGithub info
   let (owner, repo) = splitRepoName $ problem ^. #repo
       teamUrl       = mconcat ["https://", token, "@github.com/", github, ".git"]
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
-  shelly' $ chdir_p (workDir </> (team ^. #name)) (Git.cloneOrFetch teamUrl repo)
-  shelly' $ chdir_p (workDir </> (team ^. #name) </> repo) $ do
+  shelly' $ chdir_p workDir (Git.cloneOrFetch teamUrl repo)
+  shelly' $ chdir_p (workDir </> repo) $ do
     Git.existBranch "temp" >>= \case
       False -> Git.checkout ["-b", "temp"]
       True  -> Git.checkout ["temp"]
@@ -133,13 +134,13 @@ setupWebhook info = do
 initProblemCI :: Repo -> Team -> Problem -> Plant ()
 initProblemCI info team problem = do
   token   <- getTextToken
-  workDir <- asks (view #work)
+  workDir <- getWorkDir team
   github  <- repoGithub info
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
-  shelly' $ chdir_p (workDir </> owner) (Git.cloneOrFetch problemUrl repo)
-  shelly' $ chdir_p (workDir </> owner </> repo) $ do
+  shelly' $ chdir_p workDir (Git.cloneOrFetch problemUrl repo)
+  shelly' $ chdir_p (workDir </> repo) $ do
     Git.checkout [problem ^. #ci_branch]
     Git.pull []
     Git.existBranch (team ^. #name) >>= \case
@@ -153,21 +154,21 @@ initProblemCI info team problem = do
 
 resetRepo :: Repo -> Team -> Problem -> Plant ()
 resetRepo info team problem = do
-  workDir <- asks (view #work)
+  workDir <- getWorkDir team
   let (_, repo) = splitRepoName $ problem ^. #repo
-  paths <- shelly' $ chdir_p (workDir </> (team ^. #name) </> repo) $ ls "."
+  paths <- shelly' $ chdir_p (workDir </> repo) $ ls "."
   logDebug $ "Remove file: " <> display (Text.intercalate " " $ map toTextIgnore paths)
-  shelly' $ chdir_p (workDir </> (team ^. #name)) $ rm_rf (fromText repo)
+  shelly' $ chdir_p workDir $ rm_rf (fromText repo)
   initRepoInGitHub info team problem
 
 pushForCI :: Team -> Problem -> Plant ()
 pushForCI team problem = do
   token   <- getTextToken
-  workDir <- asks (view #work)
+  workDir <- getWorkDir team
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
-  shelly' $ chdir_p (workDir </> owner) (Git.cloneOrFetch problemUrl repo)
-  shelly' $ chdir_p (workDir </> owner </> repo) $ do
+  shelly' $ chdir_p workDir (Git.cloneOrFetch problemUrl repo)
+  shelly' $ chdir_p (workDir </> repo) $ do
     Git.checkout [team ^. #name]
     Git.pull []
     Git.commit ["--allow-empty", "-m", "Empty Commit!!"]
@@ -197,12 +198,12 @@ deleteRepoInGithub info = do
 deleteProblemCI :: Team -> Problem -> Plant ()
 deleteProblemCI team problem = do
   token   <- getTextToken
-  workDir <- asks (view #work)
+  workDir <- getWorkDir team
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
-  shelly' $ chdir_p (workDir </> owner) (Git.cloneOrFetch problemUrl repo)
-  shelly' $ chdir_p (workDir </> owner </> repo) $ do
+  shelly' $ chdir_p workDir (Git.cloneOrFetch problemUrl repo)
+  shelly' $ chdir_p (workDir </> repo) $ do
     errExit False $ Git.push [ "--delete", "origin", team ^. #name]
   logInfo $ "Success: delete ci branch in " <> displayShow (problem ^. #repo)
 
@@ -225,3 +226,8 @@ repoGithub repo =
 
 ciFileName :: IsString s => s
 ciFileName = "REPOSITORY"
+
+getWorkDir :: Team -> Plant S.FilePath
+getWorkDir team = do
+  base <- asks (view #work)
+  pure $ base </> (team ^. #name)
