@@ -141,6 +141,7 @@ initProblemCI info team problem = do
   shelly' $ chdir_p (workDir </> owner) (Git.cloneOrFetch problemUrl repo)
   shelly' $ chdir_p (workDir </> owner </> repo) $ do
     Git.checkout [problem ^. #ci_branch]
+    Git.pull []
     Git.existBranch (team ^. #name) >>= \case
       False -> Git.checkout ["-b", team ^. #name]
       True  -> Git.checkout [team ^. #name]
@@ -167,8 +168,8 @@ pushForCI team problem = do
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
   shelly' $ chdir_p (workDir </> owner) (Git.cloneOrFetch problemUrl repo)
   shelly' $ chdir_p (workDir </> owner </> repo) $ do
-    Git.fetch []
     Git.checkout [team ^. #name]
+    Git.pull []
     Git.commit ["--allow-empty", "-m", "Empty Commit!!"]
     Git.push ["origin", team ^. #name]
   logInfo "Success push"
