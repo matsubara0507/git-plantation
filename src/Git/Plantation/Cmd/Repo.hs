@@ -116,17 +116,17 @@ setupWebhook :: Repo -> Plant ()
 setupWebhook info = do
   (owner, repo) <- splitRepoName <$> repoGithub info
   token         <- asks (view #token)
-  webhookUrl    <- asks (view #webhook)
+  webhookConfig <- asks (view #webhook)
   logInfo $ "setup github webhook to repo: " <> displayShow (owner <> "/" <> repo)
   resp <- liftIO $ GitHub.createRepoWebhook'
-    (OAuth token) (mkName Proxy owner) (mkName Proxy repo) (webhook webhookUrl)
+    (OAuth token) (mkName Proxy owner) (mkName Proxy repo) (webhook webhookConfig)
   case resp of
     Left err -> logDebug (displayShow err) >> throwIO (SetupWebhookError err info)
     Right _  -> logDebug "Success: setup GitHub Webhook to repository"
   where
-    webhook url = NewRepoWebhook
+    webhook conf = NewRepoWebhook
       { newRepoWebhookName   = "web"
-      , newRepoWebhookConfig = Map.fromList [("url", url), ("content_type", "json")]
+      , newRepoWebhookConfig = Map.fromList conf
       , newRepoWebhookEvents = Just $ V.fromList [WebhookPushEvent]
       , newRepoWebhookActive = Just True
       }

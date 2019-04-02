@@ -9,7 +9,6 @@ module Git.Plantation.Cmd
     ) where
 
 import           RIO
-import qualified RIO.Text                   as Text
 
 import           Data.Extensible
 import qualified Drone.Client               as Drone
@@ -18,23 +17,23 @@ import           Git.Plantation.Cmd.Options as X
 import           Git.Plantation.Cmd.Repo    as X
 import           Git.Plantation.Cmd.Run     as X
 import           Git.Plantation.Config      (readConfig)
-import           System.Environment         (getEnv, lookupEnv)
+import           Git.Plantation.Env         (mkWebhookConf)
+import           System.Environment         (getEnv)
 
 run :: MonadUnliftIO m => Options -> m ()
 run opts = do
   config  <- readConfig (opts ^. #config)
   logOpts <- logOptionsHandle stdout (opts ^. #verbose)
   token   <- liftIO $ fromString <$> getEnv "GH_TOKEN"
-  appHost <- liftIO $ fromString <$> getEnv "APP_HOST"
-  appPort <- liftIO $ maybe "" fromString <$> lookupEnv "APP_PORT"
+  secret  <- liftIO $ fromString <$> getEnv "GH_SECRET"
+  appUrl  <- liftIO $ fromString <$> getEnv "APP_SERVER"
   withLogFunc logOpts $ \logger -> do
     let client = #host @= "" <: #port @= Nothing <: #token @= "" <: nil
-        webhookUrl = mconcat ["http://", appHost, if Text.null appPort then "" else ":", appPort, "/api"]
         env = #config  @= config
            <: #token   @= token
            <: #work    @= opts ^. #work
            <: #client  @= Drone.HttpsClient client
-           <: #webhook @= webhookUrl
+           <: #webhook @= mkWebhookConf (appUrl <> "/hook") secret
            <: #logger  @= logger
            <: nil
     runRIO env $ matchField
