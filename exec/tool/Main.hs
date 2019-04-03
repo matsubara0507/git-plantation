@@ -18,7 +18,7 @@ import           Data.Extensible
 import           Data.Version         (Version)
 import qualified Data.Version         as Version
 import           Development.GitRev
-import           GHC.TypeLits
+import           GHC.TypeLits         hiding (Mod)
 import           Git.Plantation.Cmd
 import           Options.Applicative
 
@@ -54,8 +54,8 @@ subcmdParser = variantFrom
 
 newRepoCmdParser :: Parser NewRepoCmd
 newRepoCmdParser = hsequence
-    $ #repo <@=> option (Just <$> auto) (long "repo" <> value Nothing <> metavar "ID" <> help "Sets reopsitory that want to controll by problem id.")
-   <: #team <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
+    $ #repos <@=> option comma (long "repos" <> value [] <> metavar "IDS" <> help "Sets reopsitory that want to controll by problem id.")
+   <: #team  <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
    <: nil
 
 singleRepoCmdParser :: Parser (Record RepoCmdFields)
@@ -69,9 +69,9 @@ deleteRepoCmdParser = newRepoCmdParser
 
 inviteMemberCmdParser :: Parser InviteMemberCmd
 inviteMemberCmdParser = hsequence
-    $ #team <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
-   <: #repo <@=> option (Just <$> auto) (long "repo" <> value Nothing <> metavar "ID" <> help "Sets reopsitory that want to controll by problem id.")
-   <: #user <@=> option (Just <$> str) (long "user" <> value Nothing <> metavar "TEXT" <> help "Sets user that want to controll.")
+    $ #team  <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
+   <: #repos <@=> option comma (long "repos" <> value [] <> metavar "ID" <> help "Sets reopsitory that want to controll by problem id.")
+   <: #user  <@=> option (Just <$> str) (long "user" <> value Nothing <> metavar "TEXT" <> help "Sets user that want to controll.")
    <: nil
 
 variantFrom ::
@@ -85,6 +85,11 @@ variantFrom = subparser . subcmdVariant
 instance Wrapper ParserInfo where
   type Repr ParserInfo a = ParserInfo a
   _Wrapper = id
+
+-- |
+-- support `--hoge 1,2,3`
+comma :: Read a => ReadM [a]
+comma = maybeReader (\s -> readMaybe $ "[" ++ s ++ "]")
 
 withInfo :: Parser a -> String -> ParserInfo a
 withInfo opts = info (helper <*> opts) . progDesc

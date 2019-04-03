@@ -28,13 +28,13 @@ import           Shelly                          hiding (FilePath)
 import qualified Shelly                          as S
 
 type NewRepoCmd = Record
-  '[ "repo" >: Maybe Int
-   , "team" >: Text
+  '[ "repos" >: [Int]
+   , "team"  >: Text
    ]
 
 type DeleteRepoCmd = Record
-  '[ "repo" >: Maybe Int
-   , "team" >: Text
+  '[ "repos" >: [Int]
+   , "team"  >: Text
    ]
 
 type RepoCmdFields =

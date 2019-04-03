@@ -18,17 +18,18 @@ import           GitHub.Endpoints.Repos               (Auth (..))
 import qualified GitHub.Endpoints.Repos.Collaborators as GitHub
 
 type InviteMemberCmd = Record
-  '[ "team" >: Text
-   , "repo" >: Maybe Int
-   , "user" >: Maybe Text
+  '[ "team"  >: Text
+   , "repos" >: [Int]
+   , "user"  >: Maybe Text
    ]
 
 inviteMember :: InviteMemberCmd -> Team -> Plant ()
-inviteMember args team =
-  forM_ repos $ \repo -> forM_ member $ \user ->
-    tryAnyWithLogError $ inviteUserToRepo user repo
+inviteMember args team = case args ^. #repos of
+  [] -> forM_ (team ^. #repos) $ \repo -> forM_ member $ invite repo
+  _  -> forM_ repos            $ \repo -> forM_ member $ invite repo
   where
-    repos  = maybe (team ^. #repos)  (: []) $ flip lookupRepoByProblemId team =<< args ^. #repo
+    invite repo user = tryAnyWithLogError $ inviteUserToRepo user repo
+    repos  = catMaybes $ flip lookupRepoByProblemId team <$> args ^. #repos
     member = maybe (team ^. #member) (: []) $ flip lookupUser team =<< args ^. #user
 
 inviteUserToRepo :: User -> Repo -> Plant ()
