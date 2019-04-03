@@ -6,6 +6,7 @@
 module Git.Plantation.API.CRUD where
 
 import           RIO
+import qualified RIO.List             as L
 import qualified RIO.Map              as Map
 
 import           Data.Default.Class
@@ -78,7 +79,6 @@ toStatus name builds
 
 toPoint :: [Status] -> Problem -> Int
 toPoint stats problem =
-  if elem (problem ^. #name) $ map (view #problem) stats then
-    problem ^. #difficulty
-  else
-    0
+  case L.find (\s -> s ^. #problem == problem ^. #name) stats of
+    Just s | s ^. #correct -> problem ^. #difficulty
+    _                      -> 0
