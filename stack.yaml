@@ -5,7 +5,7 @@ extra-deps:
 - extensible-0.5
 - servant-github-webhook-0.4.1.0
 - github: matsubara0507/github
-  commit: 472e10b7bb096fa3f8917a5ab1cb45513f832140
+  commit: b0c8d71701a42bff143b33ac1067f5818a9804ce
 - github: matsubara0507/drone-haskell
   commit: aa6f5152dd9ea72cb48a32bdc58c91de2bdc21a9
 - github: matsubara0507/elm-export
