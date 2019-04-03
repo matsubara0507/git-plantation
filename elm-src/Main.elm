@@ -156,14 +156,17 @@ viewStatus stats problem =
 
 statBadge : Maybe API.Status -> Html msg
 statBadge status =
-    case Maybe.map .correct status of
-        Nothing ->
+    case ( Maybe.map .correct status, Maybe.map .pending status ) of
+        ( Nothing, _ ) ->
             span [ class "Label Label--gray-darker" ] [ text "未提出" ]
 
-        Just False ->
+        ( _, Just True ) ->
+            span [ class "Label bg-yellow" ] [ text "採点中" ]
+
+        ( Just False, _ ) ->
             span [ class "Label bg-red" ] [ text "不正解" ]
 
-        Just True ->
+        ( Just True, _ ) ->
             span [ class "Label bg-green" ] [ text "正解" ]
 
 
