@@ -28,13 +28,13 @@ import           Shelly                          hiding (FilePath)
 import qualified Shelly                          as S
 
 type NewRepoCmd = Record
-  '[ "repo" >: Maybe Int
-   , "team" >: Text
+  '[ "repos" >: [Int]
+   , "team"  >: Text
    ]
 
 type DeleteRepoCmd = Record
-  '[ "repo" >: Maybe Int
-   , "team" >: Text
+  '[ "repos" >: [Int]
+   , "team"  >: Text
    ]
 
 type RepoCmdFields =
@@ -95,11 +95,12 @@ initRepoInGitHub info team problem = do
   workDir <- getWorkDir team
   github  <- repoGithub info
   let (owner, repo) = splitRepoName $ problem ^. #repo
+      (_, teamRepo) = splitRepoName github
       teamUrl       = mconcat ["https://", token, "@github.com/", github, ".git"]
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
-  shelly' $ chdir_p workDir (Git.cloneOrFetch teamUrl repo)
-  shelly' $ chdir_p (workDir </> repo) $ do
+  shelly' $ chdir_p workDir (Git.cloneOrFetch teamUrl teamRepo)
+  shelly' $ chdir_p (workDir </> teamRepo) $ do
     Git.existBranch "temp" >>= \case
       False -> Git.checkout ["-b", "temp"]
       True  -> Git.checkout ["temp"]
@@ -143,13 +144,12 @@ initProblemCI info team problem = do
   shelly' $ chdir_p (workDir </> repo) $ do
     Git.checkout [problem ^. #ci_branch]
     Git.pull []
-    Git.existBranch (team ^. #name) >>= \case
-      False -> Git.checkout ["-b", team ^. #name]
-      True  -> Git.checkout [team ^. #name]
+    errExit False $ Git.branch ["-D", team ^. #name]
+    Git.checkout ["-b", team ^. #name]
     writefile ciFileName github
     Git.add [ciFileName]
     Git.commit ["-m", "[CI SKIP] Add ci branch"]
-    Git.push ["-u", "origin", team ^. #name]
+    Git.push ["-f", "-u", "origin", team ^. #name]
   logInfo $ "Success: create ci branch in " <> displayShow (problem ^. #repo)
 
 resetRepo :: Repo -> Team -> Problem -> Plant ()

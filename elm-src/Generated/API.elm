@@ -1,4 +1,4 @@
-module Generated.API exposing (Config, Problem, Repo, Score, Status, Team, User, decodeConfig, decodeProblem, decodeRepo, decodeScore, decodeStatus, decodeTeam, decodeUser, encodeConfig, encodeProblem, encodeRepo, encodeScore, encodeStatus, encodeTeam, encodeUser, getApiProblems, getApiScores, getApiTeams)
+module Generated.API exposing (Config, Link, Problem, Repo, Score, Status, Team, User, decodeConfig, decodeLink, decodeProblem, decodeRepo, decodeScore, decodeStatus, decodeTeam, decodeUser, encodeConfig, encodeLink, encodeProblem, encodeRepo, encodeScore, encodeStatus, encodeTeam, encodeUser, getApiProblems, getApiScores, getApiTeams)
 
 import Http
 import Json.Decode exposing (..)
@@ -146,6 +146,7 @@ type alias Score =
     { team : String
     , point : Int
     , stats : List Status
+    , links : List Link
     }
 
 
@@ -155,6 +156,7 @@ decodeScore =
         |> required "team" string
         |> required "point" int
         |> required "stats" (list decodeStatus)
+        |> required "links" (list decodeLink)
 
 
 encodeScore : Score -> Json.Encode.Value
@@ -163,6 +165,7 @@ encodeScore x =
         [ ( "team", Json.Encode.string x.team )
         , ( "point", Json.Encode.int x.point )
         , ( "stats", Json.Encode.list encodeStatus x.stats )
+        , ( "links", Json.Encode.list encodeLink x.links )
         ]
 
 
@@ -187,6 +190,27 @@ encodeStatus x =
         [ ( "problem", Json.Encode.string x.problem )
         , ( "correct", Json.Encode.bool x.correct )
         , ( "pending", Json.Encode.bool x.pending )
+        ]
+
+
+type alias Link =
+    { problem_id : Int
+    , url : String
+    }
+
+
+decodeLink : Decoder Link
+decodeLink =
+    Json.Decode.succeed Link
+        |> required "problem_id" int
+        |> required "url" string
+
+
+encodeLink : Link -> Json.Encode.Value
+encodeLink x =
+    Json.Encode.object
+        [ ( "problem_id", Json.Encode.int x.problem_id )
+        , ( "url", Json.Encode.string x.url )
         ]
 
 

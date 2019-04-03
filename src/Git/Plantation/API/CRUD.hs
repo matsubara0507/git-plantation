@@ -6,6 +6,7 @@
 module Git.Plantation.API.CRUD where
 
 import           RIO
+import qualified RIO.List             as L
 import qualified RIO.Map              as Map
 
 import           Data.Default.Class
@@ -13,12 +14,12 @@ import           Data.Extensible
 import qualified Drone.Client         as Drone
 import qualified Drone.Endpoints      as Drone
 import qualified Drone.Types          as Drone
-import           Git.Plantation       (Problem, Team)
+import           Git.Plantation       (Problem, Repo, Team, repoGithubPath)
 import           Git.Plantation.Cmd   (splitRepoName)
 import           Git.Plantation.Env   (Plant)
-import           Git.Plantation.Score (Score, Status)
+import           Git.Plantation.Score (Link, Score, Status)
 import           Network.HTTP.Req
-import           Servant
+import           Servant              hiding (Link, toLink)
 
 type CRUD
       = "teams"    :> Get '[JSON] [Team]
@@ -63,11 +64,13 @@ mkScore problems builds team
     = #team  @= team ^. #name
    <: #point @= sum (map (toPoint stats) problems)
    <: #stats @= stats
+   <: #links @= links
    <: nil
   where
     isTeamBuild b = b ^. #source == team ^. #name
     builds' = Map.filter (not . null) $ Map.map (filter isTeamBuild) builds
     stats = Map.elems $ Map.mapWithKey toStatus builds'
+    links = map toLink $ team ^. #repos
 
 toStatus :: Text -> [Drone.Build] -> Status
 toStatus name builds
@@ -78,7 +81,12 @@ toStatus name builds
 
 toPoint :: [Status] -> Problem -> Int
 toPoint stats problem =
-  if elem (problem ^. #name) $ map (view #problem) stats then
-    problem ^. #difficulty
-  else
-    0
+  case L.find (\s -> s ^. #problem == problem ^. #name) stats of
+    Just s | s ^. #correct -> problem ^. #difficulty
+    _                      -> 0
+
+toLink :: Repo -> Link
+toLink repo
+    = #problem_id @= repo ^. #problem
+   <: #url        @= fromMaybe "" (("https://github.com/" <>) <$> repoGithubPath repo)
+   <: nil
