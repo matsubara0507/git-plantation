@@ -11,7 +11,7 @@ import           Elm                     (ElmType, Spec (Spec), specsToDir,
                                           toElmDecoderSource,
                                           toElmEncoderSource, toElmTypeSource)
 import           Git.Plantation          (Config, Link, Problem, Repo, Score,
-                                          Status, Team, User)
+                                          ScoreBoardConfig, Status, Team, User)
 import           Git.Plantation.API.CRUD (CRUD)
 import           Servant                 ((:>))
 import           Servant.Elm             (defElmImports, generateElmForAPI)
@@ -25,6 +25,7 @@ spec = Spec ["Generated", "API"] $ concat
             , toElmTypeAll      (Proxy @ Repo)
             , toElmTypeAll      (Proxy @ Problem)
             , toElmTypeAll      (Proxy @ Config)
+            , toElmTypeAll      (Proxy @ ScoreBoardConfig)
             , toElmTypeAll      (Proxy @ Score)
             , toElmTypeAll      (Proxy @ Status)
             , toElmTypeAll      (Proxy @ Link)

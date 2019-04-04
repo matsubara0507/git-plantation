@@ -25,6 +25,7 @@ type alias Model =
     , problems : List API.Problem
     , teams : List API.Team
     , scores : RemoteData String (List API.Score)
+    , interval : Float
     }
 
 
@@ -47,6 +48,7 @@ init flags =
             , problems = flags.config.problems
             , teams = flags.config.teams
             , scores = NotAsked
+            , interval = flags.config.scoreboard.interval
             }
     in
     ( model, Cmd.batch [ fetchScores ] )
@@ -220,11 +222,6 @@ fetchScores =
     Http.send FetchScores API.getApiScores
 
 
-baseUrl : String
-baseUrl =
-    "localhost:8080"
-
-
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Time.every 60000 Tick
+    Time.every model.interval Tick
