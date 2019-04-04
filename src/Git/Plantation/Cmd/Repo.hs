@@ -30,6 +30,17 @@ import qualified Shelly                          as S
 type NewRepoCmd = Record
   '[ "repos" >: [Int]
    , "team"  >: Text
+   , "skip_create_repo"   >: Bool
+   , "skip_init_repo"     >: Bool
+   , "skip_setup_webhook" >: Bool
+   , "skip_init_ci"       >: Bool
+   ]
+
+type NewRepoSkipFlags = Record
+  '[ "skip_create_repo"   >: Bool
+   , "skip_init_repo"     >: Bool
+   , "skip_setup_webhook" >: Bool
+   , "skip_init_ci"       >: Bool
    ]
 
 type DeleteRepoCmd = Record
@@ -60,17 +71,17 @@ actByProblemId act team pid = do
     Nothing       -> logError $ "repo is not found by problem id: " <> display pid
     Just problem' -> tryAnyWithLogError $ act team problem'
 
-createRepo :: Team -> Problem -> Plant ()
-createRepo team problem = do
+createRepo :: NewRepoSkipFlags -> Team -> Problem -> Plant ()
+createRepo flags team problem = do
   logInfo $ mconcat
     [ "create repo: ", displayShow $ problem ^. #repo
     , " to team: ", displayShow $ team ^. #name
     ]
   info <- Team.lookupRepo problem team `fromJustWithThrow` UndefinedTeamProblem team problem
-  createRepoInGitHub info team problem
-  initRepoInGitHub info team problem
-  setupWebhook info
-  initProblemCI info team problem
+  unless (flags ^. #skip_create_repo)   $ createRepoInGitHub info team problem
+  unless (flags ^. #skip_init_repo)     $ initRepoInGitHub info team problem
+  unless (flags ^. #skip_setup_webhook) $ setupWebhook info
+  unless (flags ^. #skip_init_ci)       $ initProblemCI info team problem
 
 createRepoInGitHub :: Repo -> Team -> Problem -> Plant ()
 createRepoInGitHub info team problem = do
