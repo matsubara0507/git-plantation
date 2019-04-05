@@ -69,7 +69,10 @@ singleRepoCmdParser = hsequence
    <: nil
 
 deleteRepoCmdParser :: Parser DeleteRepoCmd
-deleteRepoCmdParser = shrink <$> newRepoCmdParser
+deleteRepoCmdParser = hsequence
+    $ #repos              <@=> option comma (long "repos" <> value [] <> metavar "IDS" <> help "Sets reopsitory that want to controll by problem id.")
+   <: #team               <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
+   <: nil
 
 inviteMemberCmdParser :: Parser InviteMemberCmd
 inviteMemberCmdParser = hsequence
