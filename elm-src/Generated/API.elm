@@ -1,4 +1,4 @@
-module Generated.API exposing (Config, Link, Problem, Repo, Score, Status, Team, User, decodeConfig, decodeLink, decodeProblem, decodeRepo, decodeScore, decodeStatus, decodeTeam, decodeUser, encodeConfig, encodeLink, encodeProblem, encodeRepo, encodeScore, encodeStatus, encodeTeam, encodeUser, getApiProblems, getApiScores, getApiTeams)
+module Generated.API exposing (Config, Link, Problem, Repo, Score, ScoreBoardConfig, Status, Team, User, decodeConfig, decodeLink, decodeProblem, decodeRepo, decodeScore, decodeScoreBoardConfig, decodeStatus, decodeTeam, decodeUser, encodeConfig, encodeLink, encodeProblem, encodeRepo, encodeScore, encodeScoreBoardConfig, encodeStatus, encodeTeam, encodeUser, getApiProblems, getApiScores, getApiTeams)
 
 import Http
 import Json.Decode exposing (..)
@@ -122,7 +122,8 @@ encodeProblem x =
 
 
 type alias Config =
-    { problems : List Problem
+    { scoreboard : ScoreBoardConfig
+    , problems : List Problem
     , teams : List Team
     }
 
@@ -130,6 +131,7 @@ type alias Config =
 decodeConfig : Decoder Config
 decodeConfig =
     Json.Decode.succeed Config
+        |> required "scoreboard" decodeScoreBoardConfig
         |> required "problems" (list decodeProblem)
         |> required "teams" (list decodeTeam)
 
@@ -137,8 +139,27 @@ decodeConfig =
 encodeConfig : Config -> Json.Encode.Value
 encodeConfig x =
     Json.Encode.object
-        [ ( "problems", Json.Encode.list encodeProblem x.problems )
+        [ ( "scoreboard", encodeScoreBoardConfig x.scoreboard )
+        , ( "problems", Json.Encode.list encodeProblem x.problems )
         , ( "teams", Json.Encode.list encodeTeam x.teams )
+        ]
+
+
+type alias ScoreBoardConfig =
+    { interval : Float
+    }
+
+
+decodeScoreBoardConfig : Decoder ScoreBoardConfig
+decodeScoreBoardConfig =
+    Json.Decode.succeed ScoreBoardConfig
+        |> required "interval" float
+
+
+encodeScoreBoardConfig : ScoreBoardConfig -> Json.Encode.Value
+encodeScoreBoardConfig x =
+    Json.Encode.object
+        [ ( "interval", Json.Encode.float x.interval )
         ]
 
 

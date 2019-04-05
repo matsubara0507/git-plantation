@@ -48,11 +48,12 @@ instance Run ("verify" >: ()) where
 instance Run ("new_repo" >: NewRepoCmd) where
   run' _ args = do
     conf <- asks (view #config)
-    let team = L.find (\t -> t ^. #name == args ^. #team) $ conf ^. #teams
+    let team  = L.find (\t -> t ^. #name == args ^. #team) $ conf ^. #teams
+        flags = shrink args
     case (team, args ^. #repos) of
       (Nothing, _)       -> logError $ "team is not found: " <> display (args ^. #team)
-      (Just team', [])   -> forM_ (conf ^. #problems) (tryAnyWithLogError . createRepo team')
-      (Just team', pids) -> forM_ pids $ actByProblemId createRepo team'
+      (Just team', [])   -> forM_ (conf ^. #problems) (tryAnyWithLogError . createRepo flags team')
+      (Just team', pids) -> forM_ pids $ actByProblemId (createRepo flags) team'
 
 instance Run ("new_github_repo" >: NewGitHubRepoCmd) where
   run' _ = runRepoCmd $ \team problem -> do

@@ -54,8 +54,12 @@ subcmdParser = variantFrom
 
 newRepoCmdParser :: Parser NewRepoCmd
 newRepoCmdParser = hsequence
-    $ #repos <@=> option comma (long "repos" <> value [] <> metavar "IDS" <> help "Sets reopsitory that want to controll by problem id.")
-   <: #team  <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
+    $ #repos              <@=> option comma (long "repos" <> value [] <> metavar "IDS" <> help "Sets reopsitory that want to controll by problem id.")
+   <: #team               <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
+   <: #skip_create_repo   <@=> switch (long "skip_create_repo" <> help "Flag for skip create new repository in GitHub")
+   <: #skip_init_repo     <@=> switch (long "skip_init_repo" <> help "Flag for skip init repository in GitHub")
+   <: #skip_setup_webhook <@=> switch (long "skip_setup_webhook" <> help "Flag for skip setup GitHub Webhook to repository")
+   <: #skip_init_ci       <@=> switch (long "skip_init_ci" <> help "Flag for skip init CI by repository")
    <: nil
 
 singleRepoCmdParser :: Parser (Record RepoCmdFields)
@@ -65,7 +69,7 @@ singleRepoCmdParser = hsequence
    <: nil
 
 deleteRepoCmdParser :: Parser DeleteRepoCmd
-deleteRepoCmdParser = newRepoCmdParser
+deleteRepoCmdParser = shrink <$> newRepoCmdParser
 
 inviteMemberCmdParser :: Parser InviteMemberCmd
 inviteMemberCmdParser = hsequence

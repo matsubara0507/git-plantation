@@ -1,3 +1,6 @@
+scoreboard:
+  interval: 60000
+
 problems:
 - id: 1
   name: tutorial
