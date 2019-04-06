@@ -7,14 +7,25 @@ cache:
   directories:
   - "$HOME/.stack/"
   - "$HOME/.local/bin/"
-  - ".stack-work/"
+  - "./.stack-work/"
+  - "./elm-stuff/"
 install:
 - mkdir -p ~/.local/bin
 - export PATH=$HOME/.local/bin:$PATH
 - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
+- stack docker pull
 jobs:
   include:
     - stage: build dependencies
       script: stack --no-terminal --install-ghc test --bench --only-dependencies
     - stage: run test
       script: stack --no-terminal test --bench --no-run-benchmarks --no-haddock-deps --pedantic
+    - stage: push docker image
+      if: branch = master AND type = push
+      script:
+      - stack test
+      - stack --docker --no-terminal build -j 1 Cabal
+      - stack --docker image container
+      - docker build -t matsubara0507/git-plantation .
+      - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+      - docker push matsubara0507/git-plantation
