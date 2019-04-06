@@ -36,6 +36,7 @@ type SubCmdFields =
    , "reset_repo"       >: ResetRepoCmd
    , "delete_repo"      >: DeleteRepoCmd
    , "invite_member"    >: InviteMemberCmd
+   , "kick_member"      >: KickMemberCmd
    ]
 
 instance Run ("verify" >: ()) where
@@ -103,4 +104,12 @@ instance Run ("invite_member" >: InviteMemberCmd) where
     let team = L.find (\t -> t ^. #name == args ^. #team) $ conf ^. #teams
     case team of
       Nothing    -> logError $ "team is not found: " <> display (args ^. #team)
-      Just team' -> inviteMember args team'
+      Just team' -> actForMember inviteUserToRepo args team'
+
+instance Run ("kick_member" >: KickMemberCmd) where
+  run' _ args = do
+    conf <- asks (view #config)
+    let team = L.find (\t -> t ^. #name == args ^. #team) $ conf ^. #teams
+    case team of
+      Nothing    -> logError $ "team is not found: " <> display (args ^. #team)
+      Just team' -> actForMember kickUserFromRepo args team'
