@@ -1,7 +1,5 @@
 {-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators    #-}
 
 module Git.Plantation.Cmd.Member where

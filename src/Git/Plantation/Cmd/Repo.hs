@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators    #-}
 
 module Git.Plantation.Cmd.Repo where
@@ -214,7 +213,7 @@ deleteProblemCI team problem = do
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
   shelly' $ chdir_p workDir (Git.cloneOrFetch problemUrl repo)
-  shelly' $ chdir_p (workDir </> repo) $ do
+  shelly' $ chdir_p (workDir </> repo) $
     errExit False $ Git.push [ "--delete", "origin", team ^. #name]
   logInfo $ "Success: delete ci branch in " <> displayShow (problem ^. #repo)
 

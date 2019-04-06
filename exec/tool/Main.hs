@@ -91,7 +91,7 @@ variantFrom = subparser . subcmdVariant
   where
     subcmdVariant = hfoldMapWithIndexFor (Proxy @ (KeyIs KnownSymbol)) $ \m x ->
       let k = symbolVal (proxyAssocKey m)
-      in command k ((EmbedAt m . Field . pure) <$> getField x)
+      in command k (EmbedAt m . Field . pure <$> getField x)
 
 instance Wrapper ParserInfo where
   type Repr ParserInfo a = ParserInfo a

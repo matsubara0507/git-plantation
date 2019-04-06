@@ -88,5 +88,5 @@ toPoint stats problem =
 toLink :: Repo -> Link
 toLink repo
     = #problem_id @= repo ^. #problem
-   <: #url        @= fromMaybe "" (("https://github.com/" <>) <$> repoGithubPath repo)
+   <: #url        @= maybe "" ("https://github.com/" <>) (repoGithubPath repo)
    <: nil

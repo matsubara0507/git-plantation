@@ -26,7 +26,7 @@ webhook =
   pingWebhook :<|> pushWebhook
 
 pingWebhook :: RepoWebhookEvent -> ((), PublicEvent) -> Plant ()
-pingWebhook _ (_, ev) = do
+pingWebhook _ (_, ev) =
   logInfo $ "Hook Ping Event: " <> displayShow ev
 
 pushWebhook :: RepoWebhookEvent -> ((), PushEvent) -> Plant ()

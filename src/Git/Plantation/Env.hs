@@ -56,9 +56,8 @@ shelly' :: Sh a -> Plant a
 shelly' sh = do
   env <- ask
   shelly
-    $ (log_stdout_with (runRIO env . logDebug . display))
-    $ (log_stderr_with (runRIO env . logDebug . display))
-    $ sh
+    $ log_stdout_with (runRIO env . logDebug . display)
+    $ log_stderr_with (runRIO env . logDebug . display) sh
 
 mkLogMessage :: Text -> Record xs -> Record ("error_message" >: Text ': xs)
 mkLogMessage message r = #error_message @= message <: r
