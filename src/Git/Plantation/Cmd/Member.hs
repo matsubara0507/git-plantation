@@ -17,18 +17,22 @@ import           GitHub.Data.Name                     (mkName)
 import           GitHub.Endpoints.Repos               (Auth (..))
 import qualified GitHub.Endpoints.Repos.Collaborators as GitHub
 
-type InviteMemberCmd = Record
+type InviteMemberCmd = Record MemeberCmdFields
+
+type KickMemberCmd = Record MemeberCmdFields
+
+type MemeberCmdFields =
   '[ "team"  >: Text
    , "repos" >: [Int]
    , "user"  >: Maybe Text
    ]
 
-inviteMember :: InviteMemberCmd -> Team -> Plant ()
-inviteMember args team = case args ^. #repos of
-  [] -> forM_ (team ^. #repos) $ \repo -> forM_ member $ invite repo
-  _  -> forM_ repos            $ \repo -> forM_ member $ invite repo
+actForMember :: (User -> Repo -> Plant ()) -> Record MemeberCmdFields -> Team -> Plant ()
+actForMember act args team = case args ^. #repos of
+  [] -> forM_ (team ^. #repos) $ \repo -> forM_ member $ act' repo
+  _  -> forM_ repos            $ \repo -> forM_ member $ act' repo
   where
-    invite repo user = tryAnyWithLogError $ inviteUserToRepo user repo
+    act' repo user = tryAnyWithLogError $ act user repo
     repos  = catMaybes $ flip lookupRepoByProblemId team <$> args ^. #repos
     member = maybe (team ^. #member) (: []) $ flip lookupUser team =<< args ^. #user
 
@@ -50,4 +54,24 @@ inviteUserToRepo user target = do
       [ "Success: invite "
       , user ^. #name, "(", user ^. #github, ")"
       , " to ", githubPath, "."
+      ]
+
+kickUserFromRepo :: User -> Repo -> Plant ()
+kickUserFromRepo user target = do
+  token  <- asks (view #token)
+  github <- repoGithub target
+  let (owner, repo) = splitRepoName github
+  resp <- liftIO $ GitHub.removeCollaborator
+    (OAuth token)
+    (mkName Proxy owner)
+    (mkName Proxy repo)
+    (mkName Proxy $ user ^. #github)
+  case resp of
+    Left err -> logDebug (displayShow err) >> throwIO (KickUserError err user target)
+    Right _  -> logInfo $ display (success github)
+  where
+    success githubPath = mconcat
+      [ "Success: kick "
+      , user ^. #name, "(", user ^. #github, ")"
+      , " from ", githubPath, "."
       ]

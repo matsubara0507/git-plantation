@@ -75,6 +75,7 @@ data GitPlantException
   | DeleteRepoError GitHub.Error Repo
   | SetupWebhookError GitHub.Error Repo
   | InviteUserError GitHub.Error User Repo
+  | KickUserError GitHub.Error User Repo
   | InvalidRepoConfig Repo
   deriving (Typeable)
 
@@ -101,6 +102,10 @@ instance Show GitPlantException where
     InviteUserError _err user repo ->
       mkLogMessage'
         "can't invite user to repository"
+        (#user @= user <: #repo @= repo <: nil)
+    KickUserError _err user repo ->
+      mkLogMessage'
+        "can't kick user from repository"
         (#user @= user <: #repo @= repo <: nil)
     InvalidRepoConfig repo ->
       mkLogMessage'
