@@ -7,8 +7,7 @@ cache:
   directories:
   - "$HOME/.stack/"
   - "$HOME/.local/bin/"
-  - "./.stack-work/"
-  - "./elm-stuff/"
+  - ".stack-work/"
 install:
 - mkdir -p ~/.local/bin
 - export PATH=$HOME/.local/bin:$PATH
