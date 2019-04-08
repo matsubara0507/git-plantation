@@ -3,6 +3,7 @@ packages:
 - .
 - ./libs/mix
 - ./libs/mix-plugin-github
+- ./libs/mix-plugin-drone
 extra-deps:
 - extensible-0.5
 - servant-github-webhook-0.4.1.0
