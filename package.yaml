@@ -1,16 +1,16 @@
 name:                git-plantation
 version:             0.2.0.0
-github:              "githubuser/git-plantation"
-license:             BSD3
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2018 Author name here"
+github:              "matsubara0507/git-plantation"
+license:             MIT
+author:              "MATSUBARA Nobutada"
+maintainer:          "t12307043@gunma-u.ac.jp"
+copyright:           "2018 MATSUBARA Nobutada"
 
 extra-source-files:
 - README.md
 - CHANGELOG.md
 
-description:         Please see the README on GitHub at <https://github.com/githubuser/git-plantation#readme>
+description:         Please see the README on GitHub at <https://github.com/matsubara0507/git-plantation#readme>
 
 ghc-options:
 - -Wall
