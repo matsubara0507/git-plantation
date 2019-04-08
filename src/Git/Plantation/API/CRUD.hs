@@ -76,7 +76,7 @@ toStatus :: Text -> [Drone.Build] -> Status
 toStatus name builds
     = #problem @= name
    <: #correct @= any (\b -> b ^. #status == "success") builds
-   <: #pending @= any (\b -> b ^. #status == "running") builds
+   <: #pending @= any (\b -> b ^. #status == "running" || b ^. #status == "pending") builds
    <: nil
 
 toPoint :: [Status] -> Problem -> Int
