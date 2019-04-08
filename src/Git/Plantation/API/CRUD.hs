@@ -54,10 +54,19 @@ getScores = do
 fetchBuilds :: Drone.Client c => c -> Problem -> Plant (Text, [Drone.Build])
 fetchBuilds client problem = do
   let (owner, repo) = splitRepoName $ problem ^. #repo
-  builds <- tryAny (runReq def $ Drone.getBuilds client owner repo Nothing) >>= \case
-    Left err   -> logError (display err) >> pure []
-    Right resp -> pure $ responseBody resp
+  builds <- tryAny (getAllBuilds client owner repo) >>= \case
+    Left err     -> logError (display err) >> pure []
+    Right builds -> pure builds
   pure (problem ^. #name, builds)
+
+getAllBuilds :: (MonadIO m, Drone.Client c) => c -> Text -> Text -> m [Drone.Build]
+getAllBuilds client owner repo = mconcat <$> getAllBuilds' [] 1
+  where
+    getAllBuilds' xss n = do
+      resp <- runReq def $ Drone.getBuilds client owner repo (Just n)
+      case responseBody resp of
+        []     -> pure xss
+        builds -> getAllBuilds' (builds : xss) (n + 1)
 
 mkScore :: [Problem] -> Map Text [Drone.Build] -> Team -> Score
 mkScore problems builds team
