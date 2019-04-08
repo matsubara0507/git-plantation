@@ -1,6 +1,7 @@
 resolver: lts-13.13
 packages:
 - .
+- ./libs/mix
 extra-deps:
 - extensible-0.5
 - servant-github-webhook-0.4.1.0
