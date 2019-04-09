@@ -9,9 +9,7 @@ import           RIO
 import qualified RIO.List             as L
 import qualified RIO.Map              as Map
 
-import           Data.Default.Class
 import           Data.Extensible
-import qualified Drone.Client         as Drone
 import qualified Drone.Endpoints      as Drone
 import qualified Drone.Types          as Drone
 import           Git.Plantation       (Problem, Repo, Team, repoGithubPath)

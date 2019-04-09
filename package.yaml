@@ -55,7 +55,7 @@ dependencies:
 - servant-elm
 - servant-github-webhook
 - servant-server
-- shelly
+- shh
 - yaml >= 0.8.31
 
 library:

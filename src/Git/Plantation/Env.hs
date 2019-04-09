@@ -19,7 +19,6 @@ import qualified GitHub.Auth           as GitHub
 import qualified GitHub.Data           as GitHub
 import           Mix.Plugin.Logger     ()
 import qualified RIO.Text.Lazy         as TL
-import           Shelly                hiding (FilePath)
 
 type Plant = RIO Env
 
@@ -49,13 +48,6 @@ tryAnyWithLogError :: Plant a -> Plant ()
 tryAnyWithLogError act = tryAny act >>= \case
   Left  e -> logError $ display e
   Right _ -> pure ()
-
-shelly' :: Sh a -> Plant a
-shelly' sh = do
-  env <- ask
-  shelly
-    $ log_stdout_with (runRIO env . logDebug . display)
-    $ log_stderr_with (runRIO env . logDebug . display) sh
 
 mkLogMessage :: Text -> Record xs -> Record ("error_message" >: Text ': xs)
 mkLogMessage message r = #error_message @= message <: r

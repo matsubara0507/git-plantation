@@ -2,13 +2,15 @@
 
 module Mix.Plugin.Shell.Internal
     ( cat
-    , git
+    , echo
     , mkdir
+    , ls
     , pwd
     , rm
+    , test
     , touch
     ) where
 
 import           Shh
 
-$(load SearchPath ["touch", "cat", "rm", "git", "pwd", "mkdir"])
+$(load SearchPath ["touch", "cat", "rm", "pwd", "mkdir", "test", "echo", "ls"])

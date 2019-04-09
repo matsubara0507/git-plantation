@@ -1,28 +1,36 @@
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeOperators    #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE ExtendedDefaultRules #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE OverloadedLabels     #-}
+{-# LANGUAGE TypeOperators        #-}
 
 module Mix.Plugin.Shell
   ( HasWorkDir (..)
   , buildPlugin
   , workText
   , runShell
-  , Shell.git
+  , git
+  , Shell.cat
+  , Shell.echo
+  , Shell.ls
   , Shell.mkdir
   , Shell.rm
   , Shell.cd
   , Shell.pwd
+  , Shell.test
   , Shell.touch
+  , test_d
+  , test_f
   ) where
 
 import           RIO
+import qualified RIO.Text                  as Text
 
 import           Data.Extensible
 import           Mix.Plugin                (Plugin, toPlugin)
 import qualified Mix.Plugin.Logger         as Mix
 import qualified Mix.Plugin.Shell.Internal as Shell
-import qualified Shh                       as Shell
+import qualified Shh.Internal              as Shell
 
 buildPlugin :: MonadIO m => FilePath -> Plugin a m FilePath
 buildPlugin path = toPlugin $ \f -> f path
@@ -46,9 +54,19 @@ runShell act = do
   path <- liftIO $ takeWhile (/= '\n') <$> Shell.readProc Shell.pwd
   work <- view workL
   result <- liftIO $ Shell.catchFailure $ Shell.readProc $ do
+    Shell.mkdir "-p" work
     liftIO $ Shell.cd work
     act
   case result of
     Left err  -> Mix.logError `Mix.withlines` displayShow err
     Right out -> Mix.logDebug `Mix.withlines` fromString out
   liftIO $ Shell.cd path
+
+test_d :: (Shell.ProcFailure m, Functor m) => FilePath -> m Bool
+test_d path = (== 0) <$> Shell.catchCode (Shell.test "-d" path)
+
+test_f :: (Shell.ProcFailure m, Functor m) => FilePath -> m Bool
+test_f path = (== 0) <$> Shell.catchCode (Shell.test "-f" path)
+
+git :: Text -> [Text] -> Shell.Proc ()
+git cmd args = Shell.mkProc "git" $ Text.unpack <$> (cmd : args)

@@ -15,7 +15,7 @@ import           Git.Plantation          (Config, Link, Problem, Repo, Score,
 import           Git.Plantation.API.CRUD (CRUD)
 import           Servant                 ((:>))
 import           Servant.Elm             (defElmImports, generateElmForAPI)
-import           Shelly                  (run_, shelly)
+import qualified Shh                     as Shell
 
 spec :: Spec
 spec = Spec ["Generated", "API"] $ concat
@@ -42,6 +42,6 @@ toElmTypeAll proxy =
 main :: IO ()
 main = do
   specsToDir [spec] "elm-src"
-  shelly $ do
-    run_ "elm" ["make", "elm-src/Main.elm", "--output=static/main.js"]
-    run_ "elm-format" ["--yes", "elm-src/Generated/"]
+  Shell.runProc $ do
+    Shell.mkProc "elm" ["make", "elm-src/Main.elm", "--output=static/main.js"]
+    Shell.mkProc "elm-format" ["--yes", "elm-src/Generated/"]

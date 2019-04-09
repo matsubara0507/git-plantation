@@ -1,7 +1,8 @@
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE LambdaCase       #-}
-{-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeOperators    #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE ExtendedDefaultRules #-}
+{-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE OverloadedLabels     #-}
+{-# LANGUAGE TypeOperators        #-}
 
 module Git.Plantation.Cmd.Repo where
 
@@ -12,7 +13,6 @@ import qualified RIO.Text                        as Text
 import qualified RIO.Vector                      as V
 
 import           Data.Extensible
-import qualified Git.Cmd                         as Git
 import           Git.Plantation.Data             (Problem, Repo, Team)
 import qualified Git.Plantation.Data.Team        as Team
 import           Git.Plantation.Env
@@ -22,11 +22,11 @@ import           GitHub.Data.Webhooks            (NewRepoWebhook (..),
                                                   RepoWebhookEvent (..))
 import qualified GitHub.Endpoints.Repos          as GitHub
 import qualified GitHub.Endpoints.Repos.Webhooks as GitHub
-import           Shelly                          hiding (FilePath)
-import qualified Shelly                          as S
 
 import qualified Mix.Plugin.GitHub               as MixGitHub
 import qualified Mix.Plugin.Shell                as MixShell
+import           Shh                             ((&>))
+import qualified Shh                             as Shell
 
 type NewRepoCmd = Record
   '[ "repos" >: [Int]
@@ -103,25 +103,25 @@ createRepoInGitHub info team problem = do
 initRepoInGitHub :: Repo -> Team -> Problem -> Plant ()
 initRepoInGitHub info team problem = do
   token   <- MixGitHub.tokenText
-  workDir <- getWorkDir team
   github  <- repoGithub info
   let (owner, repo) = splitRepoName $ problem ^. #repo
       (_, teamRepo) = splitRepoName github
       teamUrl       = mconcat ["https://", token, "@github.com/", github, ".git"]
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
+      teamRepo'     = Text.unpack teamRepo
 
-  shelly' $ chdir_p workDir (Git.cloneOrFetch teamUrl teamRepo)
-  shelly' $ chdir_p (workDir </> teamRepo) $ do
-    Git.existBranch "temp" >>= \case
-      False -> Git.checkout ["-b", "temp"]
-      True  -> Git.checkout ["temp"]
-    errExit False $ Git.branch $ "-D" : problem ^. #challenge_branches
-    errExit False $ Git.remote ["add", "problem", problemUrl]
-    Git.fetch ["--all"]
-    forM_ (problem ^. #challenge_branches) $
-      \branch -> Git.checkout ["-b", branch, "problem/" <> branch]
-    Git.push $ "-f" : "-u" : "origin" : problem ^. #challenge_branches
-    errExit False $ Git.branch ["-D", "temp"]
+  local (over #work $ toTeamWork team) $ do
+    MixShell.runShell $
+      whenM (MixShell.test_d teamRepo') $ MixShell.git "clone" [teamUrl, teamRepo]
+    local (over #work $ toWorkWith teamRepo') $ MixShell.runShell $ do
+      Shell.ignoreFailure $ MixShell.git "branch" ["-D", "temp"]
+      Shell.ignoreFailure $ MixShell.git "checkout" ["-b", "temp"]
+      Shell.ignoreFailure $ MixShell.git "branch" $ "-D" : problem ^. #challenge_branches
+      Shell.ignoreFailure $ MixShell.git "remote" ["add", "problem", problemUrl]
+      MixShell.git "fetch" ["--all"]
+      forM_ (problem ^. #challenge_branches) $
+        \branch -> MixShell.git "checkout" ["-b", branch, "problem/" <> branch]
+      MixShell.git "push" $ "-f" : "-u" : "origin" : problem ^. #challenge_branches
   logInfo $ "Success: create repo as " <> displayShow github
 
 setupWebhook :: Repo -> Plant ()
@@ -145,44 +145,48 @@ setupWebhook info = do
 initProblemCI :: Repo -> Team -> Problem -> Plant ()
 initProblemCI info team problem = do
   token   <- MixGitHub.tokenText
-  workDir <- getWorkDir team
   github  <- repoGithub info
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
+      repo'         = Text.unpack repo
 
-  shelly' $ chdir_p workDir (Git.cloneOrFetch problemUrl repo)
-  shelly' $ chdir_p (workDir </> repo) $ do
-    Git.checkout [problem ^. #ci_branch]
-    Git.pull []
-    errExit False $ Git.branch ["-D", team ^. #name]
-    Git.checkout ["-b", team ^. #name]
-    writefile ciFileName github
-    Git.add [ciFileName]
-    Git.commit ["-m", "[CI SKIP] Add ci branch"]
-    Git.push ["-f", "-u", "origin", team ^. #name]
+  local (over #work $ toTeamWork team) $ do
+    MixShell.runShell $
+      whenM (MixShell.test_d repo') $ MixShell.git "clone" [problemUrl, repo]
+    local (over #work $ toWorkWith repo') $ MixShell.runShell $ do
+      MixShell.git "checkout" [problem ^. #ci_branch]
+      MixShell.git "pull" []
+      Shell.ignoreFailure $ MixShell.git "branch" ["-D", team ^. #name]
+      MixShell.git "checkout" ["-b", team ^. #name]
+      MixShell.echo (Text.unpack github) &> Shell.Truncate (Text.unpack ciFileName)
+      MixShell.git "add" [ciFileName]
+      MixShell.git "commit" ["-m", "[CI SKIP] Add ci branch"]
+      MixShell.git "push" ["-f", "-u", "origin", team ^. #name]
   logInfo $ "Success: create ci branch in " <> displayShow (problem ^. #repo)
 
 resetRepo :: Repo -> Team -> Problem -> Plant ()
 resetRepo info team problem = do
-  workDir <- getWorkDir team
   let (_, repo) = splitRepoName $ problem ^. #repo
-  paths <- shelly' $ chdir_p (workDir </> repo) $ ls "."
-  logDebug $ "Remove file: " <> display (Text.intercalate " " $ map toTextIgnore paths)
-  shelly' $ chdir_p workDir $ rm_rf (fromText repo)
+  local (over #work $ toTeamWork team) $ do
+    local (over #work $ toWorkWith $ Text.unpack repo) $ MixShell.runShell (MixShell.ls)
+    MixShell.runShell $ MixShell.rm "-rf" (Text.unpack repo)
   initRepoInGitHub info team problem
 
 pushForCI :: Team -> Problem -> Plant ()
 pushForCI team problem = do
   token   <- MixGitHub.tokenText
-  workDir <- getWorkDir team
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
-  shelly' $ chdir_p workDir (Git.cloneOrFetch problemUrl repo)
-  shelly' $ chdir_p (workDir </> repo) $ do
-    Git.checkout [team ^. #name]
-    Git.pull []
-    Git.commit ["--allow-empty", "-m", "Empty Commit!!"]
-    Git.push ["origin", team ^. #name]
+      repo'         = Text.unpack repo
+
+  local (over #work $ toTeamWork team) $ do
+    MixShell.runShell $
+      whenM (MixShell.test_d repo') $ MixShell.git "clone" [problemUrl, repo]
+    local (over #work $ toWorkWith repo') $ MixShell.runShell $ do
+      MixShell.git "checkout" [team ^. #name]
+      MixShell.git "pull" []
+      MixShell.git "commit" ["--allow-empty", "-m", "Empty Commit!!"]
+      MixShell.git "push" ["origin", team ^. #name]
   logInfo "Success push"
 
 deleteRepo :: Team -> Problem -> Plant ()
@@ -208,13 +212,15 @@ deleteRepoInGithub info = do
 deleteProblemCI :: Team -> Problem -> Plant ()
 deleteProblemCI team problem = do
   token   <- MixGitHub.tokenText
-  workDir <- getWorkDir team
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
+      repo'         = Text.unpack repo
 
-  shelly' $ chdir_p workDir (Git.cloneOrFetch problemUrl repo)
-  shelly' $ chdir_p (workDir </> repo) $
-    errExit False $ Git.push [ "--delete", "origin", team ^. #name]
+  local (over #work $ toTeamWork team) $ do
+    MixShell.runShell $
+      whenM (MixShell.test_d repo') $ MixShell.git "clone" [problemUrl, repo]
+    local (over #work $ toWorkWith repo') $ MixShell.runShell $
+      Shell.ignoreFailure $ MixShell.git "push"  [ "--delete", "origin", team ^. #name]
   logInfo $ "Success: delete ci branch in " <> displayShow (problem ^. #repo)
 
 
@@ -231,7 +237,8 @@ repoGithub repo =
 ciFileName :: IsString s => s
 ciFileName = "REPOSITORY"
 
-getWorkDir :: Team -> Plant S.FilePath
-getWorkDir team = do
-  base <- asks (view #work)
-  pure $ base </> (team ^. #name)
+toWorkWith :: FilePath -> FilePath -> FilePath
+toWorkWith path = (<> "/" <> path)
+
+toTeamWork :: Team -> FilePath -> FilePath
+toTeamWork team = toWorkWith $ Text.unpack $ team ^. #name
