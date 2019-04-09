@@ -18,6 +18,7 @@ import           Git.Plantation       (Problem, Repo, Team, repoGithubPath)
 import           Git.Plantation.Cmd   (splitRepoName)
 import           Git.Plantation.Env   (Plant)
 import           Git.Plantation.Score (Link, Score, Status)
+import qualified Mix.Plugin.Drone     as MixDrone
 import           Network.HTTP.Req
 import           Servant              hiding (Link, toLink)
 
@@ -47,23 +48,22 @@ getScores = do
   logInfo "[GET] /scores"
   teams    <- asks (view #teams . view #config)
   problems <- asks (view #problems . view #config)
-  client   <- asks (view #client)
-  builds   <- Map.fromList <$> mapM (fetchBuilds client) problems
+  builds   <- Map.fromList <$> mapM fetchBuilds problems
   pure $ map (mkScore problems builds) teams
 
-fetchBuilds :: Drone.Client c => c -> Problem -> Plant (Text, [Drone.Build])
-fetchBuilds client problem = do
+fetchBuilds :: Problem -> Plant (Text, [Drone.Build])
+fetchBuilds problem = do
   let (owner, repo) = splitRepoName $ problem ^. #repo
-  builds <- tryAny (getAllBuilds client owner repo) >>= \case
+  builds <- tryAny (getAllBuilds owner repo) >>= \case
     Left err     -> logError (display err) >> pure []
     Right builds -> pure builds
   pure (problem ^. #name, builds)
 
-getAllBuilds :: (MonadIO m, Drone.Client c) => c -> Text -> Text -> m [Drone.Build]
-getAllBuilds client owner repo = mconcat <$> getAllBuilds' [] 1
+getAllBuilds :: Text -> Text -> Plant [Drone.Build]
+getAllBuilds owner repo = mconcat <$> getAllBuilds' [] 1
   where
     getAllBuilds' xss n = do
-      resp <- runReq def $ Drone.getBuilds client owner repo (Just n)
+      resp <- MixDrone.fetch $ \client -> Drone.getBuilds client owner repo (Just n)
       case responseBody resp of
         []     -> pure xss
         builds -> getAllBuilds' (builds : xss) (n + 1)

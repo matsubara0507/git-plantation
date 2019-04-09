@@ -17,6 +17,7 @@ import           Git.Plantation.Config
 import           Git.Plantation.Data   (Problem, Repo, Team, User)
 import qualified GitHub.Auth           as GitHub
 import qualified GitHub.Data           as GitHub
+import           Mix.Plugin.Logger     ()
 import qualified RIO.Text.Lazy         as TL
 import           Shelly                hiding (FilePath)
 
@@ -24,9 +25,9 @@ type Plant = RIO Env
 
 type Env = Record
   '[ "config"  >: Config
-   , "token"   >: GitHub.Token
+   , "github"  >: GitHub.Token
    , "work"    >: FilePath
-   , "client"  >: Drone.HttpsClient
+   , "drone"   >: Drone.HttpsClient
    , "webhook" >: WebhookConfig
    , "logger"  >: LogFunc
    ]
@@ -39,9 +40,6 @@ mkWebhookConf url secret =
   , ("content_type", "json")
   , ("secret", secret)
   ]
-
-instance HasLogFunc Env where
-  logFuncL = lens (view #logger) (\x y -> x & #logger `set` y)
 
 fromJustWithThrow :: Exception e => Maybe a -> e -> Plant a
 fromJustWithThrow (Just x) _ = pure x

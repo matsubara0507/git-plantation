@@ -20,6 +20,11 @@ import           Development.GitRev
 import qualified Drone.Client             as Drone
 import           Git.Plantation
 import           Git.Plantation.API       (api, server)
+import qualified Mix.Plugin               as Mix (withPlugin)
+import qualified Mix.Plugin.Drone         as MixDrone
+import qualified Mix.Plugin.GitHub        as MixGitHub
+import qualified Mix.Plugin.Logger        as MixLogger
+import qualified Mix.Plugin.Shell         as MixShell
 import qualified Network.Wai.Handler.Warp as Warp
 import           Servant
 import qualified Servant.GitHub.Webhook   (GitHubKey, gitHubKey)
@@ -64,23 +69,23 @@ versionOpt = optFlag [] ["version"] "Show version"
 
 runServer :: Options -> Config -> IO ()
 runServer opts config = do
-  logOpts <- logOptionsHandle stdout $ opts ^. #verbose
   token   <- liftIO $ fromString <$> getEnv "GH_TOKEN"
   dHost   <- liftIO $ fromString <$> getEnv "DRONE_HOST"
   dToken  <- liftIO $ fromString <$> getEnv "DRONE_TOKEN"
   dPort   <- liftIO $ readMaybe  <$> getEnv "DRONE_PORT"
-  let client = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
-  withLogFunc logOpts $ \logger -> do
-    let env = #config  @= config
-           <: #token   @= token
-           <: #work    @= (opts ^. #work)
-           <: #client  @= Drone.HttpsClient client
-           <: #webhook @= mempty
-           <: #logger  @= logger
-           <: nil :: Env
-    B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
-    Warp.run (opts ^. #port) $
-      app env (gitHubKey $ fromString <$> getEnv "GH_SECRET")
+  let client  = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
+      logConf = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
+      plugin  = hsequence
+          $ #config  <@=> pure config
+         <: #github  <@=> MixGitHub.buildPlugin token
+         <: #work    <@=> MixShell.buildPlugin (opts ^. #work)
+         <: #drone   <@=> MixDrone.buildPlugin client Drone.HttpsClient
+         <: #webhook <@=> pure mempty
+         <: #logger  <@=> MixLogger.buildPlugin logConf
+         <: nil
+  B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
+  flip Mix.withPlugin plugin $ \env -> Warp.run (opts ^. #port) $
+    app env (gitHubKey $ fromString <$> getEnv "GH_SECRET")
 
 app :: Env -> GitHubKey -> Application
 app env key =

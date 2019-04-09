@@ -20,11 +20,13 @@ import           GitHub.Data.Name                (mkName)
 import           GitHub.Data.Repos               (newRepo, newRepoPrivate)
 import           GitHub.Data.Webhooks            (NewRepoWebhook (..),
                                                   RepoWebhookEvent (..))
-import           GitHub.Endpoints.Repos          (Auth (..))
 import qualified GitHub.Endpoints.Repos          as GitHub
 import qualified GitHub.Endpoints.Repos.Webhooks as GitHub
 import           Shelly                          hiding (FilePath)
 import qualified Shelly                          as S
+
+import qualified Mix.Plugin.GitHub               as MixGitHub
+import qualified Mix.Plugin.Shell                as MixShell
 
 type NewRepoCmd = Record
   '[ "repos" >: [Int]
@@ -85,9 +87,8 @@ createRepo flags team problem = do
 createRepoInGitHub :: Repo -> Team -> Problem -> Plant ()
 createRepoInGitHub info team problem = do
   (owner, repo) <- splitRepoName <$> repoGithub info
-  token <- asks (view #token)
   logInfo $ "create repo in github: " <> displayShow (owner <> "/" <> repo)
-  resp <- liftIO $ request owner (OAuth token)
+  resp <- MixGitHub.fetch $ \auth -> request owner auth
     ((newRepo $ mkName Proxy repo) { newRepoPrivate = Just (info ^. #private) })
   case resp of
     Left err -> logDebug (displayShow err) >> throwIO (CreateRepoError err team problem)
@@ -101,7 +102,7 @@ createRepoInGitHub info team problem = do
 
 initRepoInGitHub :: Repo -> Team -> Problem -> Plant ()
 initRepoInGitHub info team problem = do
-  token   <- getTextToken
+  token   <- MixGitHub.tokenText
   workDir <- getWorkDir team
   github  <- repoGithub info
   let (owner, repo) = splitRepoName $ problem ^. #repo
@@ -126,11 +127,10 @@ initRepoInGitHub info team problem = do
 setupWebhook :: Repo -> Plant ()
 setupWebhook info = do
   (owner, repo) <- splitRepoName <$> repoGithub info
-  token         <- asks (view #token)
   webhookConfig <- asks (view #webhook)
   logInfo $ "setup github webhook to repo: " <> displayShow (owner <> "/" <> repo)
-  resp <- liftIO $ GitHub.createRepoWebhook'
-    (OAuth token) (mkName Proxy owner) (mkName Proxy repo) (webhook webhookConfig)
+  resp <- MixGitHub.fetch $ \auth -> GitHub.createRepoWebhook'
+    auth (mkName Proxy owner) (mkName Proxy repo) (webhook webhookConfig)
   case resp of
     Left err -> logDebug (displayShow err) >> throwIO (SetupWebhookError err info)
     Right _  -> logDebug "Success: setup GitHub Webhook to repository"
@@ -144,7 +144,7 @@ setupWebhook info = do
 
 initProblemCI :: Repo -> Team -> Problem -> Plant ()
 initProblemCI info team problem = do
-  token   <- getTextToken
+  token   <- MixGitHub.tokenText
   workDir <- getWorkDir team
   github  <- repoGithub info
   let (owner, repo) = splitRepoName $ problem ^. #repo
@@ -173,7 +173,7 @@ resetRepo info team problem = do
 
 pushForCI :: Team -> Problem -> Plant ()
 pushForCI team problem = do
-  token   <- getTextToken
+  token   <- MixGitHub.tokenText
   workDir <- getWorkDir team
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
@@ -198,16 +198,16 @@ deleteRepo team problem = do
 deleteRepoInGithub :: Repo -> Plant ()
 deleteRepoInGithub info = do
   (owner, repo) <- splitRepoName <$> repoGithub info
-  token <- asks (view #token)
   logInfo $ "delete repo in github: " <> displayShow (owner <> "/" <> repo)
-  resp <- liftIO $ GitHub.deleteRepo (OAuth token) (mkName Proxy owner) (mkName Proxy repo)
+  resp <- MixGitHub.fetch $ \auth ->
+    GitHub.deleteRepo auth (mkName Proxy owner) (mkName Proxy repo)
   case resp of
     Left err -> logDebug (displayShow err) >> throwIO (DeleteRepoError err info)
     Right _  -> logDebug "Success: delete repository in GitHub"
 
 deleteProblemCI :: Team -> Problem -> Plant ()
 deleteProblemCI team problem = do
-  token   <- getTextToken
+  token   <- MixGitHub.tokenText
   workDir <- getWorkDir team
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
@@ -223,12 +223,6 @@ deleteProblemCI team problem = do
 
 splitRepoName :: Text -> (Text, Text)
 splitRepoName = fmap (Text.drop 1) . Text.span(/= '/')
-
-getTextToken :: Plant Text
-getTextToken =
-  Text.decodeUtf8' <$> asks (view #token) >>= \case
-    Left  _ -> logError "cannot decode token to utf8." >> pure ""
-    Right t -> pure t
 
 repoGithub :: Repo -> Plant Text
 repoGithub repo =

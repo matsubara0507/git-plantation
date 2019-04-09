@@ -32,5 +32,5 @@ tokenText = tshow <$> view tokenL
 auth :: (MonadIO m, MonadReader env m, HasGitHubToken env) => m GitHub.Auth
 auth = GitHub.OAuth <$> view tokenL
 
-fetch :: (MonadIO m, MonadReader env m, HasGitHubToken env) => (GitHub.Auth -> m a) -> m a
-fetch act = act =<< auth
+fetch :: (MonadIO m, MonadReader env m, HasGitHubToken env) => (GitHub.Auth -> IO a) -> m a
+fetch act = (liftIO . act) =<< auth

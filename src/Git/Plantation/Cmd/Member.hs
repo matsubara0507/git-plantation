@@ -12,8 +12,8 @@ import           Git.Plantation.Cmd.Repo              (repoGithub,
 import           Git.Plantation.Data
 import           Git.Plantation.Env
 import           GitHub.Data.Name                     (mkName)
-import           GitHub.Endpoints.Repos               (Auth (..))
 import qualified GitHub.Endpoints.Repos.Collaborators as GitHub
+import qualified Mix.Plugin.GitHub                    as MixGitHub
 
 type InviteMemberCmd = Record MemeberCmdFields
 
@@ -36,11 +36,9 @@ actForMember act args team = case args ^. #repos of
 
 inviteUserToRepo :: User -> Repo -> Plant ()
 inviteUserToRepo user target = do
-  token  <- asks (view #token)
   github <- repoGithub target
   let (owner, repo) = splitRepoName github
-  resp <- liftIO $ GitHub.addCollaborator
-    (OAuth token)
+  resp <- MixGitHub.fetch $ \auth -> GitHub.addCollaborator auth
     (mkName Proxy owner)
     (mkName Proxy repo)
     (mkName Proxy $ user ^. #github)
@@ -56,11 +54,9 @@ inviteUserToRepo user target = do
 
 kickUserFromRepo :: User -> Repo -> Plant ()
 kickUserFromRepo user target = do
-  token  <- asks (view #token)
   github <- repoGithub target
   let (owner, repo) = splitRepoName github
-  resp <- liftIO $ GitHub.removeCollaborator
-    (OAuth token)
+  resp <- MixGitHub.fetch $ \auth -> GitHub.removeCollaborator auth
     (mkName Proxy owner)
     (mkName Proxy repo)
     (mkName Proxy $ user ^. #github)
