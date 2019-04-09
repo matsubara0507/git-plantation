@@ -11,9 +11,11 @@ module Mix.Plugin.Logger
   , logInfo
   , logWarn
   , logError
+  , withlines
   ) where
 
 import           RIO
+import qualified RIO.Text           as Text
 
 import           Control.Monad.Cont
 import           Data.Extensible
@@ -31,3 +33,6 @@ buildPlugin conf = do
 
 instance Associate "logger" LogFunc xs => HasLogFunc (Record xs) where
   logFuncL = lens (view #logger) (\x y -> x & #logger `set` y)
+
+withlines :: MonadIO m => (Utf8Builder -> m ()) -> Utf8Builder -> m ()
+withlines logger = mapM_ (logger . display) . Text.lines . textDisplay

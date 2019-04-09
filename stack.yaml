@@ -4,9 +4,11 @@ packages:
 - ./libs/mix
 - ./libs/mix-plugin-github
 - ./libs/mix-plugin-drone
+- ./libs/mix-plugin-shell
 extra-deps:
 - extensible-0.5
 - servant-github-webhook-0.4.1.0
+- shh-0.3.1.0
 - github: matsubara0507/github
   commit: df371930d6369d1b2f37901619d8e8c56fb8fb60
 - github: matsubara0507/drone-haskell
