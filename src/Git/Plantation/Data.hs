@@ -1,7 +1,4 @@
-module Git.Plantation.Data where
+module Git.Plantation.Data (module X) where
 
-import           RIO
-
-type Branch = Text
-
-type User = Text
+import           Git.Plantation.Data.Problem as X
+import           Git.Plantation.Data.Team    as X

@@ -14,11 +14,18 @@ type Score = Record
   '[ "team"  >: Text
    , "point" >: Int
    , "stats" >: [Status]
+   , "links" >: [Link]
    ]
 
 type Status = Record
   '[ "problem" >: Text
    , "correct" >: Bool
+   , "pending" >: Bool
+   ]
+
+type Link = Record
+  '[ "problem_id" >: Int
+   , "url"        >: Text
    ]
 
 instance ElmType Score where
@@ -26,3 +33,6 @@ instance ElmType Score where
 
 instance ElmType Status where
   toElmType = toElmRecordType "Status"
+
+instance ElmType Link where
+  toElmType = toElmRecordType "Link"

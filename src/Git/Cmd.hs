@@ -11,6 +11,9 @@ clone = command1_ "git" [] "clone"
 fetch :: [Text] -> Sh ()
 fetch = command1_ "git" [] "fetch"
 
+pull :: [Text] -> Sh ()
+pull = command1_ "git" [] "pull"
+
 remote :: [Text] -> Sh ()
 remote = command1_ "git" [] "remote"
 
@@ -25,6 +28,9 @@ commit = command1_ "git" [] "commit"
 
 add :: [Text] -> Sh ()
 add = command1_ "git" [] "add"
+
+branch :: [Text] -> Sh ()
+branch = command1_ "git" [] "branch"
 
 cloneOrFetch :: Text -> Text -> Sh ()
 cloneOrFetch repoUrl repoName = do

@@ -11,6 +11,7 @@ import           Paths_git_plantation     (version)
 import           RIO
 import qualified RIO.ByteString           as B
 
+import           Configuration.Dotenv     (defaultConfig, loadFile)
 import           Data.Extensible
 import           Data.Extensible.GetOpt
 import           Data.Version             (Version)
@@ -25,7 +26,8 @@ import qualified Servant.GitHub.Webhook   (GitHubKey, gitHubKey)
 import           System.Environment       (getEnv)
 
 main :: IO ()
-main = withGetOpt "[options] [config-file]" opts $ \r args ->
+main = withGetOpt "[options] [config-file]" opts $ \r args -> do
+  _ <- tryIO $ loadFile defaultConfig
   case (r ^. #version, listToMaybe args) of
     (True, _)      -> B.putStr $ fromString (showVersion version) <> "\n"
     (_, Nothing)   -> error "please input config file path."
@@ -62,17 +64,19 @@ versionOpt = optFlag [] ["version"] "Show version"
 
 runServer :: Options -> Config -> IO ()
 runServer opts config = do
-  logOpts   <- logOptionsHandle stdout $ opts ^. #verbose
-  token     <- liftIO $ fromString <$> getEnv "GH_TOKEN"
-  dHost     <- liftIO $ fromString <$> getEnv "DRONE_HOST"
-  dToken    <- liftIO $ fromString <$> getEnv "DRONE_TOKEN"
-  let client = Drone.HttpsClient (#host @= dHost <: #token @= dToken <: nil)
+  logOpts <- logOptionsHandle stdout $ opts ^. #verbose
+  token   <- liftIO $ fromString <$> getEnv "GH_TOKEN"
+  dHost   <- liftIO $ fromString <$> getEnv "DRONE_HOST"
+  dToken  <- liftIO $ fromString <$> getEnv "DRONE_TOKEN"
+  dPort   <- liftIO $ readMaybe  <$> getEnv "DRONE_PORT"
+  let client = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
   withLogFunc logOpts $ \logger -> do
-    let env = #config @= config
-           <: #token  @= token
-           <: #work   @= (opts ^. #work)
-           <: #client @= client
-           <: #logger @= logger
+    let env = #config  @= config
+           <: #token   @= token
+           <: #work    @= (opts ^. #work)
+           <: #client  @= Drone.HttpsClient client
+           <: #webhook @= mempty
+           <: #logger  @= logger
            <: nil :: Env
     B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
     Warp.run (opts ^. #port) $

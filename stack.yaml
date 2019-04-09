@@ -1,18 +1,19 @@
-resolver: lts-13.6
+resolver: lts-13.13
 packages:
 - .
 extra-deps:
 - extensible-0.5
-- github-0.20
 - servant-github-webhook-0.4.1.0
+- github: matsubara0507/github
+  commit: df371930d6369d1b2f37901619d8e8c56fb8fb60
 - github: matsubara0507/drone-haskell
-  commit: 6e1f61e625fe04d2d90554ea3fe93894708a4fcf
+  commit: aa6f5152dd9ea72cb48a32bdc58c91de2bdc21a9
 - github: matsubara0507/elm-export
-  commit: 7dc72b9eb34a4f126bb37e288534ec9ac7dc4bc3
+  commit: 0a05fecf56f84aa2ad998200a03c7df2a1676c0c
 docker:
   repo: fpco/stack-build
   enable: false
 image:
   container:
     name: git-plantation-bin
-    base: fpco/ubuntu-with-libgmp
+    base: matsubara0507/ubuntu-for-haskell:git

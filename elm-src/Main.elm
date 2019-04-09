@@ -3,7 +3,7 @@ module Main exposing (Model, Msg(..), init, main, subscriptions, update, view, v
 import Browser as Browser
 import Generated.API as API exposing (..)
 import Html exposing (..)
-import Html.Attributes exposing (checked, class, id, style, type_)
+import Html.Attributes exposing (checked, class, href, id, style, target, type_)
 import Html.Events exposing (onCheck, onClick)
 import Http
 import List.Extra as List
@@ -23,7 +23,9 @@ main =
 type alias Model =
     { reload : Bool
     , problems : List API.Problem
+    , teams : List API.Team
     , scores : RemoteData String (List API.Score)
+    , interval : Float
     }
 
 
@@ -44,7 +46,9 @@ init flags =
         model =
             { reload = True
             , problems = flags.config.problems
+            , teams = flags.config.teams
             , scores = NotAsked
+            , interval = flags.config.scoreboard.interval
             }
     in
     ( model, Cmd.batch [ fetchScores ] )
@@ -107,8 +111,8 @@ viewHeader model =
 viewHeaderCol : API.Problem -> Html msg
 viewHeaderCol problem =
     th
-        [ id problem.problem_name, class "text-center p-2 f4", style "width" "100px" ]
-        [ text problem.problem_name ]
+        [ id problem.name, class "text-center p-2 f4", style "width" "100px" ]
+        [ text problem.name ]
 
 
 viewBody : Model -> List (Html msg)
@@ -135,35 +139,43 @@ viewScore problems idx score =
         ]
         (List.concat
             [ [ th [ class "text-right p-2 f4" ] [ text score.team ] ]
-            , List.map (viewStatus score.stats) problems
+            , List.map (viewStatus score) problems
             , [ th [ class "text-center p-2 f4" ] [ text (String.fromInt score.point) ] ]
             ]
         )
 
 
-viewStatus : List API.Status -> API.Problem -> Html msg
-viewStatus stats problem =
+viewStatus : API.Score -> API.Problem -> Html msg
+viewStatus score problem =
     let
         status =
-            List.find (\st -> st.problem == problem.problem_name) stats
+            List.find (\st -> st.problem == problem.name) score.stats
+
+        url =
+            List.find (\l -> l.problem_id == problem.id) score.links
+                |> Maybe.map .url
+                |> Maybe.withDefault ""
     in
     th
         [ class "text-center p-2" ]
-        [ div [] [ statBadge status ]
+        [ a [ href url, target "_blank" ] [ statBadge status ]
         , div [] [ stars problem.difficulty ]
         ]
 
 
 statBadge : Maybe API.Status -> Html msg
 statBadge status =
-    case Maybe.map .correct status of
-        Nothing ->
+    case ( Maybe.map .correct status, Maybe.map .pending status ) of
+        ( Nothing, _ ) ->
             span [ class "Label Label--gray-darker" ] [ text "未提出" ]
 
-        Just False ->
+        ( _, Just True ) ->
+            span [ class "Label bg-yellow" ] [ text "採点中" ]
+
+        ( Just False, _ ) ->
             span [ class "Label bg-red" ] [ text "不正解" ]
 
-        Just True ->
+        ( Just True, _ ) ->
             span [ class "Label bg-green" ] [ text "正解" ]
 
 
@@ -210,11 +222,6 @@ fetchScores =
     Http.send FetchScores API.getApiScores
 
 
-baseUrl : String
-baseUrl =
-    "localhost:8080"
-
-
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Time.every 60000 Tick
+    Time.every model.interval Tick
