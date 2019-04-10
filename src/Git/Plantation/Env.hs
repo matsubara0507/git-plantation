@@ -8,22 +8,24 @@ module Git.Plantation.Env where
 
 import           RIO
 
-import           Data.Aeson            (ToJSON)
-import qualified Data.Aeson.Text       as Json
+import           Data.Aeson                (ToJSON)
+import qualified Data.Aeson.Text           as Json
 import           Data.Extensible
-import qualified Drone.Client          as Drone
+import qualified Drone.Client              as Drone
 import           Git.Plantation.Config
-import           Git.Plantation.Data   (Problem, Repo, Team, User)
-import qualified GitHub.Auth           as GitHub
-import qualified GitHub.Data           as GitHub
-import           Mix.Plugin.Logger     ()
-import qualified RIO.Text.Lazy         as TL
+import           Git.Plantation.Data       (Problem, Repo, Team, User)
+import qualified Git.Plantation.Data.Slack as Slack
+import qualified GitHub.Auth               as GitHub
+import qualified GitHub.Data               as GitHub
+import           Mix.Plugin.Logger         ()
+import qualified RIO.Text.Lazy             as TL
 
 type Plant = RIO Env
 
 type Env = Record
   '[ "config"  >: Config
    , "github"  >: GitHub.Token
+   , "slack"   >: Maybe Slack.Config
    , "work"    >: FilePath
    , "drone"   >: Drone.HttpsClient
    , "webhook" >: WebhookConfig

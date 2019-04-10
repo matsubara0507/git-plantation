@@ -36,6 +36,7 @@ run opts = do
       plugin  = hsequence
           $ #config  <@=> pure config
          <: #github  <@=> MixGitHub.buildPlugin token
+         <: #slack   <@=> pure Nothing
          <: #work    <@=> MixShell.buildPlugin (opts ^. #work)
          <: #drone   <@=> MixDrone.buildPlugin client Drone.HttpsClient
          <: #webhook <@=> pure (mkWebhookConf (appUrl <> "/hook") secret)

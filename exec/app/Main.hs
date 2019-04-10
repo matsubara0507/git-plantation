@@ -30,6 +30,8 @@ import           Servant
 import qualified Servant.GitHub.Webhook   (GitHubKey, gitHubKey)
 import           System.Environment       (getEnv)
 
+import           Orphans                  ()
+
 main :: IO ()
 main = withGetOpt "[options] [config-file]" opts $ \r args -> do
   _ <- tryIO $ loadFile defaultConfig
@@ -73,11 +75,13 @@ runServer opts config = do
   dHost   <- liftIO $ fromString <$> getEnv "DRONE_HOST"
   dToken  <- liftIO $ fromString <$> getEnv "DRONE_TOKEN"
   dPort   <- liftIO $ readMaybe  <$> getEnv "DRONE_PORT"
+  sToken  <- liftIO $ fromString <$> getEnv "SLACK_API_TOKEN"
   let client  = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
       logConf = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
       plugin  = hsequence
           $ #config  <@=> pure config
          <: #github  <@=> MixGitHub.buildPlugin token
+         <: #slack   <@=> pure (Just $ #token @= sToken <: #user_ids @= [] <: nil)
          <: #work    <@=> MixShell.buildPlugin (opts ^. #work)
          <: #drone   <@=> MixDrone.buildPlugin client Drone.HttpsClient
          <: #webhook <@=> pure mempty
