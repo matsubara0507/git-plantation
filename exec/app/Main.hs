@@ -120,8 +120,7 @@ showVersion v = unwords
   ]
 
 readListEnv :: Read a => String -> [a]
-readListEnv =
-  catMaybes . map (readMaybe . show) . Text.split (== ',') . fromString
+readListEnv = mapMaybe (readMaybe . show) . Text.split (== ',') . fromString
 
 -- HACK
 newtype GitHubKey = GitHubKey (forall result. Servant.GitHub.Webhook.GitHubKey result)

@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TupleSections    #-}
 {-# LANGUAGE TypeOperators    #-}
