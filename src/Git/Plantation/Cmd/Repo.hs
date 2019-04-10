@@ -101,8 +101,8 @@ createRepoInGitHub info team problem = do
 
 initRepoInGitHub :: Repo -> Team -> Problem -> Plant ()
 initRepoInGitHub info team problem = do
-  token   <- MixGitHub.tokenText
-  github  <- repoGithub info
+  token  <- MixGitHub.tokenText
+  github <- repoGithub info
   let (owner, repo) = splitRepoName $ problem ^. #repo
       (_, teamRepo) = splitRepoName github
       teamUrl       = mconcat ["https://", token, "@github.com/", github, ".git"]
@@ -139,8 +139,8 @@ setupWebhook info = do
 
 initProblemCI :: Repo -> Team -> Problem -> Plant ()
 initProblemCI info team problem = do
-  token   <- MixGitHub.tokenText
-  github  <- repoGithub info
+  token  <- MixGitHub.tokenText
+  github <- repoGithub info
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
@@ -165,7 +165,7 @@ resetRepo info team problem = do
 
 pushForCI :: Team -> Problem -> Plant ()
 pushForCI team problem = do
-  token   <- MixGitHub.tokenText
+  token <- MixGitHub.tokenText
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
@@ -198,7 +198,7 @@ deleteRepoInGithub info = do
 
 deleteProblemCI :: Team -> Problem -> Plant ()
 deleteProblemCI team problem = do
-  token   <- MixGitHub.tokenText
+  token <- MixGitHub.tokenText
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
   runGitForTeam team repo problemUrl $
