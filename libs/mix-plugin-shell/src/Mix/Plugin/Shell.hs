@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE OverloadedLabels     #-}
 {-# LANGUAGE TypeOperators        #-}
+{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
 module Mix.Plugin.Shell
   ( HasWorkDir (..)
@@ -54,7 +55,7 @@ runShell act = do
   path <- liftIO $ takeWhile (/= '\n') <$> Shell.readProc Shell.pwd
   work <- view workL
   result <- liftIO $ Shell.catchFailure $ Shell.readProc $ do
-    Shell.mkdir "-p" work
+    Shell.mkdir ("-p" :: String) work
     liftIO $ Shell.cd work
     act
   case result of
@@ -63,10 +64,10 @@ runShell act = do
   liftIO $ Shell.cd path
 
 test_d :: (Shell.ProcFailure m, Functor m) => FilePath -> m Bool
-test_d path = (== 0) <$> Shell.catchCode (Shell.test "-d" path)
+test_d path = (== 0) <$> Shell.catchCode (Shell.test ("-d" :: String) path)
 
 test_f :: (Shell.ProcFailure m, Functor m) => FilePath -> m Bool
-test_f path = (== 0) <$> Shell.catchCode (Shell.test "-f" path)
+test_f path = (== 0) <$> Shell.catchCode (Shell.test ("-f" :: String) path)
 
 git :: Text -> [Text] -> Shell.Proc ()
 git cmd args = Shell.mkProc "git" $ Text.unpack <$> (cmd : args)

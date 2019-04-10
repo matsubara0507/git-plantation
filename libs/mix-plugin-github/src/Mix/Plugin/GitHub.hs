@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeOperators    #-}
+{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
 module Mix.Plugin.GitHub
   ( HasGitHubToken (..)
@@ -17,7 +18,7 @@ import           Data.Extensible
 import qualified GitHub.Auth     as GitHub
 import           Mix.Plugin      (Plugin, toPlugin)
 
-buildPlugin :: MonadIO m => GitHub.Token -> Plugin a m GitHub.Token
+buildPlugin ::  MonadIO m => GitHub.Token -> Plugin a m GitHub.Token
 buildPlugin token = toPlugin $ \f -> f token
 
 class HasGitHubToken env where

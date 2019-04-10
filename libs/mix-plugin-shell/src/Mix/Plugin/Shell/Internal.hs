@@ -1,4 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 
 module Mix.Plugin.Shell.Internal
     ( cat

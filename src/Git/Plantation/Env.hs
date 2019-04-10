@@ -3,7 +3,6 @@
 {-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeOperators    #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Git.Plantation.Env where
 

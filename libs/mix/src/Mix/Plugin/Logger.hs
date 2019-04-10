@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeOperators    #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Mix.Plugin.Logger
   ( LogFunc
@@ -15,11 +16,10 @@ module Mix.Plugin.Logger
   ) where
 
 import           RIO
-import qualified RIO.Text           as Text
+import qualified RIO.Text        as Text
 
-import           Control.Monad.Cont
 import           Data.Extensible
-import           Mix.Plugin         (Plugin, toPlugin)
+import           Mix.Plugin      (Plugin, toPlugin)
 
 type MixLoggerConfig = Record
   '[ "handle"  >: Handle

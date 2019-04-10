@@ -160,7 +160,7 @@ resetRepo info team problem = do
   let (_, repo) = splitRepoName $ problem ^. #repo
   local (over #work $ toTeamWork team) $ do
     local (over #work $ toWorkWith $ Text.unpack repo) $ MixShell.runShell MixShell.ls
-    MixShell.runShell $ MixShell.rm "-rf" (Text.unpack repo)
+    MixShell.runShell $ MixShell.rm ("-rf" :: String) (Text.unpack repo)
   initRepoInGitHub info team problem
 
 pushForCI :: Team -> Problem -> Plant ()

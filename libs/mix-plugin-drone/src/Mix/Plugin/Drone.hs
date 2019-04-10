@@ -3,6 +3,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLabels      #-}
 {-# LANGUAGE TypeOperators         #-}
+{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
 module Mix.Plugin.Drone
   ( HasDroneClient (..)
@@ -18,7 +19,7 @@ import           Drone
 import           Mix.Plugin         (Plugin, toPlugin)
 import           Network.HTTP.Req   (Req, runReq)
 
-buildPlugin :: (Drone.Client c, MonadIO m)
+buildPlugin :: (MonadIO m, Drone.Client c)
   => Drone.BaseClient -> (Drone.BaseClient -> c) -> Plugin a m c
 buildPlugin base scheme = toPlugin $ \f -> f (scheme base)
 
@@ -32,6 +33,5 @@ fetch ::
   ( MonadIO m
   , MonadReader env m
   , HasDroneClient c env
-  , Drone.Client c
   ) => (c -> Req a) -> m a
 fetch req = (runReq def . req) =<< view clientL
