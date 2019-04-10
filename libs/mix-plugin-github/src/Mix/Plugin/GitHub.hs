@@ -27,7 +27,7 @@ instance Associate "github" GitHub.Token xs => HasGitHubToken (Record xs) where
   tokenL = lens (view #github) (\x y -> x & #github `set` y)
 
 tokenText :: (MonadIO m, MonadReader env m, HasGitHubToken env) => m Text
-tokenText = tshow <$> view tokenL
+tokenText = decodeUtf8With lenientDecode <$> view tokenL
 
 auth :: (MonadIO m, MonadReader env m, HasGitHubToken env) => m GitHub.Auth
 auth = GitHub.OAuth <$> view tokenL
