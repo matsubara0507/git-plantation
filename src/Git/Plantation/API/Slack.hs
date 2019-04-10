@@ -9,7 +9,9 @@ module Git.Plantation.API.Slack where
 import           RIO
 import qualified RIO.List                  as L
 import qualified RIO.Text                  as Text
+import qualified RIO.Text.Lazy             as TL
 
+import qualified Data.Aeson.Text           as Json
 import           Data.Extensible
 import qualified Git.Plantation.Cmd.Repo   as Cmd
 import           Git.Plantation.Config     (Config)
@@ -18,25 +20,25 @@ import qualified Git.Plantation.Data.Slack as Slack
 import qualified Git.Plantation.Data.Team  as Team
 import           Git.Plantation.Env        (Plant)
 import           Servant
+import           UnliftIO.Concurrent       (forkIO)
 
 type SlackAPI
-     = "reset-repo" :> ReqBody '[FormUrlEncoded] Slack.OutgoingWebhookData :> Post '[JSON] Slack.Message
+     = "reset-repo" :> ReqBody '[FormUrlEncoded] Slack.SlashCmdData :> Post '[JSON] Slack.Message
 
 slackAPI :: ServerT SlackAPI Plant
 slackAPI
       = resetRepo
 
-resetRepo :: Slack.OutgoingWebhookData -> Plant Slack.Message
+resetRepo :: Slack.SlashCmdData -> Plant Slack.Message
 resetRepo postData = do
-  logInfo $ display $ mconcat
-    [ "[POST] /slack/reset-repo"
-    , " text='", postData ^. #text, "'"
-    , " trigger_word='", postData ^. #trigger_word, "'"
+  logInfo $ fromString $ mconcat
+    [ "[POST] /slack/reset-repo "
+    , TL.unpack $ Json.encodeToLazyText (shrink postData :: Slack.DisplayLogData)
     ]
   slackConfig <- asks (view #slack)
-  case verify slackConfig postData of
+  case verify slackConfig (view #reset_repo_cmd) postData of
     Left err -> returnMessage err
-    Right _  -> resetRepo' $ toMessageBody postData
+    Right _  -> resetRepo' (postData ^. #text)
   where
     returnMessage :: MonadIO m => Text -> m Slack.Message
     returnMessage txt = pure $ #text @= txt <: nil
@@ -50,20 +52,18 @@ resetRepo postData = do
 
     reset :: (Team, Problem, Repo) -> Plant Text
     reset (team, problem, repo) = do
-      let success = [team ^. #name, " の ", problem ^. #name, " をリセットしたよ！"]
-      tryAny (Cmd.resetRepo repo team problem) >>= \case
-        Left  e -> logError (display e) >> pure "うーん、なんか失敗しました。"
-        Right _ -> pure $ mconcat success
+      let success = [team ^. #name, " の ", problem ^. #name, " をリセットするね！"]
+      _ <- forkIO $ Cmd.resetRepo repo team problem
+      pure $ mconcat success
 
-verify :: Maybe Slack.Config -> Slack.OutgoingWebhookData -> Either Text ()
-verify Nothing _ = Left "Undefined Token..."
-verify (Just config) postData
-  | config ^. #token /= postData ^. #token = Left "Invalid Token..."
-  | otherwise                              = pure ()
-
-toMessageBody :: Slack.OutgoingWebhookData -> Text
-toMessageBody postData =
-  Text.strip $ fromMaybe "" $ Text.stripPrefix (postData ^. #trigger_word) (postData ^. #text)
+verify :: Maybe Slack.Config -> (Slack.Config -> Text) -> Slack.SlashCmdData -> Either Text ()
+verify Nothing _ _ = Left "Undefined Token..."
+verify (Just config) cmd postData
+  | config ^. #token /= postData ^. #token                   = Left "Invalid token..."
+  | postData ^. #team_id /= config ^. #team_id               = Left "Invalid team..."
+  | postData ^. #channel_id `notElem` config ^. #channel_ids = Left "Invalid channel..."
+  | cmd config /= postData ^. #command                       = Left "Invalid command..."
+  | otherwise                                                = pure ()
 
 findInfos :: Config -> Text -> Maybe (Team, Problem, Repo)
 findInfos config txt = do
@@ -71,5 +71,5 @@ findInfos config txt = do
   problem      <- L.find (\p -> p ^. #id == repo ^. #problem) $ config ^. #problems
   pure (team, problem, repo)
   where
-    ghPath = Text.dropSuffix ">" $ Text.dropPrefix "<https://github.com/" txt
+    ghPath = Text.dropPrefix "https://github.com/" txt
     repos  = concatMap (\t -> (t,) <$> t ^. #repos) $ config ^. #teams

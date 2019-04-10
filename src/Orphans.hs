@@ -5,7 +5,6 @@
 module Orphans () where
 
 import           RIO
-import qualified RIO.List           as L
 import qualified RIO.Text           as Text
 
 import           Data.Extensible

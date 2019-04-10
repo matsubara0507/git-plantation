@@ -58,6 +58,7 @@ dependencies:
 - shh
 - yaml >= 0.8.31
 - http-api-data
+- unliftio
 
 library:
   source-dirs: src

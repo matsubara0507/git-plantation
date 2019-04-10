@@ -10,6 +10,7 @@ module Main where
 import           Paths_git_plantation     (version)
 import           RIO
 import qualified RIO.ByteString           as B
+import qualified RIO.Text                 as Text
 
 import           Configuration.Dotenv     (defaultConfig, loadFile)
 import           Data.Extensible
@@ -71,17 +72,27 @@ versionOpt = optFlag [] ["version"] "Show version"
 
 runServer :: Options -> Config -> IO ()
 runServer opts config = do
-  token   <- liftIO $ fromString <$> getEnv "GH_TOKEN"
-  dHost   <- liftIO $ fromString <$> getEnv "DRONE_HOST"
-  dToken  <- liftIO $ fromString <$> getEnv "DRONE_TOKEN"
-  dPort   <- liftIO $ readMaybe  <$> getEnv "DRONE_PORT"
-  sToken  <- liftIO $ fromString <$> getEnv "SLACK_API_TOKEN"
-  let client  = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
-      logConf = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
-      plugin  = hsequence
+  token         <- liftIO $ fromString  <$> getEnv "GH_TOKEN"
+  dHost         <- liftIO $ fromString  <$> getEnv "DRONE_HOST"
+  dToken        <- liftIO $ fromString  <$> getEnv "DRONE_TOKEN"
+  dPort         <- liftIO $ readMaybe   <$> getEnv "DRONE_PORT"
+  sToken        <- liftIO $ fromString  <$> getEnv "SLACK_API_TOKEN"
+  sTeam         <- liftIO $ fromString  <$> getEnv "SLACK_TEAM_ID"
+  sChannels     <- liftIO $ readListEnv <$> getEnv "SLACK_CHANNEL_IDS"
+  sResetRepoCmd <- liftIO $ fromString  <$> getEnv "SLACK_RESET_REPO_CMD"
+  let client    = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
+      logConf   = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
+      slackConf
+          = #token          @= sToken
+         <: #team_id        @= sTeam
+         <: #channel_ids    @= sChannels
+         <: #user_ids       @= []
+         <: #reset_repo_cmd @= sResetRepoCmd
+         <: nil
+      plugin    = hsequence
           $ #config  <@=> pure config
          <: #github  <@=> MixGitHub.buildPlugin token
-         <: #slack   <@=> pure (Just $ #token @= sToken <: #user_ids @= [] <: nil)
+         <: #slack   <@=> pure (Just slackConf)
          <: #work    <@=> MixShell.buildPlugin (opts ^. #work)
          <: #drone   <@=> MixDrone.buildPlugin client Drone.HttpsClient
          <: #webhook <@=> pure mempty
@@ -107,6 +118,10 @@ showVersion v = unwords
   , $(gitHash)
   , "(" ++ $(gitCommitCount) ++ " commits)"
   ]
+
+readListEnv :: Read a => String -> [a]
+readListEnv =
+  catMaybes . map (readMaybe . show) . Text.split (== ',') . fromString
 
 -- HACK
 newtype GitHubKey = GitHubKey (forall result. Servant.GitHub.Webhook.GitHubKey result)
