@@ -36,6 +36,10 @@ default-extensions:
 dependencies:
 - base >= 4.7 && < 5
 - rio >= 0.1.1.0
+- mix
+- mix-plugin-github
+- mix-plugin-drone
+- mix-plugin-shell
 - aeson
 - blaze-html
 - data-default-class
@@ -51,7 +55,7 @@ dependencies:
 - servant-elm
 - servant-github-webhook
 - servant-server
-- shelly
+- shh
 - yaml >= 0.8.31
 
 library:
