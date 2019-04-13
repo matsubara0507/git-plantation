@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TupleSections    #-}
 {-# LANGUAGE TypeOperators    #-}
@@ -22,38 +23,45 @@ import           Servant
 import           UnliftIO.Concurrent       (forkIO)
 
 type SlackAPI
-     = "reset-repo" :> ReqBody '[FormUrlEncoded] Slack.SlashCmdData :> Post '[JSON] Slack.Message
+     = "reset-repo" :> ReqBody '[FormUrlEncoded] Slack.SlashCmdData :> Post '[JSON] NoContent
 
 slackAPI :: ServerT SlackAPI Plant
 slackAPI
       = resetRepo
 
-resetRepo :: Slack.SlashCmdData -> Plant Slack.Message
+resetRepo :: Slack.SlashCmdData -> Plant NoContent
 resetRepo postData = do
   logInfo $ fromString $ mconcat
     [ "[POST] /slack/reset-repo "
     , TL.unpack $ Json.encodeToLazyText (shrink postData :: Slack.DisplayLogData)
     ]
-  slackConfig <- asks (view #slack)
-  case verify slackConfig (view #reset_repo_cmd) postData of
-    Left err -> returnMessage err
-    Right _  -> resetRepo' (postData ^. #text)
+  _ <- forkIO $ do
+    slackConfig <- asks (view #slack)
+    case verify slackConfig (view #reset_repo_cmd) postData of
+      Left err -> logError $ display err
+      Right _  -> (logError . display) `handleIO` resetRepo' (postData ^. #text)
+  pure NoContent
   where
     returnMessage :: MonadIO m => Text -> m Slack.Message
     returnMessage txt = pure $ #text @= txt <: nil
 
-    resetRepo' :: Text -> Plant Slack.Message
+    resetRepo' :: Text -> Plant ()
     resetRepo' text = do
-      config <- asks (view #config)
-      case findInfos config text of
-        Nothing   -> returnMessage "リポジトリが見つからなーい"
+      logDebug "reset-cmd: find repository by message"
+      Slack.respondMessage postData $ Slack.mkMessage "リポジトリをリセットするね！"
+      config  <- asks (view #config)
+      message <- case findInfos config text of
+        Nothing   -> returnMessage "うーん、リポジトリが見つからなーい..."
         Just info -> returnMessage =<< reset info
+      logDebug $ display ("reset-cmd: response: " <> message ^. #text)
+      Slack.respondMessage postData message
 
     reset :: (Team, Problem, Repo) -> Plant Text
     reset (team, problem, repo) = do
-      let success = [team ^. #name, " の ", problem ^. #name, " をリセットするね！"]
-      _ <- forkIO $ Cmd.resetRepo repo team problem
-      pure $ mconcat success
+      let success = [team ^. #name, " の ", problem ^. #name, " をリセットしました！"]
+      tryIO (Cmd.resetRepo repo team problem) >>= \case
+        Left err -> logError (display err) >> pure "うーん、なんか失敗したみたい..."
+        Right _  -> pure $ mconcat success
 
 verify :: Maybe Slack.Config -> (Slack.Config -> Text) -> Slack.SlashCmdData -> Either Text ()
 verify Nothing _ _ = Left "Undefined Token..."

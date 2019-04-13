@@ -1,11 +1,15 @@
-{-# LANGUAGE DataKinds     #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeOperators    #-}
 
 module Git.Plantation.Data.Slack where
 
 import           RIO
+import qualified RIO.Text        as Text
 
+import qualified Data.Aeson      as J
 import           Data.Extensible
+import qualified Network.Wreq    as W
 
 type Config = Record
   '[ "token"          >: Text
@@ -37,3 +41,12 @@ type DisplayLogData = Record
    , "text"         >: Text
    , "command"      >: Text
    ]
+
+mkMessage :: Text -> Message
+mkMessage txt = #text @= txt <: nil
+
+respondMessage :: MonadIO m => SlashCmdData -> Message -> m ()
+respondMessage postData message = do
+  let url = Text.unpack $ postData ^. #response_url
+  _ <- liftIO $ W.post url (J.toJSON message)
+  pure ()
