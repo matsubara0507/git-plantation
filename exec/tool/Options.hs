@@ -3,19 +3,18 @@
 {-# LANGUAGE TypeOperators    #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Git.Plantation.Cmd.Options where
+module Options where
 
 import           RIO
-import qualified RIO.List                  as L
+import qualified RIO.List                 as L
 
 import           Data.Extensible
-import           Git.Plantation.Cmd.Member
-import           Git.Plantation.Cmd.Repo
-import           Git.Plantation.Cmd.Run
-import           Git.Plantation.Config     as Config
-import           Git.Plantation.Data       (Problem, Team)
-import qualified Git.Plantation.Data.Team  as Team
+import           Git.Plantation.Cmd
+import           Git.Plantation.Config    as Config
+import           Git.Plantation.Data      (Problem, Team)
+import qualified Git.Plantation.Data.Team as Team
 import           Git.Plantation.Env
+
 
 type Options = Record
   '[ "verbose" >: Bool
