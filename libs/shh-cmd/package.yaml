@@ -1,4 +1,4 @@
-name:                mix-plugin-shell
+name:                shh-cmd
 version:             0.1.0
 license:             MIT
 author:              "MATSUBARA Nobutada"
@@ -16,27 +16,10 @@ ghc-options:
 - -Wincomplete-uni-patterns
 - -Wredundant-constraints
 
-default-extensions:
-- NoImplicitPrelude
-
-- ConstraintKinds
-- FlexibleContexts
-- FlexibleInstances
-- GeneralizedNewtypeDeriving
-- OverloadedStrings
-- PolyKinds
-- RankNTypes
-- StandaloneDeriving
-- TypeFamilies
-- TypeSynonymInstances
-
 dependencies:
 - base >= 4.7 && < 5
-- rio >= 0.1.1.0
-- extensible
-- mix
+- text
 - shh
-- shh-cmd
 
 library:
   source-dirs: src

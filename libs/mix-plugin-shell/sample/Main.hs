@@ -1,7 +1,8 @@
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeOperators    #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE OverloadedLabels  #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeOperators     #-}
 
 module Main where
 
@@ -11,7 +12,7 @@ import           Data.Extensible
 import           Mix
 import qualified Mix.Plugin.Logger as MixLogger
 import qualified Mix.Plugin.Shell  as MixShell
-import qualified Shh               as Shell
+import qualified Shh.Command       as Shell
 
 
 type Env = Record
@@ -20,9 +21,9 @@ type Env = Record
    ]
 
 main :: IO ()
-main = Mix.run plugin $ MixShell.runShell $ do
-  MixShell.pwd
-  MixShell.git "--version"
+main = Mix.run plugin $ MixShell.exec $ do
+  Shell.pwd
+  Shell.ls [] "."
   where
     plugin :: Plugin () IO Env
     plugin = hsequence
