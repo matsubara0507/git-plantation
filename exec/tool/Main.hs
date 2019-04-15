@@ -75,8 +75,8 @@ subcmdParser = variantFrom
    <: #init_ci          @= singleRepoCmdParser   `withInfo` "Init CI repository by team repository"
    <: #reset_repo       @= singleRepoCmdParser   `withInfo` "Reset repository for team"
    <: #delete_repo      @= deleteRepoCmdParser   `withInfo` "Delete repository for team."
-   <: #invite_member    @= inviteMemberCmdParser `withInfo` "Invite member to team repository"
-   <: #kick_member      @= kickMemberCmdParser   `withInfo` "Kick member from team repository"
+   <: #invite_member    @= memberCmdParser       `withInfo` "Invite member to team repository"
+   <: #kick_member      @= memberCmdParser       `withInfo` "Kick member from team repository"
    <: nil
 
 newRepoCmdParser :: Parser NewRepoCmd
@@ -97,19 +97,16 @@ singleRepoCmdParser = hsequence
 
 deleteRepoCmdParser :: Parser DeleteRepoCmd
 deleteRepoCmdParser = hsequence
-    $ #repos              <@=> option comma (long "repos" <> value [] <> metavar "IDS" <> help "Sets reopsitory that want to controll by problem id.")
-   <: #team               <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
+    $ #repos <@=> option comma (long "repos" <> value [] <> metavar "IDS" <> help "Sets reopsitory that want to controll by problem id.")
+   <: #team  <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
    <: nil
 
-inviteMemberCmdParser :: Parser InviteMemberCmd
-inviteMemberCmdParser = hsequence
+memberCmdParser :: Parser MemberCmdArg
+memberCmdParser = hsequence
     $ #team  <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
    <: #repos <@=> option comma (long "repos" <> value [] <> metavar "ID" <> help "Sets reopsitory that want to controll by problem id.")
    <: #user  <@=> option (Just <$> str) (long "user" <> value Nothing <> metavar "TEXT" <> help "Sets user that want to controll.")
    <: nil
-
-kickMemberCmdParser :: Parser KickMemberCmd
-kickMemberCmdParser = inviteMemberCmdParser
 
 variantFrom ::
   Forall (KeyIs KnownSymbol) xs => RecordOf ParserInfo xs -> Parser (Variant xs)

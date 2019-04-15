@@ -34,8 +34,8 @@ type SubCmdFields =
    , "init_ci"          >: InitCICmd
    , "reset_repo"       >: ResetRepoCmd
    , "delete_repo"      >: DeleteRepoCmd
-   , "invite_member"    >: InviteMemberCmd
-   , "kick_member"      >: KickMemberCmd
+   , "invite_member"    >: MemberCmdArg
+   , "kick_member"      >: MemberCmdArg
    ]
 
 instance Run ("verify" >: ()) where
@@ -97,18 +97,8 @@ instance Run ("delete_repo" >: DeleteRepoCmd) where
       (Just team', [])   -> forM_ (conf ^. #problems) (tryAnyWithLogError . deleteRepo team')
       (Just team', pids) -> forM_ pids $ actByProblemId deleteRepo team'
 
-instance Run ("invite_member" >: InviteMemberCmd) where
-  run' _ args = do
-    conf <- asks (view #config)
-    let team = L.find (\t -> t ^. #name == args ^. #team) $ conf ^. #teams
-    case team of
-      Nothing    -> logError $ "team is not found: " <> display (args ^. #team)
-      Just team' -> actForMember inviteUserToRepo args team'
+instance Run ("invite_member" >: MemberCmdArg) where
+  run' _ = actForMember inviteUserToRepo
 
-instance Run ("kick_member" >: KickMemberCmd) where
-  run' _ args = do
-    conf <- asks (view #config)
-    let team = L.find (\t -> t ^. #name == args ^. #team) $ conf ^. #teams
-    case team of
-      Nothing    -> logError $ "team is not found: " <> display (args ^. #team)
-      Just team' -> actForMember kickUserFromRepo args team'
+instance Run ("kick_member" >: MemberCmdArg) where
+  run' _ = actForMember kickUserFromRepo
