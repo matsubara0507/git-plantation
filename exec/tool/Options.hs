@@ -1,20 +1,24 @@
 {-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TemplateHaskell  #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies     #-}
 {-# LANGUAGE TypeOperators    #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Options where
 
 import           RIO
-import qualified RIO.List                 as L
+import           SubCmd
 
 import           Data.Extensible
+import           Data.Version        (Version)
+import qualified Data.Version        as Version
+import           Development.GitRev
+import           GHC.TypeLits        hiding (Mod)
 import           Git.Plantation.Cmd
-import           Git.Plantation.Config    as Config
-import           Git.Plantation.Data      (Problem, Team)
-import qualified Git.Plantation.Data.Team as Team
-import           Git.Plantation.Env
-
+import           Options.Applicative
 
 type Options = Record
   '[ "verbose" >: Bool
@@ -23,82 +27,108 @@ type Options = Record
    , "subcmd"  >: SubCmd
    ]
 
-type SubCmd = Variant SubCmdFields
+options :: Parser Options
+options = hsequence
+    $ #verbose <@=> switch (long "verbose" <> short 'v' <> help "Enable verbose mode: verbosity level \"debug\"")
+   <: #config  <@=> strOption (long "config" <> short 'c' <> value "config.yaml" <> metavar "PATH" <> help "Configuration file")
+   <: #work    <@=> strOption (long "work" <> value "~/.git-plantation" <> metavar "PATH" <> help "Work directory to exec git commands")
+   <: #subcmd  <@=> subcmdParser
+   <: nil
 
-type SubCmdFields =
-  '[ "verify"           >: ()
-   , "new_repo"         >: NewRepoCmd
-   , "new_github_repo"  >: NewGitHubRepoCmd
-   , "init_github_repo" >: InitGitHubRepoCmd
-   , "setup_webhook"    >: SetupWebhookCmd
-   , "init_ci"          >: InitCICmd
-   , "reset_repo"       >: ResetRepoCmd
-   , "delete_repo"      >: DeleteRepoCmd
-   , "invite_member"    >: MemberCmdArg
-   , "kick_member"      >: MemberCmdArg
-   ]
+subcmdParser :: Parser SubCmd
+subcmdParser = variantFrom
+    $ #config  @= configCmdParser  `withInfo` "Manage git-plantation config file."
+   <: #repo    @= repoCmdParser    `withInfo` "Manage team repository in GitHub."
+   <: #member  @= memberCmdParser  `withInfo` "Manage team member with GitHub Account."
+   <: #problem @= problemCmdParser `withInfo` "Manage problem repository in GitHub."
+   <: nil
 
-instance Run ("verify" >: ()) where
-  run' _ _ = do
-    conf <- asks (view #config)
-    case Config.verify conf of
-      Left err -> logError $ "invalid config: " <> display err
-      Right _  -> logInfo "valid config"
+configCmdParser :: Parser ConfigCmd
+configCmdParser = fmap ConfigCmd . variantFrom
+    $ #verify @= pure () `withInfo` "Verify git-plantation config file."
+   <: nil
 
-instance Run ("new_repo" >: NewRepoCmd) where
-  run' _ args = do
-    conf <- asks (view #config)
-    let team  = L.find (\t -> t ^. #name == args ^. #team) $ conf ^. #teams
-        flags = shrink args
-    case (team, args ^. #repos) of
-      (Nothing, _)       -> logError $ "team is not found: " <> display (args ^. #team)
-      (Just team', [])   -> forM_ (conf ^. #problems) (tryAnyWithLogError . createRepo flags team')
-      (Just team', pids) -> forM_ pids $ actByProblemId (createRepo flags) team'
+repoCmdParser :: Parser RepoCmd
+repoCmdParser = fmap RepoCmd . variantFrom
+    $ #new           @= newRepoCmdParser    `withInfo` "Create repository for team."
+   <: #new_github    @= singleRepoCmdParser `withInfo` "Create new repository for team in GitHub"
+   <: #init_github   @= singleRepoCmdParser `withInfo` "Init repository for team in GitHub"
+   <: #setup_webhook @= singleRepoCmdParser `withInfo` "Setup GitHub Webhook to team repository"
+   <: #init_ci       @= singleRepoCmdParser `withInfo` "Init CI repository by team repository"
+   <: #reset         @= singleRepoCmdParser `withInfo` "Reset repository for team"
+   <: #delete        @= deleteRepoCmdParser `withInfo` "Delete repository for team."
+   <: nil
 
-instance Run ("new_github_repo" >: NewGitHubRepoCmd) where
-  run' _ = runRepoCmd $ \team problem -> do
-    info <- Team.lookupRepo problem team `fromJustWithThrow` UndefinedTeamProblem team problem
-    createRepoInGitHub info team problem
+memberCmdParser :: Parser MemberCmd
+memberCmdParser = fmap MemberCmd . variantFrom
+    $ #invite @= memberCmdArgParser `withInfo` "Invite member to team repository"
+   <: #kick   @= memberCmdArgParser `withInfo` "Kick member from team repository"
+   <: nil
 
-instance Run ("init_github_repo" >: InitGitHubRepoCmd) where
-  run' _ = runRepoCmd $ \team problem -> do
-    info <- Team.lookupRepo problem team `fromJustWithThrow` UndefinedTeamProblem team problem
-    initRepoInGitHub info team problem
+memberCmdArgParser :: Parser MemberCmdArg
+memberCmdArgParser = hsequence
+    $ #team  <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
+   <: #repos <@=> option comma (long "repos" <> value [] <> metavar "ID" <> help "Sets reopsitory that want to controll by problem id.")
+   <: #user  <@=> option (Just <$> str) (long "user" <> value Nothing <> metavar "TEXT" <> help "Sets user that want to controll.")
+   <: nil
 
-instance Run ("setup_webhook" >: SetupWebhookCmd) where
-  run' _ = runRepoCmd $ \team problem -> do
-    info <- Team.lookupRepo problem team `fromJustWithThrow` UndefinedTeamProblem team problem
-    setupWebhook info
+problemCmdParser :: Parser ProblemCmd
+problemCmdParser = fmap ProblemCmd . variantFrom
+    $ #show @= pure () `withInfo` "Display proble info."
+   <: nil
 
-instance Run ("init_ci" >: InitCICmd) where
-  run' _ = runRepoCmd $ \team problem -> do
-    info <- Team.lookupRepo problem team `fromJustWithThrow` UndefinedTeamProblem team problem
-    initProblemCI info team problem
+newRepoCmdParser :: Parser NewRepoCmd
+newRepoCmdParser = hsequence
+    $ #repos              <@=> option comma (long "repos" <> value [] <> metavar "IDS" <> help "Sets reopsitory that want to controll by problem id.")
+   <: #team               <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
+   <: #skip_create_repo   <@=> switch (long "skip_create_repo" <> help "Flag for skip create new repository in GitHub")
+   <: #skip_init_repo     <@=> switch (long "skip_init_repo" <> help "Flag for skip init repository in GitHub")
+   <: #skip_setup_webhook <@=> switch (long "skip_setup_webhook" <> help "Flag for skip setup GitHub Webhook to repository")
+   <: #skip_init_ci       <@=> switch (long "skip_init_ci" <> help "Flag for skip init CI by repository")
+   <: nil
 
-instance Run ("reset_repo" >: ResetRepoCmd) where
-  run' _ = runRepoCmd $ \team problem -> do
-    info <- Team.lookupRepo problem team `fromJustWithThrow` UndefinedTeamProblem team problem
-    resetRepo info team problem
+singleRepoCmdParser :: Parser (Record RepoCmdFields)
+singleRepoCmdParser = hsequence
+    $ #repo <@=> option auto (long "repo" <> metavar "ID" <> help "Sets reopsitory that want to controll by problem id.")
+   <: #team <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
+   <: nil
 
-runRepoCmd :: (Team -> Problem -> Plant ()) -> Record RepoCmdFields -> Plant ()
-runRepoCmd act args = do
-  conf <- asks (view #config)
-  let team = L.find (\t -> t ^. #name == args ^. #team) $ conf ^. #teams
-  case (team, args ^. #repo) of
-    (Nothing, _)      -> logError $ "team is not found: " <> display (args ^. #team)
-    (Just team', pid) -> actByProblemId act team' pid
+deleteRepoCmdParser :: Parser DeleteRepoCmd
+deleteRepoCmdParser = hsequence
+    $ #repos <@=> option comma (long "repos" <> value [] <> metavar "IDS" <> help "Sets reopsitory that want to controll by problem id.")
+   <: #team  <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
+   <: nil
 
-instance Run ("delete_repo" >: DeleteRepoCmd) where
-  run' _ args = do
-    conf <- asks (view #config)
-    let team = L.find (\t -> t ^. #name == args ^. #team) $ conf ^. #teams
-    case (team, args ^. #repos) of
-      (Nothing, _)       -> logError $ "team is not found: " <> display (args ^. #team)
-      (Just team', [])   -> forM_ (conf ^. #problems) (tryAnyWithLogError . deleteRepo team')
-      (Just team', pids) -> forM_ pids $ actByProblemId deleteRepo team'
+variantFrom ::
+  Forall (KeyIs KnownSymbol) xs => RecordOf ParserInfo xs -> Parser (Variant xs)
+variantFrom = subparser . subcmdVariant
+  where
+    subcmdVariant = hfoldMapWithIndexFor (Proxy @ (KeyIs KnownSymbol)) $ \m x ->
+      let k = symbolVal (proxyAssocKey m)
+      in command k (EmbedAt m . Field . pure <$> getField x)
 
-instance Run ("invite_member" >: MemberCmdArg) where
-  run' _ = actForMember inviteUserToRepo
+instance Wrapper ParserInfo where
+  type Repr ParserInfo a = ParserInfo a
+  _Wrapper = id
 
-instance Run ("kick_member" >: MemberCmdArg) where
-  run' _ = actForMember kickUserFromRepo
+-- |
+-- support `--hoge 1,2,3`
+comma :: Read a => ReadM [a]
+comma = maybeReader (\s -> readMaybe $ "[" ++ s ++ "]")
+
+withInfo :: Parser a -> String -> ParserInfo a
+withInfo opts = info (helper <*> opts) . progDesc
+
+version :: Version -> Parser (a -> a)
+version v = infoOption (showVersion v)
+    $ long "version"
+   <> help "Show version"
+
+showVersion :: Version -> String
+showVersion v = unwords
+  [ "Version"
+  , Version.showVersion v ++ ","
+  , "Git revision"
+  , $(gitHash)
+  , "(" ++ $(gitCommitCount) ++ " commits)"
+  ]
