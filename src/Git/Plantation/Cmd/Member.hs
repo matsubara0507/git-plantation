@@ -17,7 +17,6 @@ import           Git.Plantation.Env
 import           GitHub.Data.Name                     (mkName)
 import qualified GitHub.Endpoints.Repos.Collaborators as GitHub
 import qualified Mix.Plugin.GitHub                    as MixGitHub
-import           Mix.Plugin.Logger                    as MixLogger
 
 type MemberCmdArg = Record
   '[ "team"  >: TeamId
