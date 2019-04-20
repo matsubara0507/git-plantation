@@ -59,7 +59,7 @@ resetRepo postData = do
     reset :: (Team, Problem, Repo) -> Plant Text
     reset (team, problem, repo) = do
       let success = [team ^. #name, " の ", problem ^. #name, " をリセットしました！"]
-      tryIO (Cmd.resetRepo repo team problem) >>= \case
+      tryIO (Cmd.resetRepo $ #repo @= repo <: #team @= team <: nil) >>= \case
         Left err -> logError (display err) >> pure "うーん、なんか失敗したみたい..."
         Right _  -> pure $ mconcat success
 

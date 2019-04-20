@@ -3,7 +3,13 @@
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeOperators    #-}
 
-module Git.Plantation.Cmd.Member where
+module Git.Plantation.Cmd.Member
+  ( MemberCmdArg
+  , MemberArg
+  , actForMember
+  , inviteUserToRepo
+  , kickUserFromRepo
+  ) where
 
 import           RIO
 

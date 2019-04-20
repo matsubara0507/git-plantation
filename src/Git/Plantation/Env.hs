@@ -61,7 +61,8 @@ mkLogMessage' message =
 
 data GitPlantException
   = UndefinedTeamProblem Team Problem
-  | CreateRepoError GitHub.Error Team Problem
+  | UndefinedProblem Int
+  | CreateRepoError GitHub.Error Team Repo
   | DeleteRepoError GitHub.Error Repo
   | SetupWebhookError GitHub.Error Repo
   | InviteUserError GitHub.Error User Repo
@@ -77,6 +78,10 @@ instance Show GitPlantException where
       mkLogMessage'
         "undefined team repo"
         (#team @= team <: #problem @= problem <: nil)
+    UndefinedProblem idx ->
+      mkLogMessage'
+        "undefined problem"
+        (#id @= idx <: nil)
     CreateRepoError _err team problem ->
       mkLogMessage'
         "can't create repository"

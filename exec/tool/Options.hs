@@ -50,13 +50,29 @@ configCmdParser = fmap ConfigCmd . variantFrom
 
 repoCmdParser :: Parser RepoCmd
 repoCmdParser = fmap RepoCmd . variantFrom
-    $ #new           @= newRepoCmdParser    `withInfo` "Create repository for team."
-   <: #new_github    @= singleRepoCmdParser `withInfo` "Create new repository for team in GitHub"
-   <: #init_github   @= singleRepoCmdParser `withInfo` "Init repository for team in GitHub"
-   <: #setup_webhook @= singleRepoCmdParser `withInfo` "Setup GitHub Webhook to team repository"
-   <: #init_ci       @= singleRepoCmdParser `withInfo` "Init CI repository by team repository"
-   <: #reset         @= singleRepoCmdParser `withInfo` "Reset repository for team"
-   <: #delete        @= deleteRepoCmdParser `withInfo` "Delete repository for team."
+    $ #new           @= newRepoCmdParser `withInfo` "Create repository for team."
+   <: #new_github    @= repoCmdArgParser `withInfo` "Create new repository for team in GitHub"
+   <: #init_github   @= repoCmdArgParser `withInfo` "Init repository for team in GitHub"
+   <: #setup_webhook @= repoCmdArgParser `withInfo` "Setup GitHub Webhook to team repository"
+   <: #init_ci       @= repoCmdArgParser `withInfo` "Init CI repository by team repository"
+   <: #reset         @= repoCmdArgParser `withInfo` "Reset repository for team"
+   <: #delete        @= repoCmdArgParser `withInfo` "Delete repository for team."
+   <: nil
+  where
+    newRepoCmdParser = (,) <$> repoCmdArgParser <*> newRepoFlags
+
+repoCmdArgParser :: Parser RepoCmdArg
+repoCmdArgParser = hsequence
+    $ #repos <@=> option comma (long "repos" <> value [] <> metavar "IDS" <> help "Sets reopsitory that want to controll by problem id.")
+   <: #team  <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
+   <: nil
+
+newRepoFlags :: Parser NewRepoFlags
+newRepoFlags = hsequence
+    $ #skip_create_repo   <@=> switch (long "skip_create_repo" <> help "Flag for skip create new repository in GitHub")
+   <: #skip_init_repo     <@=> switch (long "skip_init_repo" <> help "Flag for skip init repository in GitHub")
+   <: #skip_setup_webhook <@=> switch (long "skip_setup_webhook" <> help "Flag for skip setup GitHub Webhook to repository")
+   <: #skip_init_ci       <@=> switch (long "skip_init_ci" <> help "Flag for skip init CI by repository")
    <: nil
 
 memberCmdParser :: Parser MemberCmd
@@ -75,28 +91,6 @@ memberCmdArgParser = hsequence
 problemCmdParser :: Parser ProblemCmd
 problemCmdParser = fmap ProblemCmd . variantFrom
     $ #show @= pure () `withInfo` "Display proble info."
-   <: nil
-
-newRepoCmdParser :: Parser NewRepoCmd
-newRepoCmdParser = hsequence
-    $ #repos              <@=> option comma (long "repos" <> value [] <> metavar "IDS" <> help "Sets reopsitory that want to controll by problem id.")
-   <: #team               <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
-   <: #skip_create_repo   <@=> switch (long "skip_create_repo" <> help "Flag for skip create new repository in GitHub")
-   <: #skip_init_repo     <@=> switch (long "skip_init_repo" <> help "Flag for skip init repository in GitHub")
-   <: #skip_setup_webhook <@=> switch (long "skip_setup_webhook" <> help "Flag for skip setup GitHub Webhook to repository")
-   <: #skip_init_ci       <@=> switch (long "skip_init_ci" <> help "Flag for skip init CI by repository")
-   <: nil
-
-singleRepoCmdParser :: Parser (Record RepoCmdFields)
-singleRepoCmdParser = hsequence
-    $ #repo <@=> option auto (long "repo" <> metavar "ID" <> help "Sets reopsitory that want to controll by problem id.")
-   <: #team <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
-   <: nil
-
-deleteRepoCmdParser :: Parser DeleteRepoCmd
-deleteRepoCmdParser = hsequence
-    $ #repos <@=> option comma (long "repos" <> value [] <> metavar "IDS" <> help "Sets reopsitory that want to controll by problem id.")
-   <: #team  <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
    <: nil
 
 variantFrom ::
