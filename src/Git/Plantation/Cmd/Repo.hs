@@ -4,10 +4,24 @@
 {-# LANGUAGE OverloadedLabels     #-}
 {-# LANGUAGE TypeOperators        #-}
 
-module Git.Plantation.Cmd.Repo where
+module Git.Plantation.Cmd.Repo
+  ( RepoCmdArg
+  , RepoArg
+  , NewRepoFlags
+  , actForRepo
+  , createRepo
+  , createRepoInGitHub
+  , initRepoInGitHub
+  , setupWebhook
+  , initProblemCI
+  , resetRepo
+  , pushForCI
+  , deleteRepo
+  , splitRepoName
+  , repoGithub
+  ) where
 
 import           RIO
-import qualified RIO.List                        as L
 import qualified RIO.Map                         as Map
 import qualified RIO.Text                        as Text
 import qualified RIO.Vector                      as V
@@ -70,14 +84,6 @@ findProblemWithThrow idx =
   findByIdWith (view #problems) idx >>= \case
     Nothing  -> throwIO $ UndefinedProblem (coerce idx)
     Just p -> pure p
-
-actByProblemId :: (Team -> Problem -> Plant a) -> Team -> Int -> Plant ()
-actByProblemId act team pid = do
-  conf <- asks (view #config)
-  let problem = L.find (\p -> p ^. #id == pid) $ conf ^. #problems
-  case problem of
-    Nothing       -> logError $ "repo is not found by problem id: " <> display pid
-    Just problem' -> tryAnyWithLogError $ act team problem'
 
 createRepo :: NewRepoFlags -> RepoArg -> Plant ()
 createRepo flags args = do
