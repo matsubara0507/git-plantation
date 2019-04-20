@@ -6,16 +6,15 @@ module SubCmd.Problem
   ( ProblemCmd (..)
   ) where
 
-import           RIO
-
 import           Data.Extensible
-import           Git.Plantation.Cmd
+import           Git.Plantation.Cmd.Problem
+import           Git.Plantation.Cmd.Run
 
 newtype ProblemCmd = ProblemCmd (Variant CmdField)
 
 type CmdField =
-  '[ "show" >: ()
+  '[ "show" >: ProblemCmdArg
    ]
 
-instance Run ("show" >: ()) where
-  run' _ = undefined
+instance Run ("show" >: ProblemCmdArg) where
+  run' _ = actForProblem showProblem

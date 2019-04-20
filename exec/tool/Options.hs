@@ -90,8 +90,13 @@ memberCmdArgParser = hsequence
 
 problemCmdParser :: Parser ProblemCmd
 problemCmdParser = fmap ProblemCmd . variantFrom
-    $ #show @= pure () `withInfo` "Display proble info."
+    $ #show @= problemCmdArgParser `withInfo` "Display proble info."
    <: nil
+
+problemCmdArgParser :: Parser ProblemCmdArg
+problemCmdArgParser = hsequence
+   $ #problems <@=> option comma (long "problems" <> value [] <> metavar "IDS" <> help "Set problem ids that want to manage.")
+  <: nil
 
 variantFrom ::
   Forall (KeyIs KnownSymbol) xs => RecordOf ParserInfo xs -> Parser (Variant xs)
