@@ -87,8 +87,8 @@ findProblemWithThrow idx =
 
 createRepo :: NewRepoFlags -> RepoArg -> Plant ()
 createRepo flags args = do
-  logInfo $
-    display $ encodeToLazyText $ #message @= "create team repository" <: args
+  logInfo $ display $ encodeToLazyText $
+    #message @= ("create team repository" :: Text) <: args
   unless (flags ^. #skip_create_repo)   $ createRepoInGitHub args
   unless (flags ^. #skip_init_repo)     $ initRepoInGitHub args
   unless (flags ^. #skip_setup_webhook) $ setupWebhook args
@@ -194,8 +194,8 @@ pushForCI team problem = do
 
 deleteRepo :: RepoArg -> Plant ()
 deleteRepo args = do
-  logInfo $
-    display $ encodeToLazyText $ #message @= "delete team repository" <: args
+  logInfo $ display $ encodeToLazyText $
+    #message @= ("delete team repository" :: Text) <: args
   problem <- findProblemWithThrow (ProblemId $ args ^. #repo ^. #problem)
   deleteRepoInGithub (args ^. #repo)
   deleteProblemCI (args ^. #team) problem
