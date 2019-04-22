@@ -19,13 +19,11 @@ module Mix.Plugin.Logger.JSON
   ) where
 
 import           RIO
-import qualified RIO.Text          as Text
 
-import           Data.Aeson        (ToJSON (..))
-import qualified Data.Aeson        as J
-import           Data.Aeson.Text   (encodeToLazyText)
+import           Data.Aeson      (ToJSON (..))
+import qualified Data.Aeson      as J
+import           Data.Aeson.Text (encodeToLazyText)
 import           Data.Extensible
-import qualified Mix.Plugin.Logger as Mix
 
 type LogMessage xs = Record ("message" >: Text ': "level" >: LogLevel ': xs)
 
