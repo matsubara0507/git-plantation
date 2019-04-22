@@ -14,11 +14,11 @@ import           Mix.Plugin.Config     (HasConfig (..))
 
 class IdArg id a | id -> a where
   findById :: id -> [a] -> Maybe a
-  errMsg :: id -> ErrMsg
+  toArgInfo :: id -> ArgInfo
 
-type ErrMsg = Record
-  '[ "message" >: Text
-   , "id" >: Text
+type ArgInfo = Record
+  '[ "type" >: Text
+   , "id"   >: Text
    ]
 
 asksConfig :: (HasConfig Config env, MonadReader env m) => m Config
