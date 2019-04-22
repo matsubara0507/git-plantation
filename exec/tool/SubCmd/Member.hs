@@ -6,6 +6,8 @@ module SubCmd.Member
   ( MemberCmd (..)
   ) where
 
+import           RIO
+
 import           Data.Extensible
 import           Git.Plantation.Cmd.Member
 import           Git.Plantation.Cmd.Run
@@ -18,7 +20,9 @@ type CmdFields =
    ]
 
 instance Run ("invite" >: MemberCmdArg) where
-  run' _ = actForMember inviteUserToRepo
+  run' _ args =
+    actForMember inviteUserToRepo args `catchAny` (logError . displayShow)
 
 instance Run ("kick" >: MemberCmdArg) where
-  run' _ = actForMember kickUserFromRepo
+  run' _ args =
+    actForMember kickUserFromRepo args `catchAny` (logError . displayShow)
