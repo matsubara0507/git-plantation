@@ -51,7 +51,7 @@ ref. `.env.template`
 using `git-plantation-tool`:
 
 ```
-$ stack exec -- git-plantation-tool -c .git-plantation.yaml --work .temp new_repo sample
+$ stack exec -- git-plantation-tool -c .git-plantation.yaml --work .temp repo new sample
 ```
 
 ### 4. Run app

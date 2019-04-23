@@ -2,6 +2,19 @@
 
 ## Unreleased changes
 
+* mix パッケージを作成 (#26)
+  * [tonatona](http://hackage.haskell.org/package/tonatona) にインスパイアされた [rio](http://hackage.haskell.org/package/rio) の薄いラッパーパッケージ
+  * rio-logger, [github-client](https://github.com/matsubara0507/github/tree/collaborator-api), [drone-client](https://github.com/matsubara0507/drone-haskell), [shh](http://hackage.haskell.org/package/shh) プラグインも作成
+  * shelly を shh に移行　
+* リセットするSlackボット用のAPIを追加 (#27)
+* shh-cmd パッケージを作成 (#28)
+  * [shh](http://hackage.haskell.org/package/shh) の薄いラッパーパッケージ
+  * よく使うコマンド関数を作成
+* `tool` をサブサブコマンド化 (#29)
+  * `git-plantation-tool (config|problem|member|repo) COMMAND` と指定する形式に変更
+  * 合わせてディレクトリ構造も刷新
+  * `problem` コマンドも追加
+
 ## v0.2.0
 
 * org アカウント以外で config 設定 (#10)
