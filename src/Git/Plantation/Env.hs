@@ -58,6 +58,7 @@ data GitPlantException
   | CreateRepoError GitHub.Error Team Repo
   | DeleteRepoError GitHub.Error Repo
   | SetupWebhookError GitHub.Error Repo
+  | AddRepoToGitHubTeamError GitHub.Error Text Text Repo
   | InviteUserError GitHub.Error User MemberTarget
   | KickUserError GitHub.Error User MemberTarget
   | CreateGitHubTeamError GitHub.Error Team Text
@@ -88,6 +89,10 @@ instance Show GitPlantException where
       mkLogMessage'
         "can't setup github webhook"
         (#repo @= repo <: nil)
+    AddRepoToGitHubTeamError _err org name repo ->
+      mkLogMessage'
+        "cant't add repository to GitHub team"
+        (#org @= org <: #gh_team @= name <: #repo @= repo <: nil)
     InviteUserError _err user target ->
       mkLogMessage'
         "can't invite user to repository"

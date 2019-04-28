@@ -17,35 +17,37 @@ module Git.Plantation.Cmd.Repo
   , resetRepo
   , pushForCI
   , deleteRepo
+  , addGitHubTeam
   , splitRepoName
   , repoGithub
   ) where
 
 import           RIO
-import qualified RIO.Map                         as Map
-import qualified RIO.Text                        as Text
-import qualified RIO.Vector                      as V
+import qualified RIO.Map                              as Map
+import qualified RIO.Text                             as Text
+import qualified RIO.Vector                           as V
 
-import           Data.Coerce                     (coerce)
+import           Data.Coerce                          (coerce)
 import           Data.Extensible
 import           Git.Plantation.Cmd.Arg
-import           Git.Plantation.Data             (Problem, Repo, Team)
-import qualified Git.Plantation.Data.Team        as Team
+import           Git.Plantation.Data                  (Problem, Repo, Team)
+import qualified Git.Plantation.Data.Team             as Team
 import           Git.Plantation.Env
-import           GitHub.Data.Name                (mkName)
-import           GitHub.Data.Repos               (newRepo, newRepoPrivate)
-import           GitHub.Data.Webhooks            (NewRepoWebhook (..),
-                                                  RepoWebhookEvent (..))
-import qualified GitHub.Endpoints.Repos          as GitHub
-import qualified GitHub.Endpoints.Repos.Webhooks as GitHub
+import           GitHub.Data.Name                     (mkName)
+import           GitHub.Data.Repos                    (newRepo, newRepoPrivate)
+import           GitHub.Data.Webhooks                 (NewRepoWebhook (..),
+                                                       RepoWebhookEvent (..))
+import qualified GitHub.Endpoints.Organizations.Teams as GitHub
+import qualified GitHub.Endpoints.Repos               as GitHub
+import qualified GitHub.Endpoints.Repos.Webhooks      as GitHub
 
-import qualified Mix.Plugin.GitHub               as MixGitHub
-import qualified Mix.Plugin.Logger.JSON          as Mix
-import qualified Mix.Plugin.Shell                as MixShell
-import           Shh                             ((&>))
-import qualified Shh                             as Shell
-import qualified Shh.Command                     as Shell
-import qualified Shh.Command.Git                 as Git
+import qualified Mix.Plugin.GitHub                    as MixGitHub
+import qualified Mix.Plugin.Logger.JSON               as Mix
+import qualified Mix.Plugin.Shell                     as MixShell
+import           Shh                                  ((&>))
+import qualified Shh                                  as Shell
+import qualified Shh.Command                          as Shell
+import qualified Shh.Command.Git                      as Git
 
 type RepoCmdArg = Record
   '[ "repos" >: [RepoId]
@@ -225,6 +227,36 @@ execGitForTeam team repo url act =
   where
     repo' = Text.unpack repo
 
+addGitHubTeam :: RepoArg -> Plant ()
+addGitHubTeam args = case (args ^. #team ^. #org, args ^. #repo ^. #only) of
+  (Nothing, _)   -> logError "Undefined GitHub org in team"
+  (_, Nothing)   -> logError "Undefined 'only' option in team repo."
+  (Just org, Just name)
+    | valid name -> addGitHubTeam' org name (args ^. #repo)
+    | otherwise  -> logError $ display $ "Undefined GitHub team in team: " <> name
+  where
+    valid name = name `elem` args ^. #team ^. #gh_teams
+
+    addGitHubTeam' :: Text -> Text -> Repo -> Plant ()
+    addGitHubTeam' org name repo = do
+      resp <- MixGitHub.fetch $ \auth -> GitHub.teamInfoByName' (Just auth)
+        (mkName Proxy org)
+        (mkName Proxy name)
+      team <- case resp of
+        Left err   -> logDebug (displayShow err) >> throwIO (failure err org name)
+        Right team -> pure team
+      (owner, repoName) <- splitRepoName <$> repoGithub repo
+      resp' <- MixGitHub.fetch $ \auth -> GitHub.addOrUpdateTeamRepo' auth
+        (GitHub.teamId team)
+        (mkName Proxy $ owner)
+        (mkName Proxy $ repoName)
+        GitHub.PermissionPush
+      case resp' of
+        Left err -> logDebug (displayShow err) >> throwIO (failure err org name)
+        Right _  -> logInfo $ display $ "Success: add repository to GitHub team: " <> name
+
+    failure err org name =
+      AddRepoToGitHubTeamError err org name $ args ^. #repo
 
 -- |
 -- helper functions

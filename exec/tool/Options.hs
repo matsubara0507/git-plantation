@@ -59,6 +59,7 @@ repoCmdParser = fmap RepoCmd . variantFrom
    <: #init_ci       @= repoCmdArgParser `withInfo` "Init CI repository by team repository"
    <: #reset         @= repoCmdArgParser `withInfo` "Reset repository for team"
    <: #delete        @= repoCmdArgParser `withInfo` "Delete repository for team."
+   <: #add_gh_team   @= repoCmdArgParser `withInfo` "Add repository to GitHub team."
    <: nil
   where
     newRepoCmdParser = (,) <$> repoCmdArgParser <*> newRepoFlags
