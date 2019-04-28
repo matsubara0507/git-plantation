@@ -13,7 +13,7 @@ import qualified Data.Aeson.Text           as Json
 import           Data.Extensible
 import qualified Drone.Client              as Drone
 import           Git.Plantation.Config
-import           Git.Plantation.Data       (Problem, Repo, Team, User)
+import           Git.Plantation.Data
 import qualified Git.Plantation.Data.Slack as Slack
 import qualified GitHub.Auth               as GitHub
 import qualified GitHub.Data               as GitHub
@@ -58,8 +58,8 @@ data GitPlantException
   | CreateRepoError GitHub.Error Team Repo
   | DeleteRepoError GitHub.Error Repo
   | SetupWebhookError GitHub.Error Repo
-  | InviteUserError GitHub.Error User Repo
-  | KickUserError GitHub.Error User Repo
+  | InviteUserError GitHub.Error User MemberTarget
+  | KickUserError GitHub.Error User MemberTarget
   | InvalidRepoConfig Repo
   deriving (Typeable)
 
@@ -87,14 +87,14 @@ instance Show GitPlantException where
       mkLogMessage'
         "can't setup github webhook"
         (#repo @= repo <: nil)
-    InviteUserError _err user repo ->
+    InviteUserError _err user target ->
       mkLogMessage'
         "can't invite user to repository"
-        (#user @= user <: #repo @= repo <: nil)
-    KickUserError _err user repo ->
+        (#user @= user <: #target @= toMemberTargetRecord target <: nil)
+    KickUserError _err user target ->
       mkLogMessage'
         "can't kick user from repository"
-        (#user @= user <: #repo @= repo <: nil)
+        (#user @= user <: #target @= toMemberTargetRecord target <: nil)
     InvalidRepoConfig repo ->
       mkLogMessage'
         "invalid repo config"

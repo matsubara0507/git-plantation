@@ -83,9 +83,11 @@ memberCmdParser = fmap MemberCmd . variantFrom
 
 memberCmdArgParser :: Parser MemberCmdArg
 memberCmdArgParser = hsequence
-    $ #team  <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
-   <: #repos <@=> option comma (long "repos" <> value [] <> metavar "ID" <> help "Sets reopsitory that want to controll by problem id.")
-   <: #user  <@=> option (Just <$> str) (long "user" <> value Nothing <> metavar "TEXT" <> help "Sets user that want to controll.")
+    $ #team    <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
+   <: #repos   <@=> option comma (long "repos" <> value [] <> metavar "ID" <> help "Sets reopsitory that want to controll by problem id.")
+   <: #user    <@=> option (Just <$> str) (long "user" <> value Nothing <> metavar "TEXT" <> help "Sets user that want to controll.")
+   <: #org     <@=> switch (long "org" <> help "Manage member to GitHub Organization if true.")
+   <: #gh_team <@=> option (Just <$> str) (long "gh_team" <> value Nothing <> metavar "TEXT" <> help "Manage member to GitHub Org Team.")
    <: nil
 
 problemCmdParser :: Parser ProblemCmd

@@ -38,6 +38,10 @@ problems:
 teams:
 - name: sample
   id: alpha
+  org: sample-hige
+  gh_teams:
+  - alpha-tutorial
+  - alpha
   member:
   - name: MATSUBARA Nobutada
     github: matsubara0507
@@ -46,11 +50,14 @@ teams:
     org: sample-hige
     problem: 1
     private: false
+    only: alpha-tutorial
   - name: git-challenge-is-order-an-adding
     org: sample-hige
     problem: 2
     private: false
+    only: alpha
   - name: git-challenge-minesweeper
     org: sample-hige
     problem: 3
     private: false
+    only: alpha
