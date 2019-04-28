@@ -8,7 +8,6 @@ module Git.Plantation.Data.Team where
 import           RIO
 import qualified RIO.List                    as L
 
-import           Data.Aeson                  (ToJSON (..))
 import           Data.Extensible
 import           Git.Plantation.Data.Problem
 import           Language.Elm

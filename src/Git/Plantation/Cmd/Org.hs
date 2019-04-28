@@ -34,7 +34,7 @@ type GitHubTeamArg = Record
    ]
 
 actForGitHubTeam :: (GitHubTeamArg -> Plant ()) -> OrgCmdArg -> Plant ()
-actForGitHubTeam act args = do
+actForGitHubTeam act args =
   findByIdWith (view #teams) (args ^. #team) >>= \case
     Nothing   -> Mix.logErrorR "not found by config" (toArgInfo $ args ^. #team)
     Just team -> do
