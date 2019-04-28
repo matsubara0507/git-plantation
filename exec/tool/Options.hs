@@ -10,6 +10,7 @@
 module Options where
 
 import           RIO
+import qualified RIO.Text            as Text
 import           SubCmd
 
 import           Data.Extensible
@@ -41,6 +42,7 @@ subcmdParser = variantFrom
    <: #repo    @= repoCmdParser    `withInfo` "Manage team repository in GitHub."
    <: #member  @= memberCmdParser  `withInfo` "Manage team member with GitHub Account."
    <: #problem @= problemCmdParser `withInfo` "Manage problem repository in GitHub."
+   <: #org     @= orgCmdParser     `withInfo` "Manage GitHub organization for team."
    <: nil
 
 configCmdParser :: Parser ConfigCmd
@@ -100,6 +102,17 @@ problemCmdArgParser = hsequence
    $ #problems <@=> option comma (long "problems" <> value [] <> metavar "IDS" <> help "Set problem ids that want to manage.")
   <: nil
 
+orgCmdParser :: Parser OrgCmd
+orgCmdParser = fmap OrgCmd . variantFrom
+    $ #create_team @= orgCmdArgParser `withInfo` "Create GitHub Team in org"
+   <: nil
+
+orgCmdArgParser :: Parser OrgCmdArg
+orgCmdArgParser = hsequence
+    $ #team     <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
+   <: #gh_teams <@=> option commaS (long "gh_teams" <> value [] <> metavar "NAME" <> help "Manage GitHub Team names in config.")
+   <: nil
+
 variantFrom ::
   Forall (KeyIs KnownSymbol) xs => RecordOf ParserInfo xs -> Parser (Variant xs)
 variantFrom = subparser . subcmdVariant
@@ -116,6 +129,10 @@ instance Wrapper ParserInfo where
 -- support `--hoge 1,2,3`
 comma :: Read a => ReadM [a]
 comma = maybeReader (\s -> readMaybe $ "[" ++ s ++ "]")
+
+commaS :: IsString s => ReadM [s]
+commaS =
+  maybeReader $ Just . map (fromString . Text.unpack) . Text.split (== ',') . fromString
 
 withInfo :: Parser a -> String -> ParserInfo a
 withInfo opts = info (helper <*> opts) . progDesc

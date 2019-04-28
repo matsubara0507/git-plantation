@@ -60,6 +60,7 @@ data GitPlantException
   | SetupWebhookError GitHub.Error Repo
   | InviteUserError GitHub.Error User MemberTarget
   | KickUserError GitHub.Error User MemberTarget
+  | CreateGitHubTeamError GitHub.Error Team Text
   | InvalidRepoConfig Repo
   deriving (Typeable)
 
@@ -95,6 +96,10 @@ instance Show GitPlantException where
       mkLogMessage'
         "can't kick user from repository"
         (#user @= user <: #target @= toMemberTargetRecord target <: nil)
+    CreateGitHubTeamError _err team name ->
+      mkLogMessage'
+        "can't create GitHub team in org"
+        (#team @= team <: #gh_team @= name <: nil)
     InvalidRepoConfig repo ->
       mkLogMessage'
         "invalid repo config"

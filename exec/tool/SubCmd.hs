@@ -10,6 +10,7 @@ module SubCmd
 
 import           SubCmd.Config      as X (ConfigCmd (..))
 import           SubCmd.Member      as X (MemberCmd (..))
+import           SubCmd.Org         as X (OrgCmd (..))
 import           SubCmd.Problem     as X (ProblemCmd (..))
 import           SubCmd.Repo        as X (RepoCmd (..))
 
@@ -22,6 +23,7 @@ type SubCmd = Variant
    , "repo"    >: RepoCmd
    , "member"  >: MemberCmd
    , "problem" >: ProblemCmd
+   , "org"     >: OrgCmd
    ]
 
 instance Run ("config" >: ConfigCmd) where
@@ -35,3 +37,6 @@ instance Run ("member" >: MemberCmd) where
 
 instance Run ("problem" >: ProblemCmd) where
   run' _ (ProblemCmd cmd) = run cmd
+
+instance Run ("org" >: OrgCmd) where
+  run' _ (OrgCmd cmd) = run cmd

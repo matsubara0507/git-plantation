@@ -1,0 +1,66 @@
+{-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE LambdaCase       #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TupleSections    #-}
+{-# LANGUAGE TypeOperators    #-}
+
+module Git.Plantation.Cmd.Org
+  ( OrgCmdArg
+  , GitHubTeamArg
+  , actForGitHubTeam
+  , createGitHubTeam
+  ) where
+
+import           RIO
+
+import           Data.Extensible
+import           Git.Plantation.Cmd.Arg
+import           Git.Plantation.Data.Team
+import           Git.Plantation.Env
+import           GitHub.Data.Name                     (mkName)
+import qualified GitHub.Endpoints.Organizations.Teams as GitHub
+import qualified Mix.Plugin.GitHub                    as MixGitHub
+import qualified Mix.Plugin.Logger.JSON               as Mix
+
+type OrgCmdArg = Record
+  '[ "team"     >: TeamId
+   , "gh_teams" >: [GitHubTeamName]
+   ]
+
+type GitHubTeamArg = Record
+  '[ "team"    >: Team
+   , "org"     >: Text
+   , "gh_team" >: Text
+   ]
+
+actForGitHubTeam :: (GitHubTeamArg -> Plant ()) -> OrgCmdArg -> Plant ()
+actForGitHubTeam act args = do
+  findByIdWith (view #teams) (args ^. #team) >>= \case
+    Nothing   -> Mix.logErrorR "not found by config" (toArgInfo $ args ^. #team)
+    Just team -> do
+      (org, ghTeams) <- findGitHubTeams (args ^. #gh_teams) team
+      mapM_ act $ hsequence $ #team <@=> [team] <: #org <@=> org <: #gh_team <@=> ghTeams <: nil
+
+findGitHubTeams :: [GitHubTeamName] -> Team -> Plant ([Text], [Text])
+findGitHubTeams ids team = case (team ^. #org, ids) of
+  (Nothing, _)   -> logError "Undefined GitHub org on team config." >> pure ([],[])
+  (Just org, []) -> pure ([org], team ^. #gh_teams)
+  (Just org, _)  -> ([org],) <$> findGitHubTeams'
+  where
+    findGitHubTeams' = fmap catMaybes . forM ids $ \idx ->
+      case findById idx (team ^. #gh_teams) of
+        Nothing -> Mix.logErrorR "not found by config" (toArgInfo idx) >> pure Nothing
+        Just t  -> pure (Just t)
+
+createGitHubTeam :: GitHubTeamArg -> Plant ()
+createGitHubTeam args = do
+  resp <- MixGitHub.fetch $ \auth -> GitHub.createTeamFor' auth
+    (mkName Proxy $ args ^. #org)
+    (GitHub.CreateTeam (mkName Proxy $ args ^. #gh_team) Nothing mempty GitHub.PermissionPush)
+  case resp of
+    Left err -> logDebug (displayShow err) >> throwIO (failure err)
+    Right _  -> logInfo $ display success
+  where
+    failure err = CreateGitHubTeamError err (args ^. #team) (args ^. #gh_team)
+    success = mconcat
+      [ "Success: create GitHub team: ", args ^. #org, ":", args ^. #gh_team ]

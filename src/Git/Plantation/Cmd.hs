@@ -13,6 +13,7 @@ import           RIO
 import           Data.Extensible
 import           Git.Plantation.Cmd.Arg     as X
 import           Git.Plantation.Cmd.Member  as X
+import           Git.Plantation.Cmd.Org     as X
 import           Git.Plantation.Cmd.Problem as X
 import           Git.Plantation.Cmd.Repo    as X
 import           Git.Plantation.Cmd.Run     as X
