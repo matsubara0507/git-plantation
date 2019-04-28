@@ -18,6 +18,7 @@ import qualified Git.Plantation.Data.Slack as Slack
 import qualified GitHub.Auth               as GitHub
 import qualified GitHub.Data               as GitHub
 import           Mix.Plugin.Logger         ()
+import qualified Mix.Plugin.Logger.JSON    as Mix
 import qualified RIO.Text.Lazy             as TL
 
 type Plant = RIO Env
@@ -43,21 +44,13 @@ mkWebhookConf url secret =
 
 fromJustWithThrow :: Exception e => Maybe a -> e -> Plant a
 fromJustWithThrow (Just x) _ = pure x
-fromJustWithThrow Nothing  e = throwIO e
-
-tryAnyWithLogError :: Plant a -> Plant ()
-tryAnyWithLogError act = tryAny act >>= \case
-  Left  e -> logError $ display e
-  Right _ -> pure ()
-
-mkLogMessage :: Text -> Record xs -> Record ("error_message" >: Text ': xs)
-mkLogMessage message r = #error_message @= message <: r
+fromJustWithThrow Nothing e  = throwIO e
 
 mkLogMessage' ::
   Forall (KeyValue KnownSymbol (Instance1 ToJSON Identity)) xs
   => Text -> Record xs -> String
 mkLogMessage' message =
-  TL.unpack . Json.encodeToLazyText . mkLogMessage message
+  TL.unpack . Json.encodeToLazyText . Mix.mkLogMessage message LevelError
 
 data GitPlantException
   = UndefinedTeamProblem Team Problem

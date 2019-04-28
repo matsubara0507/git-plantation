@@ -2,6 +2,7 @@ resolver: lts-13.13
 packages:
 - .
 - ./libs/mix
+- ./libs/mix-json-logger
 - ./libs/mix-plugin-github
 - ./libs/mix-plugin-drone
 - ./libs/mix-plugin-shell

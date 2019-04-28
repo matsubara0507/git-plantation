@@ -6,6 +6,8 @@ module SubCmd.Problem
   ( ProblemCmd (..)
   ) where
 
+import           RIO
+
 import           Data.Extensible
 import           Git.Plantation.Cmd.Problem
 import           Git.Plantation.Cmd.Run
@@ -17,4 +19,5 @@ type CmdField =
    ]
 
 instance Run ("show" >: ProblemCmdArg) where
-  run' _ = actForProblem showProblem
+  run' _ args =
+    actForProblem showProblem args `catchAny` (logError . displayShow)

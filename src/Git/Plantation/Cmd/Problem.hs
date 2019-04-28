@@ -12,11 +12,11 @@ module Git.Plantation.Cmd.Problem
 
 import           RIO
 
-import           Data.Aeson.Text             (encodeToLazyText)
 import           Data.Extensible
 import           Git.Plantation.Cmd.Arg
 import           Git.Plantation.Data.Problem
 import           Git.Plantation.Env
+import qualified Mix.Plugin.Logger.JSON      as Mix
 
 type ProblemCmdArg = Record
   '[ "problems" >: [ProblemId]
@@ -35,7 +35,7 @@ findProblems :: [ProblemId] -> Plant [Problem]
 findProblems []  = asks (view #problems . view #config)
 findProblems ids = fmap catMaybes . forM ids $ \idx ->
   findByIdWith (view #problems) idx >>= \case
-    Nothing -> logError (display $ encodeToLazyText $ errMsg idx) >> pure Nothing
+    Nothing -> Mix.logErrorR "not found by config" (toArgInfo idx) >> pure Nothing
     Just r  -> pure (Just r)
 
 showProblem :: ProblemArg -> Plant ()

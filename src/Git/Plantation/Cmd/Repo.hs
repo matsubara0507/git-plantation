@@ -26,7 +26,6 @@ import qualified RIO.Map                         as Map
 import qualified RIO.Text                        as Text
 import qualified RIO.Vector                      as V
 
-import           Data.Aeson.Text                 (encodeToLazyText)
 import           Data.Coerce                     (coerce)
 import           Data.Extensible
 import           Git.Plantation.Cmd.Arg
@@ -41,6 +40,7 @@ import qualified GitHub.Endpoints.Repos          as GitHub
 import qualified GitHub.Endpoints.Repos.Webhooks as GitHub
 
 import qualified Mix.Plugin.GitHub               as MixGitHub
+import qualified Mix.Plugin.Logger.JSON          as Mix
 import qualified Mix.Plugin.Shell                as MixShell
 import           Shh                             ((&>))
 import qualified Shh                             as Shell
@@ -67,7 +67,7 @@ type NewRepoFlags = Record
 actForRepo :: (RepoArg -> Plant ()) -> RepoCmdArg -> Plant ()
 actForRepo act args =
   findByIdWith (view #teams) (args ^. #team) >>= \case
-    Nothing   -> logError $ display (encodeToLazyText $ errMsg $ args ^. #team)
+    Nothing   -> Mix.logErrorR "not found by config" (toArgInfo $ args ^. #team)
     Just team -> do
       repos <- findRepos (args ^. #repos) team
       mapM_ act $ hsequence $ #repo <@=> repos <: #team <@=> pure team <: nil
@@ -76,19 +76,18 @@ findRepos :: [RepoId] -> Team -> Plant [Repo]
 findRepos [] team = pure $ team ^. #repos
 findRepos ids team = fmap catMaybes . forM ids $ \idx ->
   case findById idx (team ^. #repos) of
-    Nothing -> logError (display $ encodeToLazyText $ errMsg idx) >> pure Nothing
+    Nothing -> Mix.logErrorR "not found by config" (toArgInfo idx) >> pure Nothing
     Just r  -> pure (Just r)
 
 findProblemWithThrow :: ProblemId -> Plant Problem
 findProblemWithThrow idx =
   findByIdWith (view #problems) idx >>= \case
     Nothing  -> throwIO $ UndefinedProblem (coerce idx)
-    Just p -> pure p
+    Just p   -> pure p
 
 createRepo :: NewRepoFlags -> RepoArg -> Plant ()
 createRepo flags args = do
-  logInfo $ display $ encodeToLazyText $
-    #message @= ("create team repository" :: Text) <: args
+  Mix.logInfoR "create team repository" args
   unless (flags ^. #skip_create_repo)   $ createRepoInGitHub args
   unless (flags ^. #skip_init_repo)     $ initRepoInGitHub args
   unless (flags ^. #skip_setup_webhook) $ setupWebhook args
@@ -141,7 +140,7 @@ setupWebhook args = do
     auth (mkName Proxy owner) (mkName Proxy repo) (webhook webhookConfig)
   case resp of
     Left err -> logDebug (displayShow err) >> throwIO (mkErr err)
-    Right _  -> logDebug "Success: setup GitHub Webhook to repository"
+    Right _  -> logInfo "Success: setup GitHub Webhook to repository"
   where
     webhook conf = NewRepoWebhook
       { newRepoWebhookName   = "web"
@@ -194,8 +193,7 @@ pushForCI team problem = do
 
 deleteRepo :: RepoArg -> Plant ()
 deleteRepo args = do
-  logInfo $ display $ encodeToLazyText $
-    #message @= ("delete team repository" :: Text) <: args
+  Mix.logInfoR "delete team repository" args
   problem <- findProblemWithThrow (ProblemId $ args ^. #repo ^. #problem)
   deleteRepoInGithub (args ^. #repo)
   deleteProblemCI (args ^. #team) problem
@@ -208,7 +206,7 @@ deleteRepoInGithub info = do
     GitHub.deleteRepo auth (mkName Proxy owner) (mkName Proxy repo)
   case resp of
     Left err -> logDebug (displayShow err) >> throwIO (DeleteRepoError err info)
-    Right _  -> logDebug "Success: delete repository in GitHub"
+    Right _  -> logInfo "Success: delete repository in GitHub"
 
 deleteProblemCI :: Team -> Problem -> Plant ()
 deleteProblemCI team problem = do

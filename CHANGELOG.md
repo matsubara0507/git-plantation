@@ -14,6 +14,7 @@
   * `git-plantation-tool (config|problem|member|repo) COMMAND` と指定する形式に変更
   * 合わせてディレクトリ構造も刷新
   * `problem` コマンドも追加
+* `mix-json-logger` パッケージを作成(#30)
 
 ## v0.2.0
 

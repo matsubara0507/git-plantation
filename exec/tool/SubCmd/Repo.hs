@@ -7,6 +7,8 @@ module SubCmd.Repo
   ( RepoCmd (..)
   ) where
 
+import           RIO
+
 import           Data.Extensible
 import           Git.Plantation.Cmd.Repo
 import           Git.Plantation.Cmd.Run
@@ -24,22 +26,29 @@ type CmdFields =
    ]
 
 instance Run ("new" >: (RepoCmdArg, NewRepoFlags)) where
-  run' _ (args, flags) = actForRepo (createRepo flags) args
+  run' _ (args, flags) =
+    actForRepo (createRepo flags) args `catchAny` (logError . displayShow)
 
 instance Run ("new_github" >: RepoCmdArg) where
-  run' _ = actForRepo createRepoInGitHub
+  run' _ args =
+    actForRepo createRepoInGitHub args `catchAny` (logError . displayShow)
 
 instance Run ("init_github" >: RepoCmdArg) where
-  run' _ = actForRepo initRepoInGitHub
+  run' _ args =
+    actForRepo initRepoInGitHub args `catchAny` (logError . displayShow)
 
 instance Run ("setup_webhook" >: RepoCmdArg) where
-  run' _ = actForRepo setupWebhook
+  run' _ args =
+    actForRepo setupWebhook args `catchAny` (logError . displayShow)
 
 instance Run ("init_ci" >: RepoCmdArg) where
-  run' _ = actForRepo initProblemCI
+  run' _ args =
+    actForRepo initProblemCI args `catchAny` (logError . displayShow)
 
 instance Run ("reset" >: RepoCmdArg) where
-  run' _ = actForRepo resetRepo
+  run' _ args =
+    actForRepo resetRepo args `catchAny` (logError . displayShow)
 
 instance Run ("delete" >: RepoCmdArg) where
-  run' _ = actForRepo deleteRepo
+  run' _ args =
+    actForRepo deleteRepo args `catchAny` (logError . displayShow)
