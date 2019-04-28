@@ -15,6 +15,11 @@
   * 合わせてディレクトリ構造も刷新
   * `problem` コマンドも追加
 * `mix-json-logger` パッケージを作成(#30)
+* GitHub Team に関するコマンドを追加(#31)
+  * `github` パッケージを更新
+  * `member invite/kick` に `--org` `--gh_team` オプションを追加して GitHub Team に招待/除外
+  * `org create_team` コマンドで GitHub Team を作成
+  * `repo add_gh_team` コマンドでリポジトリを GitHub Team に追加する
 
 ## v0.2.0
 
