@@ -23,6 +23,7 @@ type CmdFields =
    , "init_ci"       >: RepoCmdArg
    , "reset"         >: RepoCmdArg
    , "delete"        >: RepoCmdArg
+   , "add_gh_team"   >: RepoCmdArg
    ]
 
 instance Run ("new" >: (RepoCmdArg, NewRepoFlags)) where
@@ -52,3 +53,7 @@ instance Run ("reset" >: RepoCmdArg) where
 instance Run ("delete" >: RepoCmdArg) where
   run' _ args =
     actForRepo deleteRepo args `catchAny` (logError . displayShow)
+
+instance Run ("add_gh_team" >: RepoCmdArg) where
+  run' _ args =
+    actForRepo addGitHubTeam args `catchAny` (logError . displayShow)

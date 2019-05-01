@@ -10,6 +10,7 @@
 module Options where
 
 import           RIO
+import qualified RIO.Text            as Text
 import           SubCmd
 
 import           Data.Extensible
@@ -41,6 +42,7 @@ subcmdParser = variantFrom
    <: #repo    @= repoCmdParser    `withInfo` "Manage team repository in GitHub."
    <: #member  @= memberCmdParser  `withInfo` "Manage team member with GitHub Account."
    <: #problem @= problemCmdParser `withInfo` "Manage problem repository in GitHub."
+   <: #org     @= orgCmdParser     `withInfo` "Manage GitHub organization for team."
    <: nil
 
 configCmdParser :: Parser ConfigCmd
@@ -57,6 +59,7 @@ repoCmdParser = fmap RepoCmd . variantFrom
    <: #init_ci       @= repoCmdArgParser `withInfo` "Init CI repository by team repository"
    <: #reset         @= repoCmdArgParser `withInfo` "Reset repository for team"
    <: #delete        @= repoCmdArgParser `withInfo` "Delete repository for team."
+   <: #add_gh_team   @= repoCmdArgParser `withInfo` "Add repository to GitHub team."
    <: nil
   where
     newRepoCmdParser = (,) <$> repoCmdArgParser <*> newRepoFlags
@@ -83,9 +86,11 @@ memberCmdParser = fmap MemberCmd . variantFrom
 
 memberCmdArgParser :: Parser MemberCmdArg
 memberCmdArgParser = hsequence
-    $ #team  <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
-   <: #repos <@=> option comma (long "repos" <> value [] <> metavar "ID" <> help "Sets reopsitory that want to controll by problem id.")
-   <: #user  <@=> option (Just <$> str) (long "user" <> value Nothing <> metavar "TEXT" <> help "Sets user that want to controll.")
+    $ #team    <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
+   <: #repos   <@=> option comma (long "repos" <> value [] <> metavar "ID" <> help "Sets reopsitory that want to controll by problem id.")
+   <: #user    <@=> option (Just <$> str) (long "user" <> value Nothing <> metavar "TEXT" <> help "Sets user that want to controll.")
+   <: #org     <@=> switch (long "org" <> help "Manage member to GitHub Organization if true.")
+   <: #gh_team <@=> option (Just <$> str) (long "gh_team" <> value Nothing <> metavar "TEXT" <> help "Manage member to GitHub Org Team.")
    <: nil
 
 problemCmdParser :: Parser ProblemCmd
@@ -97,6 +102,17 @@ problemCmdArgParser :: Parser ProblemCmdArg
 problemCmdArgParser = hsequence
    $ #problems <@=> option comma (long "problems" <> value [] <> metavar "IDS" <> help "Set problem ids that want to manage.")
   <: nil
+
+orgCmdParser :: Parser OrgCmd
+orgCmdParser = fmap OrgCmd . variantFrom
+    $ #create_team @= orgCmdArgParser `withInfo` "Create GitHub Team in org"
+   <: nil
+
+orgCmdArgParser :: Parser OrgCmdArg
+orgCmdArgParser = hsequence
+    $ #team     <@=> strArgument (metavar "TEXT" <> help "Sets team that want to controll.")
+   <: #gh_teams <@=> option commaS (long "gh_teams" <> value [] <> metavar "NAME" <> help "Manage GitHub Team names in config.")
+   <: nil
 
 variantFrom ::
   Forall (KeyIs KnownSymbol) xs => RecordOf ParserInfo xs -> Parser (Variant xs)
@@ -114,6 +130,10 @@ instance Wrapper ParserInfo where
 -- support `--hoge 1,2,3`
 comma :: Read a => ReadM [a]
 comma = maybeReader (\s -> readMaybe $ "[" ++ s ++ "]")
+
+commaS :: IsString s => ReadM [s]
+commaS =
+  maybeReader $ Just . map (fromString . Text.unpack) . Text.split (== ',') . fromString
 
 withInfo :: Parser a -> String -> ParserInfo a
 withInfo opts = info (helper <*> opts) . progDesc

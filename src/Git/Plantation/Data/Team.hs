@@ -13,10 +13,12 @@ import           Git.Plantation.Data.Problem
 import           Language.Elm
 
 type Team = Record
-  '[ "id"     >: Text
-   , "name"   >: Text
-   , "repos"  >: [Repo]
-   , "member" >: [User]
+  '[ "id"       >: Text
+   , "name"     >: Text
+   , "repos"    >: [Repo]
+   , "member"   >: [User]
+   , "org"      >: Maybe Text
+   , "gh_teams" >: [Text]
    ]
 
 instance ElmType Team where
@@ -36,10 +38,23 @@ type Repo = Record
    , "org"     >: Maybe Text
    , "problem" >: Int
    , "private" >: Bool
+   , "only"    >: Maybe Text -- GitHub Org Team
    ]
 
 instance ElmType Repo where
   toElmType = toElmRecordType "Repo"
+
+data MemberTarget
+  = TargetRepo Repo
+  | TargetOrg Text
+  | TargetTeam Text Text
+  deriving (Show, Eq)
+
+toMemberTargetRecord :: MemberTarget -> Record '[ "type" >: Text, "target" >: Maybe Text ]
+toMemberTargetRecord target = case target of
+  TargetRepo repo     -> #type @= "repo" <: #target @= repoGithubPath repo <: nil
+  TargetOrg org       -> #type @= "org"  <: #target @= Just org <: emptyRecord
+  TargetTeam org team -> #type @= "team" <: #target @= Just (org <> ":" <> team) <: nil
 
 lookupRepo :: Problem -> Team -> Maybe Repo
 lookupRepo problem = lookupRepoByProblemId (problem ^. #id)

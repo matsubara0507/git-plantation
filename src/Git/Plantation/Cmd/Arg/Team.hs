@@ -44,3 +44,13 @@ instance IdArg UserId User where
       = #type @= "User"
      <: #id   @= coerce idx
      <: nil
+
+newtype GitHubTeamName = GitHubTeamName Text
+  deriving (IsString, ToJSON) via Text
+
+instance IdArg GitHubTeamName Text where
+  findById idx = L.find (== coerce idx)
+  toArgInfo idx
+      = #type @= "GitHub Team"
+      <: #id  @= coerce idx
+      <: nil
