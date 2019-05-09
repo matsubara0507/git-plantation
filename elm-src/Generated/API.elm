@@ -12,6 +12,8 @@ type alias Team =
     , name : String
     , repos : List Repo
     , member : List User
+    , org : Maybe String
+    , gh_teams : List String
     }
 
 
@@ -22,6 +24,8 @@ decodeTeam =
         |> required "name" string
         |> required "repos" (list decodeRepo)
         |> required "member" (list decodeUser)
+        |> required "org" (maybe string)
+        |> required "gh_teams" (list string)
 
 
 encodeTeam : Team -> Json.Encode.Value
@@ -31,6 +35,8 @@ encodeTeam x =
         , ( "name", Json.Encode.string x.name )
         , ( "repos", Json.Encode.list encodeRepo x.repos )
         , ( "member", Json.Encode.list encodeUser x.member )
+        , ( "org", (Maybe.withDefault Json.Encode.null << Maybe.map Json.Encode.string) x.org )
+        , ( "gh_teams", Json.Encode.list Json.Encode.string x.gh_teams )
         ]
 
 
@@ -61,6 +67,7 @@ type alias Repo =
     , org : Maybe String
     , problem : Int
     , private : Bool
+    , only : Maybe String
     }
 
 
@@ -72,6 +79,7 @@ decodeRepo =
         |> required "org" (maybe string)
         |> required "problem" int
         |> required "private" bool
+        |> required "only" (maybe string)
 
 
 encodeRepo : Repo -> Json.Encode.Value
@@ -82,6 +90,7 @@ encodeRepo x =
         , ( "org", (Maybe.withDefault Json.Encode.null << Maybe.map Json.Encode.string) x.org )
         , ( "problem", Json.Encode.int x.problem )
         , ( "private", Json.Encode.bool x.private )
+        , ( "only", (Maybe.withDefault Json.Encode.null << Maybe.map Json.Encode.string) x.only )
         ]
 
 
