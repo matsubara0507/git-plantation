@@ -20,6 +20,7 @@
   * `member invite/kick` に `--org` `--gh_team` オプションを追加して GitHub Team に招待/除外
   * `org create_team` コマンドで GitHub Team を作成
   * `repo add_gh_team` コマンドでリポジトリを GitHub Team に追加する
+* 問題リポジトリの Drone CI をアクティベイトするコマンドを追加(#32)
 
 ## v0.2.0
 
