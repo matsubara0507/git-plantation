@@ -27,9 +27,12 @@ main = execParser parser >>= \opts -> do
   _ <- tryIO $ loadFile defaultConfig
   config  <- readConfig (opts ^. #config)
   token   <- liftIO $ fromString <$> getEnv "GH_TOKEN"
+  dHost   <- liftIO $ fromString <$> getEnv "DRONE_HOST"
+  dToken  <- liftIO $ fromString <$> getEnv "DRONE_TOKEN"
+  dPort   <- liftIO $ readMaybe  <$> getEnv "DRONE_PORT"
   secret  <- liftIO $ fromString <$> getEnv "GH_SECRET"
   appUrl  <- liftIO $ fromString <$> getEnv "APP_SERVER"
-  let client  = #host @= "" <: #port @= Nothing <: #token @= "" <: nil
+  let client  = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
       logConf = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
       plugin  = hsequence
           $ #config  <@=> pure config

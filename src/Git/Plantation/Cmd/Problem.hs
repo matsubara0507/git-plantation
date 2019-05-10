@@ -8,14 +8,18 @@ module Git.Plantation.Cmd.Problem
   , ProblemArg
   , actForProblem
   , showProblem
+  , activateCI
   ) where
 
 import           RIO
 
 import           Data.Extensible
+import qualified Drone.Endpoints.Repo        as Drone
 import           Git.Plantation.Cmd.Arg
+import           Git.Plantation.Cmd.Repo     (splitRepoName)
 import           Git.Plantation.Data.Problem
 import           Git.Plantation.Env
+import qualified Mix.Plugin.Drone            as MixDrone
 import qualified Mix.Plugin.Logger.JSON      as Mix
 
 type ProblemCmdArg = Record
@@ -45,3 +49,13 @@ showProblem args = logInfo $ display $ mconcat
   , "(⭐️ x", tshow $ args ^. #problem ^. #difficulty, ") at "
   , "https://github.com/", args ^. #problem ^. #repo
   ]
+
+activateCI :: ProblemArg -> Plant ()
+activateCI args = do
+  Mix.logDebugR "activate ci for problem repository" (args ^. #problem)
+  let (owner, repo) = splitRepoName $ args ^. #problem ^. #repo
+  tryAny (MixDrone.fetch $ \c -> Drone.enableRepo c owner repo) >>= \case
+    Left err -> logDebug (displayShow err) >> logError (fromString emessage)
+    Right _  -> logInfo $ fromString $ "activated: " <> show (args ^. #problem ^. #id)
+  where
+    emessage = "can't activate: " <> show (args ^. #problem ^. #id)
