@@ -122,7 +122,7 @@ initRepoInGitHub args = do
       teamUrl       = mconcat ["https://", token, "@github.com/", github, ".git"]
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
-  execGitForTeam (args ^. #team) teamRepo teamUrl $ do
+  execGitForTeam (args ^. #team) teamRepo False teamUrl $ do
     Shell.ignoreFailure $ Git.branch ["-D", "temp"]
     Shell.ignoreFailure $ Git.checkout ["-b", "temp"]
     Shell.ignoreFailure $ Git.branch $ "-D" : problem ^. #challenge_branches
@@ -160,7 +160,7 @@ initProblemCI args = do
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
-  execGitForTeam (args ^. #team) repo problemUrl $ do
+  execGitForTeam (args ^. #team) repo True problemUrl $ do
     Git.checkout [problem ^. #ci_branch]
     Git.pull []
     Shell.ignoreFailure $ Git.branch ["-D", args ^. #team ^. #name]
@@ -175,7 +175,7 @@ resetRepo :: RepoArg -> Plant ()
 resetRepo args = do
   problem <- findProblemWithThrow (ProblemId $ args ^. #repo ^. #problem)
   let (_, repo) = splitRepoName $ problem ^. #repo
-  local (over #work $ toTeamWork $ args ^. #team) $ do
+  local (over #work $ toTeamWork (args ^. #team) False) $ do
     local (over #work $ toWorkWith $ Text.unpack repo) $ MixShell.exec (Shell.ls [] ".")
     MixShell.exec $ Shell.rm ["-rf"] repo
   initRepoInGitHub args
@@ -186,7 +186,7 @@ pushForCI team problem = do
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
-  execGitForTeam team repo problemUrl $ do
+  execGitForTeam team repo True problemUrl $ do
     Git.checkout [team ^. #name]
     Git.pull []
     Git.commit ["--allow-empty", "-m", "Empty Commit!!"]
@@ -215,13 +215,13 @@ deleteProblemCI team problem = do
   token <- MixGitHub.tokenText
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
-  execGitForTeam team repo problemUrl $
+  execGitForTeam team repo True problemUrl $
     Shell.ignoreFailure $ Git.push  [ "--delete", "origin", team ^. #name]
   logInfo $ "Success: delete ci branch in " <> displayShow (problem ^. #repo)
 
-execGitForTeam :: Team -> Text -> Text -> Shell.Proc () -> Plant ()
-execGitForTeam team repo url act =
-  local (over #work $ toTeamWork team) $ do
+execGitForTeam :: Team -> Text -> Bool -> Text -> Shell.Proc () -> Plant ()
+execGitForTeam team repo isProblem url act =
+  local (over #work $ toTeamWork team isProblem) $ do
     MixShell.exec $ unlessM (Shell.test_d repo') $ Git.clone [url, repo]
     local (over #work $ toWorkWith repo') $ MixShell.exec act
   where
@@ -274,5 +274,6 @@ ciFileName = "REPOSITORY"
 toWorkWith :: FilePath -> FilePath -> FilePath
 toWorkWith path = (<> "/" <> path)
 
-toTeamWork :: Team -> FilePath -> FilePath
-toTeamWork team = toWorkWith $ Text.unpack $ team ^. #name
+toTeamWork :: Team -> Bool -> FilePath -> FilePath
+toTeamWork team isProblem =
+  toWorkWith $ Text.unpack $ team ^. #name <> if isProblem then "/problem" else ""
