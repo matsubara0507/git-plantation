@@ -17,6 +17,7 @@ type Config = Record
    , "channel_ids"    >: [Text]
    , "user_ids"       >: [Text]
    , "reset_repo_cmd" >: Text
+   , "webhook"        >: Maybe Text
    ]
 
 type SlashCmdData = Record
@@ -50,3 +51,7 @@ respondMessage postData message = do
   let url = Text.unpack $ postData ^. #response_url
   _ <- liftIO $ W.post url (J.toJSON message)
   pure ()
+
+sendWebhook :: MonadIO m => Text -> Message -> m ()
+sendWebhook url msg =
+  liftIO (W.post (Text.unpack url) $ J.toJSON msg) >> pure ()

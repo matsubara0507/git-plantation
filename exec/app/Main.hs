@@ -80,6 +80,7 @@ runServer opts config = do
   sTeam         <- liftIO $ fromString  <$> getEnv "SLACK_TEAM_ID"
   sChannels     <- liftIO $ readListEnv <$> getEnv "SLACK_CHANNEL_IDS"
   sResetRepoCmd <- liftIO $ fromString  <$> getEnv "SLACK_RESET_REPO_CMD"
+  sWebhook      <- liftIO $ fromString  <$> getEnv "SLACK_WEBHOOK"
   let client    = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
       logConf   = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
       slackConf
@@ -88,6 +89,7 @@ runServer opts config = do
          <: #channel_ids    @= sChannels
          <: #user_ids       @= []
          <: #reset_repo_cmd @= sResetRepoCmd
+         <: #webhook        @= Just sWebhook
          <: nil
       plugin    = hsequence
           $ #config  <@=> pure config

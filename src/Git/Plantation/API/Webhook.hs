@@ -10,6 +10,7 @@ import qualified RIO.List                     as L
 
 import           Git.Plantation.Cmd.Repo
 import           Git.Plantation.Data          (Problem, Team)
+import qualified Git.Plantation.Data.Slack    as Slack
 import qualified Git.Plantation.Data.Team     as Team
 import           Git.Plantation.Env           (Plant)
 import           GitHub.Data.Webhooks.Events
@@ -34,7 +35,7 @@ pushWebhook _ (_, ev) = do
   logInfo $ "Hook Push Event: " <> displayShow ev
   config <- asks (view #config)
   case findByPushEvent ev (config ^. #teams) (config ^. #problems) of
-    Just (team, problem) -> pushForCI team problem
+    Just (team, problem) -> notifySlack ev team problem >> pushForCI team problem
     Nothing              -> logError "team or problem is not found."
 
 findByPushEvent :: PushEvent -> [Team] -> [Problem] -> Maybe (Team, Problem)
@@ -48,3 +49,15 @@ findByPushEvent ev teams problems = do
   where
     repos    = map (\t -> (t,) <$> Team.lookupRepoByGithub repoName t) teams
     repoName = whRepoFullName $ evPushRepository ev
+
+notifySlack :: PushEvent -> Team -> Problem -> Plant ()
+notifySlack ev team problem = do
+  conf <- (view #webhook =<<) <$> asks (view #slack)
+  case (conf, Team.lookupUser sender team) of
+    (Just url, Just user) -> Slack.sendWebhook url (mkMessage user)
+    (Nothing, _)          -> logWarn "webhook url is not found when notify slack"
+    (_, Nothing)          -> logWarn "sender is not found when notify slack"
+  where
+    sender = whUserLogin $ evPushSender ev
+    mkMessage user = Slack.mkMessage $ mconcat
+      [ team ^. #name, " の ", user ^. #name, " が ", problem ^. #name, " にプッシュしたみたい！" ]
