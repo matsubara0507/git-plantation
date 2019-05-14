@@ -95,7 +95,8 @@ memberCmdArgParser = hsequence
 
 problemCmdParser :: Parser ProblemCmd
 problemCmdParser = fmap ProblemCmd . variantFrom
-    $ #show @= problemCmdArgParser `withInfo` "Display proble info."
+    $ #show        @= problemCmdArgParser `withInfo` "Display problem info."
+   <: #activate_ci @= problemCmdArgParser `withInfo` "Activate problem repository CI."
    <: nil
 
 problemCmdArgParser :: Parser ProblemCmdArg
