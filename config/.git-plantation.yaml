@@ -13,6 +13,7 @@ problems:
   - task-2
   answer_branch: master
   ci_branch: ci
+  default_branch: readme
 
 - id: 2
   name: is-order-an-adding
@@ -23,6 +24,7 @@ problems:
   - master
   answer_branch: master
   ci_branch: ci
+  default_branch: readme
 
 - id: 3
   name: minesweeper
@@ -34,6 +36,7 @@ problems:
   - checker
   answer_branch: master
   ci_branch: ci
+  default_branch: readme
 
 teams:
 - name: sample
