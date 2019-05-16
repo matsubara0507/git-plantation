@@ -143,7 +143,9 @@ setupDefaultBranch args = do
   resp <- MixGitHub.fetch $ \auth -> GitHub.editRepo auth
     (mkName Proxy owner)
     (mkName Proxy repo)
-    (edit { GitHub.editDefaultBranch = Just $ problem ^. #default_branch })
+    $ edit { GitHub.editDefaultBranch = Just $ problem ^. #default_branch
+           , GitHub.editPrivate = Just (args ^. #repo ^. #private)
+           }
   case resp of
     Left err -> logDebug (displayShow err) >> throwIO (DeleteRepoError err $ args ^. #repo)
     Right _  -> logInfo "Success: set default branch in GitHub"
