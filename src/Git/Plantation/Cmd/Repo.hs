@@ -12,6 +12,7 @@ module Git.Plantation.Cmd.Repo
   , createRepo
   , createRepoInGitHub
   , initRepoInGitHub
+  , setupDefaultBranch
   , setupWebhook
   , initProblemCI
   , resetRepo
@@ -60,10 +61,11 @@ type RepoArg = Record
    ]
 
 type NewRepoFlags = Record
-  '[ "skip_create_repo"   >: Bool
-   , "skip_init_repo"     >: Bool
-   , "skip_setup_webhook" >: Bool
-   , "skip_init_ci"       >: Bool
+  '[ "skip_create_repo"          >: Bool
+   , "skip_init_repo"            >: Bool
+   , "skip_setup_default_branch" >: Bool
+   , "skip_setup_webhook"        >: Bool
+   , "skip_init_ci"              >: Bool
    ]
 
 actForRepo :: (RepoArg -> Plant ()) -> RepoCmdArg -> Plant ()
@@ -90,10 +92,11 @@ findProblemWithThrow idx =
 createRepo :: NewRepoFlags -> RepoArg -> Plant ()
 createRepo flags args = do
   Mix.logInfoR "create team repository" args
-  unless (flags ^. #skip_create_repo)   $ createRepoInGitHub args
-  unless (flags ^. #skip_init_repo)     $ initRepoInGitHub args
-  unless (flags ^. #skip_setup_webhook) $ setupWebhook args
-  unless (flags ^. #skip_init_ci)       $ initProblemCI args
+  unless (flags ^. #skip_create_repo)          $ createRepoInGitHub args
+  unless (flags ^. #skip_init_repo)            $ initRepoInGitHub args
+  unless (flags ^. #skip_setup_default_branch) $ setupDefaultBranch args
+  unless (flags ^. #skip_setup_webhook)        $ setupWebhook args
+  unless (flags ^. #skip_init_ci)              $ initProblemCI args
 
 createRepoInGitHub :: RepoArg -> Plant ()
 createRepoInGitHub args = do
@@ -132,6 +135,22 @@ initRepoInGitHub args = do
       \branch -> Git.checkout ["-b", branch, "problem/" <> branch]
     Git.push $ "-f" : "-u" : "origin" : problem ^. #challenge_branches
   logInfo $ "Success: create repo as " <> displayShow github
+
+setupDefaultBranch :: RepoArg -> Plant ()
+setupDefaultBranch args = do
+  (owner, repo) <- splitRepoName <$> repoGithub (args ^. #repo)
+  problem <- findProblemWithThrow (ProblemId $ args ^. #repo ^. #problem)
+  resp <- MixGitHub.fetch $ \auth -> GitHub.editRepo auth
+    (mkName Proxy owner)
+    (mkName Proxy repo)
+    (edit { GitHub.editDefaultBranch = Just $ problem ^. #default_branch })
+  case resp of
+    Left err -> logDebug (displayShow err) >> throwIO (DeleteRepoError err $ args ^. #repo)
+    Right _  -> logInfo "Success: set default branch in GitHub"
+  where
+    edit = GitHub.EditRepo
+      Nothing Nothing Nothing Nothing Nothing Nothing
+      Nothing Nothing Nothing Nothing Nothing Nothing
 
 setupWebhook :: RepoArg -> Plant ()
 setupWebhook args = do

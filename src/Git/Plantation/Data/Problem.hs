@@ -17,6 +17,7 @@ type Problem = Record
    , "challenge_branches" >: [Branch]
    , "answer_branch"      >: Branch
    , "ci_branch"          >: Branch
+   , "default_branch"     >: Branch
    ]
 
 instance ElmType Problem where

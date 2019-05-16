@@ -102,6 +102,7 @@ type alias Problem =
     , challenge_branches : List String
     , answer_branch : String
     , ci_branch : String
+    , default_branch : String
     }
 
 
@@ -115,6 +116,7 @@ decodeProblem =
         |> required "challenge_branches" (list string)
         |> required "answer_branch" string
         |> required "ci_branch" string
+        |> required "default_branch" string
 
 
 encodeProblem : Problem -> Json.Encode.Value
@@ -127,6 +129,7 @@ encodeProblem x =
         , ( "challenge_branches", Json.Encode.list Json.Encode.string x.challenge_branches )
         , ( "answer_branch", Json.Encode.string x.answer_branch )
         , ( "ci_branch", Json.Encode.string x.ci_branch )
+        , ( "default_branch", Json.Encode.string x.default_branch )
         ]
 
 

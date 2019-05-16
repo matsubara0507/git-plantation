@@ -16,14 +16,15 @@ import           Git.Plantation.Cmd.Run
 newtype RepoCmd = RepoCmd (Variant CmdFields)
 
 type CmdFields =
-  '[ "new"           >: (RepoCmdArg, NewRepoFlags)
-   , "new_github"    >: RepoCmdArg
-   , "init_github"   >: RepoCmdArg
-   , "setup_webhook" >: RepoCmdArg
-   , "init_ci"       >: RepoCmdArg
-   , "reset"         >: RepoCmdArg
-   , "delete"        >: RepoCmdArg
-   , "add_gh_team"   >: RepoCmdArg
+  '[ "new"                  >: (RepoCmdArg, NewRepoFlags)
+   , "new_github"           >: RepoCmdArg
+   , "init_github"          >: RepoCmdArg
+   , "setup_default_branch" >: RepoCmdArg
+   , "setup_webhook"        >: RepoCmdArg
+   , "init_ci"              >: RepoCmdArg
+   , "reset"                >: RepoCmdArg
+   , "delete"               >: RepoCmdArg
+   , "add_gh_team"          >: RepoCmdArg
    ]
 
 instance Run ("new" >: (RepoCmdArg, NewRepoFlags)) where
@@ -37,6 +38,10 @@ instance Run ("new_github" >: RepoCmdArg) where
 instance Run ("init_github" >: RepoCmdArg) where
   run' _ args =
     actForRepo initRepoInGitHub args `catchAny` (logError . displayShow)
+
+instance Run ("setup_default_branch" >: RepoCmdArg) where
+  run' _ args =
+    actForRepo setupDefaultBranch args `catchAny` (logError . displayShow)
 
 instance Run ("setup_webhook" >: RepoCmdArg) where
   run' _ args =
