@@ -214,7 +214,7 @@ update msg model =
             ( { model | scores = Success scores }, Cmd.none )
 
         FetchScores (Err _) ->
-            ( { model | scores = Failure "Something went wrong.." }, Cmd.none )
+            ( model, Cmd.none )
 
 
 fetchScores : Cmd Msg
