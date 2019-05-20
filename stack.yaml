@@ -6,7 +6,6 @@ packages:
 - ./libs/mix-plugin-github
 - ./libs/mix-plugin-drone
 - ./libs/mix-plugin-shell
-- ./libs/shh-cmd
 extra-deps:
 - extensible-0.5
 - servant-github-webhook-0.4.1.0

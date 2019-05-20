@@ -10,15 +10,17 @@ module Mix.Plugin.Shell
   , buildPlugin
   , workText
   , exec
+  , exec'
+  , shellyWithLogDebug
+  , Sh
   ) where
 
 import           RIO
 
 import           Data.Extensible
-import           Mix.Plugin        (Plugin, toPlugin)
-import qualified Mix.Plugin.Logger as Mix
-import qualified Shh.Command       as Shell
-import qualified Shh.Internal      as Shell
+import           Mix.Plugin      (Plugin, toPlugin)
+import           Shelly          (Sh)
+import qualified Shelly          as Sh
 
 buildPlugin :: MonadIO m => FilePath -> Plugin a m FilePath
 buildPlugin path = toPlugin $ \f -> f path
@@ -33,19 +35,32 @@ workText :: (MonadIO m, MonadReader env m, HasWorkDir env) => m Text
 workText = fromString <$> view workL
 
 exec ::
-  ( MonadIO m
+  ( MonadUnliftIO m
   , MonadReader env m
   , HasWorkDir env
   , HasLogFunc env
-  ) => Shell.Proc () -> m ()
+  ) => Sh () -> m ()
 exec act = do
-  path <- liftIO $ takeWhile (/= '\n') <$> Shell.readProc Shell.pwd
   work <- view workL
-  result <- liftIO $ Shell.catchFailure $ Shell.readProc $ do
-    Shell.mkdir ["-p"] $ fromString work
-    liftIO $ Shell.cd work
-    act
-  case result of
-    Left err  -> Mix.logError `Mix.withlines` displayShow err
-    Right out -> Mix.logDebug `Mix.withlines` fromString out
-  liftIO $ Shell.cd path
+  shellyWithLogDebug $ Sh.chdir_p (fromString work) act
+
+shellyWithLogDebug ::
+  ( MonadUnliftIO m
+  , MonadReader env m
+  , HasLogFunc env
+  ) => Sh a -> m a
+shellyWithLogDebug act = do
+  runInIO <- askRunInIO
+  Sh.shelly
+    . Sh.log_stdout_with (runInIO . logDebug . display)
+    . Sh.log_stderr_with (runInIO . logDebug . display)
+    $ act
+
+exec' ::
+  ( MonadUnliftIO m
+  , MonadReader env m
+  , HasWorkDir env
+  ) => Sh () -> m ()
+exec' act = do
+  work <- view workL
+  Sh.shelly $ Sh.chdir_p (fromString work) act

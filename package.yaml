@@ -56,12 +56,11 @@ dependencies:
 - servant-elm
 - servant-github-webhook
 - servant-server
-- shh
-- shh-cmd
 - yaml >= 0.8.31
 - http-api-data
 - unliftio
 - wreq
+- shelly
 
 library:
   source-dirs: src

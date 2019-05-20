@@ -42,13 +42,11 @@ import qualified GitHub.Endpoints.Organizations.Teams as GitHub
 import qualified GitHub.Endpoints.Repos               as GitHub
 import qualified GitHub.Endpoints.Repos.Webhooks      as GitHub
 
+import qualified Git.Cmd                              as Git
 import qualified Mix.Plugin.GitHub                    as MixGitHub
 import qualified Mix.Plugin.Logger.JSON               as Mix
 import qualified Mix.Plugin.Shell                     as MixShell
-import           Shh                                  ((&>))
-import qualified Shh                                  as Shell
-import qualified Shh.Command                          as Shell
-import qualified Shh.Command.Git                      as Git
+import qualified Shelly                               as Shell
 
 type RepoCmdArg = Record
   '[ "repos" >: [RepoId]
@@ -126,10 +124,10 @@ initRepoInGitHub args = do
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
   execGitForTeam (args ^. #team) teamRepo False teamUrl $ do
-    Shell.ignoreFailure $ Git.branch ["-D", "temp"]
-    Shell.ignoreFailure $ Git.checkout ["-b", "temp"]
-    Shell.ignoreFailure $ Git.branch $ "-D" : problem ^. #challenge_branches
-    Shell.ignoreFailure $ Git.remote ["add", "problem", problemUrl]
+    Shell.errExit False $ Git.branch ["-D", "temp"]
+    Shell.errExit False $ Git.checkout ["-b", "temp"]
+    Shell.errExit False $ Git.branch $ "-D" : problem ^. #challenge_branches
+    Shell.errExit False $ Git.remote ["add", "problem", problemUrl]
     Git.fetch ["--all"]
     forM_ (problem ^. #challenge_branches) $
       \branch -> Git.checkout ["-b", branch, "problem/" <> branch]
@@ -184,9 +182,9 @@ initProblemCI args = do
   execGitForTeam (args ^. #team) repo True problemUrl $ do
     Git.checkout [problem ^. #ci_branch]
     Git.pull []
-    Shell.ignoreFailure $ Git.branch ["-D", args ^. #team ^. #name]
+    Shell.errExit False $ Git.branch ["-D", args ^. #team ^. #name]
     Git.checkout ["-b", args ^. #team ^. #name]
-    Shell.echo github &> Shell.Truncate (Text.unpack ciFileName)
+    Shell.writefile ciFileName github
     Git.add [ciFileName]
     Git.commit ["-m", "[CI SKIP] Add ci branch"]
     Git.push ["-f", "-u", "origin", args ^. #team ^. #name]
@@ -197,8 +195,8 @@ resetRepo args = do
   problem <- findProblemWithThrow (ProblemId $ args ^. #repo ^. #problem)
   let (_, repo) = splitRepoName $ problem ^. #repo
   local (over #work $ toTeamWork (args ^. #team) False) $ do
-    local (over #work $ toWorkWith $ Text.unpack repo) $ MixShell.exec (Shell.ls [] ".")
-    MixShell.exec $ Shell.rm ["-rf"] repo
+    local (over #work $ toWorkWith $ Text.unpack repo) $ MixShell.exec (Shell.ls "." >> pure ())
+    MixShell.exec $ Shell.rm_rf $ Shell.fromText repo
   initRepoInGitHub args
 
 pushForCI :: Team -> Problem -> Plant ()
@@ -237,13 +235,13 @@ deleteProblemCI team problem = do
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
   execGitForTeam team repo True problemUrl $
-    Shell.ignoreFailure $ Git.push  [ "--delete", "origin", team ^. #name]
+    Shell.errExit False $ Git.push  [ "--delete", "origin", team ^. #name]
   logInfo $ "Success: delete ci branch in " <> displayShow (problem ^. #repo)
 
-execGitForTeam :: Team -> Text -> Bool -> Text -> Shell.Proc () -> Plant ()
+execGitForTeam :: Team -> Text -> Bool -> Text -> MixShell.Sh () -> Plant ()
 execGitForTeam team repo isProblem url act =
   local (over #work $ toTeamWork team isProblem) $ do
-    MixShell.exec $ unlessM (Shell.test_d repo') $ Git.clone [url, repo]
+    MixShell.exec $ unlessM (Shell.test_d $ fromString repo') $ Git.clone [url, repo]
     local (over #work $ toWorkWith repo') $ MixShell.exec act
   where
     repo' = Text.unpack repo
