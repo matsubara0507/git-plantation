@@ -17,7 +17,6 @@ import           Git.Plantation.Env   (Plant)
 import           Git.Plantation.Score (ScoreR, Scores)
 import qualified Git.Plantation.Score as Score
 import qualified Mix.Plugin.Drone     as MixDrone
-import           Network.HTTP.Req
 import           Network.HTTP.Req     as Req
 import           Servant
 
@@ -49,7 +48,7 @@ getProblems = do
 getScores :: TVar Scores -> Plant [ScoreR]
 getScores scores = do
   logInfo "[GET] /scores"
-  liftIO $ map Score.toResponse . Map.elems <$> atomically (readTVar scores)
+  liftIO $ map Score.toResponse . Map.elems <$> readTVarIO scores
 
 putScore :: TVar Scores -> Int -> Int -> Plant ()
 putScore scores pid bid = do
@@ -58,7 +57,7 @@ putScore scores pid bid = do
     Nothing -> logWarn $ fromString ("not found problem id: " <> show pid)
     Just p  -> updateScoresWithBuild config (splitRepoName $ p ^. #repo)
   where
-    updateScoresWithBuild conf (owner, repo) = do
+    updateScoresWithBuild conf (owner, repo) =
       tryAny (MixDrone.fetch $ \c -> Drone.getBuild c owner repo bid) >>= \case
         Left err   -> logError (display err)
         Right resp -> liftIO $ atomically (modifyTVar scores $ update conf resp)

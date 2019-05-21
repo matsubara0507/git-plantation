@@ -64,7 +64,7 @@ toResponse :: Score -> ScoreR
 toResponse score
     = #team  @= (score ^. #team)
    <: #point @= (score ^. #point)
-   <: #stats @= (IntMap.elems $ score ^. #stats)
+   <: #stats @= IntMap.elems (score ^. #stats)
    <: #links @= (score ^. #links)
    <: nil
 
