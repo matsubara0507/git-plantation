@@ -18,26 +18,30 @@ import           GitHub.Data.Webhooks.Events
 import           GitHub.Data.Webhooks.Payload
 import           Servant
 import           Servant.GitHub.Webhook
+import           UnliftIO.Concurrent          (forkIO)
 
 type WebhookAPI
-     = GitHubEvent '[ 'WebhookPingEvent ] :> GitHubSignedReqBody '[JSON] PublicEvent :> Post '[JSON] ()
-  :<|> GitHubEvent '[ 'WebhookPushEvent ] :> GitHubSignedReqBody '[JSON] PushEvent :> Post '[JSON] ()
+     = GitHubEvent '[ 'WebhookPingEvent ] :> GitHubSignedReqBody '[JSON] PublicEvent :> Post '[JSON] NoContent
+  :<|> GitHubEvent '[ 'WebhookPushEvent ] :> GitHubSignedReqBody '[JSON] PushEvent :> Post '[JSON] NoContent
 
 webhook :: TVar Scores -> ServerT WebhookAPI Plant
 webhook scores =
   pingWebhook :<|> pushWebhook scores
 
-pingWebhook :: RepoWebhookEvent -> ((), PublicEvent) -> Plant ()
-pingWebhook _ (_, ev) =
+pingWebhook :: RepoWebhookEvent -> ((), PublicEvent) -> Plant NoContent
+pingWebhook _ (_, ev) = do
   logInfo $ "Hook Ping Event: " <> displayShow ev
+  pure NoContent
 
-pushWebhook :: TVar Scores -> RepoWebhookEvent -> ((), PushEvent) -> Plant ()
+pushWebhook :: TVar Scores -> RepoWebhookEvent -> ((), PushEvent) -> Plant NoContent
 pushWebhook scores _ (_, ev) = do
   logInfo $ "Hook Push Event: " <> displayShow ev
-  config <- asks (view #config)
-  case findByPushEvent ev (config ^. #teams) (config ^. #problems) of
-    Just (team, problem) -> startScoring config team problem
-    Nothing              -> logError "team or problem is not found."
+  _ <- forkIO $ do
+    config <- asks (view #config)
+    case findByPushEvent ev (config ^. #teams) (config ^. #problems) of
+      Just (team, problem) -> startScoring config team problem
+      Nothing              -> logError "team or problem is not found."
+  pure NoContent
   where
     startScoring config team problem = do
       notifySlack ev team problem
