@@ -9,27 +9,32 @@ import           RIO
 import qualified RIO.List             as L
 import qualified RIO.Map              as Map
 
-import           Data.Extensible
 import qualified Drone.Endpoints      as Drone
 import qualified Drone.Types          as Drone
-import           Git.Plantation       (Problem, Repo, Team, repoGithubPath)
+import           Git.Plantation       (Problem, Team)
 import           Git.Plantation.Cmd   (splitRepoName)
 import           Git.Plantation.Env   (Plant)
-import           Git.Plantation.Score (Link, Score, Status)
+import           Git.Plantation.Score (ScoreR, Scores)
+import qualified Git.Plantation.Score as Score
 import qualified Mix.Plugin.Drone     as MixDrone
 import           Network.HTTP.Req
-import           Servant              hiding (Link, toLink)
+import           Network.HTTP.Req     as Req
+import           Servant
 
 type CRUD
-      = "teams"    :> Get '[JSON] [Team]
-   :<|> "problems" :> Get '[JSON] [Problem]
-   :<|> "scores"   :> Get '[JSON] [Score]
+      = GetAPI
+   :<|> "scores" :> Capture "problem" Int :> Capture "build" Int :> Put '[JSON] ()
 
-crud :: ServerT CRUD Plant
-crud
-      = getTeams
-   :<|> getProblems
-   :<|> getScores
+type GetAPI
+     = "teams"    :> Get '[JSON] [Team]
+  :<|> "problems" :> Get '[JSON] [Problem]
+  :<|> "scores"   :> Get '[JSON] [ScoreR]
+
+
+crud :: TVar Scores -> ServerT CRUD Plant
+crud scores = getAPI :<|> putScore scores
+  where
+    getAPI = getTeams :<|> getProblems :<|> getScores scores
 
 getTeams :: Plant [Team]
 getTeams = do
@@ -41,59 +46,20 @@ getProblems = do
   logInfo "[GET] /problems"
   asks (view #problems . view #config)
 
-getScores :: Plant [Score]
-getScores = do
+getScores :: TVar Scores -> Plant [ScoreR]
+getScores scores = do
   logInfo "[GET] /scores"
-  teams    <- asks (view #teams . view #config)
-  problems <- asks (view #problems . view #config)
-  builds   <- Map.fromList <$> mapM fetchBuilds problems
-  pure $ map (mkScore problems builds) teams
+  liftIO $ map Score.toResponse . Map.elems <$> atomically (readTVar scores)
 
-fetchBuilds :: Problem -> Plant (Text, [Drone.Build])
-fetchBuilds problem = do
-  let (owner, repo) = splitRepoName $ problem ^. #repo
-  builds <- tryAny (getAllBuilds owner repo) >>= \case
-    Left err     -> logError (display err) >> pure []
-    Right builds -> pure builds
-  pure (problem ^. #name, builds)
-
-getAllBuilds :: Text -> Text -> Plant [Drone.Build]
-getAllBuilds owner repo = mconcat <$> getAllBuilds' [] 1
+putScore :: TVar Scores -> Int -> Int -> Plant ()
+putScore scores pid bid = do
+  config <- asks (view #config)
+  case L.find (\p -> p ^. #id == pid) (config ^. #problems) of
+    Nothing -> logWarn $ fromString ("not found problem id: " <> show pid)
+    Just p  -> updateScoresWithBuild config (splitRepoName $ p ^. #repo)
   where
-    getAllBuilds' xss n = do
-      resp <- MixDrone.fetch $ \client -> Drone.getBuilds client owner repo (Just n)
-      case responseBody resp of
-        []     -> pure xss
-        builds -> getAllBuilds' (builds : xss) (n + 1)
-
-mkScore :: [Problem] -> Map Text [Drone.Build] -> Team -> Score
-mkScore problems builds team
-    = #team  @= team ^. #name
-   <: #point @= sum (map (toPoint stats) problems)
-   <: #stats @= stats
-   <: #links @= links
-   <: nil
-  where
-    isTeamBuild b = b ^. #source == team ^. #name
-    builds' = Map.filter (not . null) $ Map.map (filter isTeamBuild) builds
-    stats = Map.elems $ Map.mapWithKey toStatus builds'
-    links = map toLink $ team ^. #repos
-
-toStatus :: Text -> [Drone.Build] -> Status
-toStatus name builds
-    = #problem @= name
-   <: #correct @= any (\b -> b ^. #status == "success") builds
-   <: #pending @= any (\b -> b ^. #status == "running" || b ^. #status == "pending") builds
-   <: nil
-
-toPoint :: [Status] -> Problem -> Int
-toPoint stats problem =
-  case L.find (\s -> s ^. #problem == problem ^. #name) stats of
-    Just s | s ^. #correct -> problem ^. #difficulty
-    _                      -> 0
-
-toLink :: Repo -> Link
-toLink repo
-    = #problem_id @= repo ^. #problem
-   <: #url        @= maybe "" ("https://github.com/" <>) (repoGithubPath repo)
-   <: nil
+    updateScoresWithBuild conf (owner, repo) = do
+      tryAny (MixDrone.fetch $ \c -> Drone.getBuild c owner repo bid) >>= \case
+        Left err   -> logError (display err)
+        Right resp -> liftIO $ atomically (modifyTVar scores $ update conf resp)
+    update conf = Score.updateStatWithBuild conf pid . Req.responseBody

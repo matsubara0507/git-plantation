@@ -101,13 +101,15 @@ runServer opts config = do
          <: #logger  <@=> MixLogger.buildPlugin logConf
          <: nil
   B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
-  flip Mix.withPlugin plugin $ \env -> Warp.run (opts ^. #port) $
-    app env (gitHubKey $ fromString <$> getEnv "GH_SECRET")
+  flip Mix.withPlugin plugin $ \env -> do
+    scores <- atomically . newTVar =<< runRIO env initScores
+    let key = gitHubKey $ fromString <$> getEnv "GH_SECRET"
+    Warp.run (opts ^. #port) $ app env key scores
 
-app :: Env -> GitHubKey -> Application
-app env key =
+app :: Env -> GitHubKey -> TVar Scores -> Application
+app env key scores =
   serveWithContext api (key :. EmptyContext) $
-    hoistServerWithContext api context (runRIO env) server
+    hoistServerWithContext api context (runRIO env) (server scores)
 
 context :: Proxy '[ GitHubKey ]
 context = Proxy

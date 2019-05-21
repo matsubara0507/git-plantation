@@ -43,6 +43,7 @@ dependencies:
 - mix-plugin-shell
 - aeson
 - blaze-html
+- containers
 - data-default-class
 - dotenv
 - drone

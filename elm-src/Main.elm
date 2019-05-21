@@ -149,7 +149,7 @@ viewStatus : API.Score -> API.Problem -> Html msg
 viewStatus score problem =
     let
         status =
-            List.find (\st -> st.problem == problem.name) score.stats
+            List.find (\st -> st.problem_id == problem.id) score.stats
 
         url =
             List.find (\l -> l.problem_id == problem.id) score.links

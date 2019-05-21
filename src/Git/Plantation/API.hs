@@ -12,6 +12,7 @@ import           Git.Plantation.API.CRUD     (CRUD, crud)
 import           Git.Plantation.API.Slack    (SlackAPI, slackAPI)
 import           Git.Plantation.API.Webhook  (WebhookAPI, webhook)
 import           Git.Plantation.Env          (Plant)
+import           Git.Plantation.Score        (Scores)
 import           Servant
 import           Servant.HTML.Blaze
 import           Servant.Server.StaticFiles  (serveDirectoryFileServer)
@@ -29,11 +30,11 @@ type API
 api :: Proxy API
 api = Proxy
 
-server :: ServerT API Plant
-server = indexHtml
+server :: TVar Scores -> ServerT API Plant
+server scores = indexHtml
     :<|> serveDirectoryFileServer "static"
-    :<|> webhook
-    :<|> crud
+    :<|> webhook scores
+    :<|> crud scores
     :<|> slackAPI
 
 indexHtml :: Plant H.Html

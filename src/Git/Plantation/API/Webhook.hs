@@ -13,6 +13,7 @@ import           Git.Plantation.Data          (Problem, Team)
 import qualified Git.Plantation.Data.Slack    as Slack
 import qualified Git.Plantation.Data.Team     as Team
 import           Git.Plantation.Env           (Plant)
+import           Git.Plantation.Score         (Scores, toPendingScore)
 import           GitHub.Data.Webhooks.Events
 import           GitHub.Data.Webhooks.Payload
 import           Servant
@@ -22,21 +23,26 @@ type WebhookAPI
      = GitHubEvent '[ 'WebhookPingEvent ] :> GitHubSignedReqBody '[JSON] PublicEvent :> Post '[JSON] ()
   :<|> GitHubEvent '[ 'WebhookPushEvent ] :> GitHubSignedReqBody '[JSON] PushEvent :> Post '[JSON] ()
 
-webhook :: ServerT WebhookAPI Plant
-webhook =
-  pingWebhook :<|> pushWebhook
+webhook :: TVar Scores -> ServerT WebhookAPI Plant
+webhook scores =
+  pingWebhook :<|> pushWebhook scores
 
 pingWebhook :: RepoWebhookEvent -> ((), PublicEvent) -> Plant ()
 pingWebhook _ (_, ev) =
   logInfo $ "Hook Ping Event: " <> displayShow ev
 
-pushWebhook :: RepoWebhookEvent -> ((), PushEvent) -> Plant ()
-pushWebhook _ (_, ev) = do
+pushWebhook :: TVar Scores -> RepoWebhookEvent -> ((), PushEvent) -> Plant ()
+pushWebhook scores _ (_, ev) = do
   logInfo $ "Hook Push Event: " <> displayShow ev
   config <- asks (view #config)
   case findByPushEvent ev (config ^. #teams) (config ^. #problems) of
-    Just (team, problem) -> notifySlack ev team problem >> pushForCI team problem
+    Just (team, problem) -> startScoring config team problem
     Nothing              -> logError "team or problem is not found."
+  where
+    startScoring config team problem = do
+      notifySlack ev team problem
+      liftIO $ atomically (modifyTVar scores $ toPendingScore config team problem)
+      pushForCI team problem
 
 findByPushEvent :: PushEvent -> [Team] -> [Problem] -> Maybe (Team, Problem)
 findByPushEvent ev teams problems = do
