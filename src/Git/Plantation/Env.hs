@@ -11,12 +11,12 @@ import           RIO
 import           Data.Aeson                (ToJSON)
 import qualified Data.Aeson.Text           as Json
 import           Data.Extensible
-import qualified Drone.Client              as Drone
 import           Git.Plantation.Config
 import           Git.Plantation.Data
 import qualified Git.Plantation.Data.Slack as Slack
 import qualified GitHub.Auth               as GitHub
 import qualified GitHub.Data               as GitHub
+import qualified Mix.Plugin.Drone          as Mix
 import           Mix.Plugin.Logger         ()
 import qualified Mix.Plugin.Logger.JSON    as Mix
 import qualified RIO.Text.Lazy             as TL
@@ -28,7 +28,7 @@ type Env = Record
    , "github"  >: GitHub.Token
    , "slack"   >: Maybe Slack.Config
    , "work"    >: FilePath
-   , "drone"   >: Drone.HttpsClient
+   , "drone"   >: Mix.DroneConfig
    , "webhook" >: WebhookConfig
    , "store"   >: Text -- URL for store
    , "logger"  >: LogFunc

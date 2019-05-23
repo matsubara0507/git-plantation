@@ -9,7 +9,6 @@ import           RIO
 
 import           Configuration.Dotenv  (defaultConfig, loadFile)
 import           Data.Extensible
-import qualified Drone.Client          as Drone
 import           Git.Plantation.Cmd    as Cmd
 import           Git.Plantation.Config (readConfig)
 import           Git.Plantation.Env    (mkWebhookConf)
@@ -39,7 +38,7 @@ main = execParser parser >>= \opts -> do
          <: #github  <@=> MixGitHub.buildPlugin token
          <: #slack   <@=> pure Nothing
          <: #work    <@=> MixShell.buildPlugin (opts ^. #work)
-         <: #drone   <@=> MixDrone.buildPlugin client Drone.HttpsClient
+         <: #drone   <@=> MixDrone.buildPlugin client False
          <: #webhook <@=> pure (mkWebhookConf (appUrl <> "/hook") secret)
          <: #store   <@=> pure ""
          <: #logger  <@=> MixLogger.buildPlugin logConf

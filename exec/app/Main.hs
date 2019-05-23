@@ -18,7 +18,6 @@ import           Data.Extensible.GetOpt
 import           Data.Version             (Version)
 import qualified Data.Version             as Version
 import           Development.GitRev
-import qualified Drone.Client             as Drone
 import           Git.Plantation
 import           Git.Plantation.API       (api, server)
 import qualified Mix.Plugin               as Mix (withPlugin)
@@ -29,7 +28,7 @@ import qualified Mix.Plugin.Shell         as MixShell
 import qualified Network.Wai.Handler.Warp as Warp
 import           Servant
 import qualified Servant.GitHub.Webhook   (GitHubKey, gitHubKey)
-import           System.Environment       (getEnv)
+import           System.Environment       (getEnv, lookupEnv)
 
 import           Orphans                  ()
 
@@ -82,6 +81,7 @@ runServer opts config = do
   sResetRepoCmd <- liftIO $ fromString  <$> getEnv "SLACK_RESET_REPO_CMD"
   sWebhook      <- liftIO $ fromString  <$> getEnv "SLACK_WEBHOOK"
   storeUrl      <- liftIO $ fromString  <$> getEnv "STORE_URL"
+  dHttp         <- lookupEnv "DRONE_HTTP"
   let client    = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
       logConf   = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
       slackConf
@@ -97,7 +97,7 @@ runServer opts config = do
          <: #github  <@=> MixGitHub.buildPlugin token
          <: #slack   <@=> pure (Just slackConf)
          <: #work    <@=> MixShell.buildPlugin (opts ^. #work)
-         <: #drone   <@=> MixDrone.buildPlugin client Drone.HttpsClient
+         <: #drone   <@=> MixDrone.buildPlugin client (dHttp == Just "true")
          <: #webhook <@=> pure mempty
          <: #store   <@=> pure storeUrl
          <: #logger  <@=> MixLogger.buildPlugin logConf

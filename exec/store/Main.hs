@@ -18,7 +18,6 @@ import           Data.Extensible.GetOpt
 import           Data.Version             (Version)
 import qualified Data.Version             as Version
 import           Development.GitRev
-import qualified Drone.Client             as Drone
 import           Git.Plantation
 import           Git.Plantation.Store     (Store)
 import qualified Git.Plantation.Store     as Store
@@ -29,7 +28,7 @@ import qualified Mix.Plugin.Logger        as MixLogger
 import qualified Mix.Plugin.Shell         as MixShell
 import qualified Network.Wai.Handler.Warp as Warp
 import           Servant
-import           System.Environment       (getEnv)
+import           System.Environment       (getEnv, lookupEnv)
 
 import           Orphans                  ()
 
@@ -68,6 +67,7 @@ runServer opts config = do
   dHost         <- liftIO $ fromString  <$> getEnv "DRONE_HOST"
   dToken        <- liftIO $ fromString  <$> getEnv "DRONE_TOKEN"
   dPort         <- liftIO $ readMaybe   <$> getEnv "DRONE_PORT"
+  dHttp         <- lookupEnv "DRONE_HTTP"
   let client    = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
       logConf   = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
       plugin    = hsequence
@@ -75,7 +75,7 @@ runServer opts config = do
          <: #github  <@=> MixGitHub.buildPlugin ""
          <: #slack   <@=> pure Nothing
          <: #work    <@=> MixShell.buildPlugin "."
-         <: #drone   <@=> MixDrone.buildPlugin client Drone.HttpsClient
+         <: #drone   <@=> MixDrone.buildPlugin client (dHttp == Just "true")
          <: #webhook <@=> pure mempty
          <: #store   <@=> pure ""
          <: #logger  <@=> MixLogger.buildPlugin logConf
