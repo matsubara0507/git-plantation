@@ -8,7 +8,7 @@ module Git.Plantation.API.Webhook where
 import           RIO
 import qualified RIO.List                     as L
 
-import           Git.Plantation.API.CRUD      (updateScore)
+import           Git.Plantation.API.CRUD      (updateScore')
 import           Git.Plantation.Cmd.Repo
 import           Git.Plantation.Data          (Problem, Team)
 import qualified Git.Plantation.Data.Slack    as Slack
@@ -46,7 +46,7 @@ pushWebhook _ (_, ev) = do
     startScoring team problem = do
       notifySlack ev team problem
       pushForCI team problem
-      _ <- updateScore (problem ^. #id)
+      updateScore' (problem ^. #id)
       pure ()
 
 findByPushEvent :: PushEvent -> [Team] -> [Problem] -> Maybe (Team, Problem)

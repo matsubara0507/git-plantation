@@ -6,6 +6,7 @@
 module Git.Plantation.API.CRUD where
 
 import           RIO
+import qualified RIO.List             as L
 import qualified RIO.Text             as Text
 
 import           Git.Plantation       (Problem, Team)
@@ -17,7 +18,7 @@ import           Servant
 
 type CRUD
       = GetAPI
-   :<|> "scores" :> Capture "problem" Int :> Put '[JSON] NoContent
+   :<|> "scores" :> Capture "owner" Text :> Capture "repo" Text :> Put '[JSON] NoContent
 
 type GetAPI
      = "teams"    :> Get '[JSON] [Team]
@@ -55,11 +56,19 @@ fetchStore = do
   resp <- W.asJSON =<< liftIO (W.get url)
   pure $ resp ^. W.responseBody
 
-updateScore :: Int -> Plant NoContent
-updateScore pid = do
-  logInfo $ fromString ("[PUT] /score/" <> show pid)
+updateScore :: Text -> Text -> Plant NoContent
+updateScore owner repo = do
+  problems <- asks (view #problems . view #config)
+  let repo' = owner <> "/" <> repo
+  logInfo $ display ("[PUT] /score/" <> repo')
+  case L.find (\p -> p ^. #repo == repo') problems of
+    Nothing -> logError $ display ("not found problem: " <> repo')
+    Just p  -> updateScore' $ p ^. #id
+  pure NoContent
+
+updateScore' :: Int -> Plant ()
+updateScore' pid = do
   url <- Text.unpack <$> asks (view #store)
   tryAny (liftIO $ W.customMethod "PATCH" $ url <> "/" <> show pid) >>= \case
     Left err -> logError (displayShow err)
     Right _  -> pure ()
-  pure NoContent
