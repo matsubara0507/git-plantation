@@ -74,6 +74,13 @@ executables:
     - git-plantation
     - gitrev
     - warp
+  git-plantation-store:
+    main:                Main.hs
+    source-dirs:         exec/store
+    dependencies:
+    - git-plantation
+    - gitrev
+    - warp
   git-plantation-tool:
     main:                Main.hs
     source-dirs:         exec/tool

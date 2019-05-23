@@ -30,6 +30,7 @@ type Env = Record
    , "work"    >: FilePath
    , "drone"   >: Drone.HttpsClient
    , "webhook" >: WebhookConfig
+   , "store"   >: Text -- URL for store
    , "logger"  >: LogFunc
    ]
 
