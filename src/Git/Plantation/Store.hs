@@ -44,17 +44,17 @@ update' problem = do
 
 uniqByTeam :: [Build] -> [Build]
 uniqByTeam =
-  mapMaybe (L.minimumByMaybe ordStatus)
+  mapMaybe (L.maximumByMaybe ordStatus)
     . L.groupBy (\a b -> a ^. #source == b ^. #source)
   where
     ordStatus a b = ordStatus' (a ^. #status) (b ^. #status)
     ordStatus' "success" _  = GT
     ordStatus'  _ "success" = LT
     ordStatus' "running" _  = GT
-    ordStatus'  _ "running" = GT
+    ordStatus'  _ "running" = LT
     ordStatus' "pending" _  = GT
-    ordStatus'  _ "pending" = GT
-    ordStatus' _ _          = GT
+    ordStatus'  _ "pending" = LT
+    ordStatus' _ _          = EQ
 
 fetchBuilds :: Problem -> Plant [Build]
 fetchBuilds problem = do
