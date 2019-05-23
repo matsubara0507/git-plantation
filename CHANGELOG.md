@@ -5,7 +5,7 @@
 * mix パッケージを作成 (#26)
   * [tonatona](http://hackage.haskell.org/package/tonatona) にインスパイアされた [rio](http://hackage.haskell.org/package/rio) の薄いラッパーパッケージ
   * rio-logger, [github-client](https://github.com/matsubara0507/github/tree/collaborator-api), [drone-client](https://github.com/matsubara0507/drone-haskell), [shh](http://hackage.haskell.org/package/shh) プラグインも作成
-  * shelly を shh に移行　
+  * ~~shelly を shh に移行~~ thred unsafe だったので shelly に戻した(#40)　
 * リセットするSlackボット用のAPIを追加 (#27)
 * shh-cmd パッケージを作成 (#28)
   * [shh](http://hackage.haskell.org/package/shh) の薄いラッパーパッケージ
@@ -27,6 +27,10 @@
 * 回答リポジトのリデフォルトブランチを更新するコマンドを追加(#35)
   * `repo new` の時にも実行される
   * `github` パッケージが対応してなかったので独自で更新
+* 独自キャッシュサーバー `git-plantation-store` を作成(#41)
+  * DroneCI のビルドデータを必要な分だけキャッシュしている
+  * スコアボードなどの負荷対策
+  * App で GitHub Webohook 取得時・DroneCI での採点終了時に更新をする
 
 ## v0.2.0
 
