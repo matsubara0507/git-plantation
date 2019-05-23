@@ -44,8 +44,7 @@ update' problem = do
 
 uniqByTeam :: [Build] -> [Build]
 uniqByTeam =
-  catMaybes
-    . map (L.minimumByMaybe ordStatus)
+  mapMaybe (L.minimumByMaybe ordStatus)
     . L.groupBy (\a b -> a ^. #source == b ^. #source)
   where
     ordStatus a b = ordStatus' (a ^. #status) (b ^. #status)

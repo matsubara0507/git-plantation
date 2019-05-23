@@ -267,8 +267,8 @@ addGitHubTeam args = case (args ^. #team ^. #org, args ^. #repo ^. #only) of
       (owner, repoName) <- splitRepoName <$> repoGithub repo
       resp' <- MixGitHub.fetch $ \auth -> GitHub.addOrUpdateTeamRepo' auth
         (GitHub.teamId team)
-        (mkName Proxy $ owner)
-        (mkName Proxy $ repoName)
+        (mkName Proxy owner)
+        (mkName Proxy repoName)
         GitHub.PermissionPush
       case resp' of
         Left err -> logDebug (displayShow err) >> throwIO (failure err org name)
