@@ -43,6 +43,7 @@ dependencies:
 - mix-plugin-shell
 - aeson
 - blaze-html
+- containers
 - data-default-class
 - dotenv
 - drone
@@ -69,6 +70,13 @@ executables:
   git-plantation-app:
     main:                Main.hs
     source-dirs:         exec/app
+    dependencies:
+    - git-plantation
+    - gitrev
+    - warp
+  git-plantation-store:
+    main:                Main.hs
+    source-dirs:         exec/store
     dependencies:
     - git-plantation
     - gitrev

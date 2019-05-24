@@ -41,6 +41,7 @@ main = execParser parser >>= \opts -> do
          <: #work    <@=> MixShell.buildPlugin (opts ^. #work)
          <: #drone   <@=> MixDrone.buildPlugin client Drone.HttpsClient
          <: #webhook <@=> pure (mkWebhookConf (appUrl <> "/hook") secret)
+         <: #store   <@=> pure ""
          <: #logger  <@=> MixLogger.buildPlugin logConf
          <: nil
   Mix.run plugin $ Cmd.run (opts ^. #subcmd)
