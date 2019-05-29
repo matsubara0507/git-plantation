@@ -28,7 +28,7 @@ type Env = Record
    , "github"  >: GitHub.Token
    , "slack"   >: Maybe Slack.Config
    , "work"    >: FilePath
-   , "drone"   >: Mix.DroneConfig
+   , "drone"   >: Mix.Config
    , "webhook" >: WebhookConfig
    , "store"   >: Text -- URL for store
    , "logger"  >: LogFunc
