@@ -93,3 +93,4 @@
   * `api/scores` で取得できないときに前のモデルを見るようにした
 * shell コマンド実行が thread unsafe だったのを修正(#40)
   * shh から shelly に戻した
+* [mix パッケージ](https://github.com/matsubara0507/mix.hs)を外部のに変更(#38)
