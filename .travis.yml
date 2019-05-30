@@ -5,9 +5,9 @@ language: elm
 cache:
   timeout: 360
   directories:
-  - "$HOME/.stack/"
-  - "$HOME/.local/bin/"
-  - ".stack-work/"
+  - "$HOME/.stack"
+  - "$HOME/.local/bin"
+  - "$TRAVIS_BUILD_DIR/.stack-work"
 install:
 - mkdir -p ~/.local/bin
 - export PATH=$HOME/.local/bin:$PATH
