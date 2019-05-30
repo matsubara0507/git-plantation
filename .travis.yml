@@ -14,10 +14,14 @@ install:
 - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
 jobs:
   include:
+    - stage: build cabal
+      script: stack --no-terminal --install-ghc build -j 1 Cabal
     - stage: build dependencies
-      script: stack --no-terminal --install-ghc test --bench --only-dependencies
+      script: stack --no-terminal build --only-dependencies
+    - stage: build dependencies for test
+      script: stack --no-terminal test --only-dependencies
     - stage: run test
-      script: stack --no-terminal test --bench --no-run-benchmarks --no-haddock-deps --pedantic
+      script: stack --no-terminal test --no-run-benchmarks --no-haddock-deps --pedantic
     - stage: push docker image
       if: branch = master AND type = push
       script:
