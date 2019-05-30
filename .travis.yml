@@ -12,7 +12,6 @@ install:
 - mkdir -p ~/.local/bin
 - export PATH=$HOME/.local/bin:$PATH
 - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
-- stack docker pull
 jobs:
   include:
     - stage: build dependencies
@@ -23,6 +22,7 @@ jobs:
       if: branch = master AND type = push
       script:
       - stack test
+      - stack docker pull
       - stack --docker --no-terminal build -j 1 Cabal
       - stack --docker image container
       - docker build -t matsubara0507/git-plantation .
