@@ -3,7 +3,7 @@ services:
   - docker
 language: elm
 cache:
-  timeout: 360
+  timeout: 1000
   directories:
   - $HOME/.local/bin
   - $HOME/.stack
