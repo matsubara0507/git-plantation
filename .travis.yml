@@ -3,26 +3,30 @@ services:
   - docker
 language: elm
 cache:
-  timeout: 360
+  timeout: 1000
   directories:
-  - "$HOME/.stack/"
-  - "$HOME/.local/bin/"
-  - ".stack-work/"
+  - $HOME/.local/bin
+  - $HOME/.stack
+  - $TRAVIS_BUILD_DIR/.stack-work
 install:
 - mkdir -p ~/.local/bin
 - export PATH=$HOME/.local/bin:$PATH
 - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
-- stack docker pull
 jobs:
   include:
+    - stage: build cabal
+      script: stack --no-terminal --install-ghc build -j 1 Cabal
     - stage: build dependencies
-      script: stack --no-terminal --install-ghc test --bench --only-dependencies
+      script: stack --no-terminal build --only-dependencies
+    - stage: build dependencies for test
+      script: stack --no-terminal test --only-dependencies
     - stage: run test
-      script: stack --no-terminal test --bench --no-run-benchmarks --no-haddock-deps --pedantic
+      script: stack --no-terminal test --no-run-benchmarks --no-haddock-deps --pedantic
     - stage: push docker image
       if: branch = master AND type = push
       script:
       - stack test
+      - stack docker pull
       - stack --docker --no-terminal build -j 1 Cabal
       - stack --docker image container
       - docker build -t matsubara0507/git-plantation .
