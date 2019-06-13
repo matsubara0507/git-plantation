@@ -4,7 +4,18 @@
 {-# LANGUAGE TupleSections    #-}
 {-# LANGUAGE TypeOperators    #-}
 
-module Git.Plantation.Store where
+module Git.Plantation.Store
+  ( Store
+  , Build
+  , initial
+  , modifyWith
+  , uniqByTeam
+  , fetchBuilds
+  , getAllBuilds
+  , API
+  , api
+  , server
+  ) where
 
 import           RIO
 import qualified RIO.List            as L
@@ -34,13 +45,8 @@ initial = do
   builds   <- forM problems (\p -> (p ^. #id,) <$> fetchBuilds p)
   pure $ uniqByTeam <$> IntMap.fromList builds
 
-update :: Problem -> Store -> Plant Store
-update p s = ($ s) <$> update' p
-
-update' :: Problem -> Plant (Store -> Store)
-update' problem = do
-  builds <- uniqByTeam <$> fetchBuilds problem
-  pure $ IntMap.insert (problem ^. #id) builds
+modifyWith :: Problem -> [Build] -> Store -> Store
+modifyWith problem builds = IntMap.insert (problem ^. #id) builds
 
 uniqByTeam :: [Build] -> [Build]
 uniqByTeam =
@@ -90,8 +96,14 @@ server store = getStore :<|> putStore
       pure store'
     putStore pid = do
       logInfo $ fromString ("[PATCH] /store/" <> show pid)
-      problems <- asks (view #problems . view #config)
-      case L.find (\p -> p ^. #id == pid) problems of
-        Nothing -> logWarn (fromString $ "not found problem id: " <> show pid)
-        Just p  -> liftIO . atomically . modifyTVar' store =<< update' p
+      findProblemWith pid $ \problem -> do
+        builds <- uniqByTeam <$> fetchBuilds problem
+        liftIO $ atomically (modifyTVar' store $ modifyWith problem builds)
       pure NoContent
+
+findProblemWith :: Int -> (Problem -> Plant ()) -> Plant ()
+findProblemWith pid act = do
+  problems <- asks (view #problems . view #config)
+  case L.find (\p -> p ^. #id == pid) problems of
+    Nothing -> logWarn (fromString $ "not found problem id: " <> show pid)
+    Just p  -> act p
