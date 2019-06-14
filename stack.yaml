@@ -11,7 +11,7 @@ extra-deps:
 - github: matsubara0507/elm-export
   commit: 0a05fecf56f84aa2ad998200a03c7df2a1676c0c
 - github: matsubara0507/mix.hs
-  commit: 45a0033b4b479a4e95687a6ceb3381dfc5e91d8d
+  commit: 2138a7a5a43443040893134f1170ce1643f0d498
   subdirs:
   - mix
   - mix-json-logger

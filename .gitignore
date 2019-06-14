@@ -1,4 +1,5 @@
 .stack-work/
+stack.yaml.lock
 git-plantation.cabal
 *~
 .temp/
