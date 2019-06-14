@@ -21,7 +21,3 @@ extra-deps:
 docker:
   repo: fpco/stack-build
   enable: false
-image:
-  container:
-    name: git-plantation-bin
-    base: matsubara0507/ubuntu-for-haskell:git
