@@ -32,6 +32,9 @@
   * スコアボードなどの負荷対策
   * App で GitHub Webohook 取得時・DroneCI での採点終了時に更新をする
 * Drone とのやりとりに http を指定できるようにした(#42)
+* LTS を 13.24 に更新(#45)
+* `stack image container` を使わないで Docker Image を作れるように変更(#45)
+  * stack v2 対応するため
 
 ## v0.2.0
 
