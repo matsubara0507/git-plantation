@@ -25,10 +25,9 @@ jobs:
     - stage: push docker image
       if: branch = master AND type = push
       script:
-      - stack test
       - stack docker pull
       - stack --docker --no-terminal build -j 1 Cabal
-      - stack --docker image container
-      - docker build -t matsubara0507/git-plantation .
+      - stack --docker --local-bin-path=./bin install
+      - docker build -t git-matsubara0507/git-plantation . --build-arg local_bin_path=./bin
       - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
       - docker push matsubara0507/git-plantation
