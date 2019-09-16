@@ -9,8 +9,12 @@ extra-deps:
 - drone-1.0.1
 - github: matsubara0507/github
   commit: 0e53921d2433c3e86b7231e6be7d234ae75c095f
-- github: matsubara0507/elm-export
-  commit: 0a05fecf56f84aa2ad998200a03c7df2a1676c0c
+- github: matsubara0507/elmap.hs
+  commit: a1539c3be6e8b5757a2a10a55e7c1b19c1fc76fd
+  subdirs:
+  - elmap
+  - servant-elmap
+  - extensible-elmap
 - github: matsubara0507/mix.hs
   commit: f4cad8e116093169c8849a9ae9acefb93c3eefc5
   subdirs:

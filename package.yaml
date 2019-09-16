@@ -47,14 +47,15 @@ dependencies:
 - data-default-class
 - dotenv
 - drone
-- elm-export
-- extensible >= 0.4.9
+- elmap
+- extensible >= 0.6
+- extensible-elmap
 - github
 - github-webhooks
 - http-media
-- req
+- req >= 2.0
 - servant-blaze
-- servant-elm
+- servant-elmap
 - servant-github-webhook
 - servant-server
 - yaml >= 0.8.31

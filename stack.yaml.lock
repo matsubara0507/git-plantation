@@ -54,19 +54,53 @@ packages:
   original:
     url: https://github.com/matsubara0507/github/archive/0e53921d2433c3e86b7231e6be7d234ae75c095f.tar.gz
 - completed:
-    size: 14805
-    url: https://github.com/matsubara0507/elm-export/archive/0a05fecf56f84aa2ad998200a03c7df2a1676c0c.tar.gz
+    size: 36888
+    subdir: elmap
+    url: https://github.com/matsubara0507/elmap.hs/archive/a1539c3be6e8b5757a2a10a55e7c1b19c1fc76fd.tar.gz
     cabal-file:
-      size: 2097
-      sha256: a376a9732c6f1f59e78f353c16d03261136b73711b5e04e0c311ff7708a23486
-    name: elm-export
-    version: 0.6.0.1
-    sha256: 7ecf44003c8e14530dc2a4f03b35e91ca617f2aaf3d2686d9762bece73fb03e4
+      size: 1788
+      sha256: e914e320116772e38d19fc5fbbe0db6827fd23f82be6a82c4d1e9691863c5861
+    name: elmap
+    version: 0.1.0.0
+    sha256: cfad46e892a213329434d0df6935f9fe08e5ea30ba9d880bda36bac662f34806
     pantry-tree:
-      size: 1960
-      sha256: acd6e028ca4cc59595d483b8bb8d9c28c1fbc27e3ea8ee8a8dd1aa5fe74e7f90
+      size: 476
+      sha256: a59c6ff50ae3f2cecdf16e12fe38f75e00e266a9ded559ef8ca876d05d764abe
   original:
-    url: https://github.com/matsubara0507/elm-export/archive/0a05fecf56f84aa2ad998200a03c7df2a1676c0c.tar.gz
+    subdir: elmap
+    url: https://github.com/matsubara0507/elmap.hs/archive/a1539c3be6e8b5757a2a10a55e7c1b19c1fc76fd.tar.gz
+- completed:
+    size: 36888
+    subdir: servant-elmap
+    url: https://github.com/matsubara0507/elmap.hs/archive/a1539c3be6e8b5757a2a10a55e7c1b19c1fc76fd.tar.gz
+    cabal-file:
+      size: 2194
+      sha256: 60205e8a33494474cbc09a5481f83b2cbc4fb41a106a1ed23c74d0eec5661469
+    name: servant-elmap
+    version: 0.1.0.0
+    sha256: cfad46e892a213329434d0df6935f9fe08e5ea30ba9d880bda36bac662f34806
+    pantry-tree:
+      size: 558
+      sha256: 6781fe28f19d1fcebd630e589b68d7d52b10b2436a279f17878ad01fd4b39678
+  original:
+    subdir: servant-elmap
+    url: https://github.com/matsubara0507/elmap.hs/archive/a1539c3be6e8b5757a2a10a55e7c1b19c1fc76fd.tar.gz
+- completed:
+    size: 36888
+    subdir: extensible-elmap
+    url: https://github.com/matsubara0507/elmap.hs/archive/a1539c3be6e8b5757a2a10a55e7c1b19c1fc76fd.tar.gz
+    cabal-file:
+      size: 1744
+      sha256: 2cc0c5e1d41ddede33c6b68e9f7a0ccfacbf10c05c449d551b34bb6df1d3cfd2
+    name: extensible-elmap
+    version: 0.1.0.0
+    sha256: cfad46e892a213329434d0df6935f9fe08e5ea30ba9d880bda36bac662f34806
+    pantry-tree:
+      size: 439
+      sha256: 60f665a4bca0c0676e6456f6fe32204cb0f28873c62fc75dc374d6e82aa3efa6
+  original:
+    subdir: extensible-elmap
+    url: https://github.com/matsubara0507/elmap.hs/archive/a1539c3be6e8b5757a2a10a55e7c1b19c1fc76fd.tar.gz
 - completed:
     size: 8272
     subdir: mix

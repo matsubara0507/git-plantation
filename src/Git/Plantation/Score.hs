@@ -8,12 +8,13 @@ module Git.Plantation.Score where
 import           RIO
 
 import           Data.Extensible
-import qualified Data.IntMap.Strict   as IntMap
-import           Elm                  (ElmType (..))
-import           Git.Plantation.Data  (Problem, Repo, Team, repoGithubPath)
-import           Git.Plantation.Store (Store)
-import qualified Git.Plantation.Store as Store
-import           Language.Elm
+import           Data.Extensible.Elm.Mapping
+import qualified Data.IntMap.Strict          as IntMap
+import           Elm.Mapping
+import           Git.Plantation.Data         (Problem, Repo, Team,
+                                              repoGithubPath)
+import           Git.Plantation.Store        (Store)
+import qualified Git.Plantation.Store        as Store
 
 type Score = Record
   '[ "team"  >: Text
@@ -33,14 +34,23 @@ type Link = Record
    , "url"        >: Text
    ]
 
-instance ElmType Score where
-  toElmType = toElmRecordType "Score"
+instance IsElmType Score where
+  compileElmType = compileElmRecordTypeWith "Score"
 
-instance ElmType Status where
-  toElmType = toElmRecordType "Status"
+instance IsElmDefinition Score where
+  compileElmDef = ETypeAlias . compileElmRecordAliasWith "Score"
 
-instance ElmType Link where
-  toElmType = toElmRecordType "Link"
+instance IsElmType Status where
+  compileElmType = compileElmRecordTypeWith "Status"
+
+instance IsElmDefinition Status where
+  compileElmDef = ETypeAlias . compileElmRecordAliasWith "Status"
+
+instance IsElmType Link where
+  compileElmType = compileElmRecordTypeWith "Link"
+
+instance IsElmDefinition Link where
+  compileElmDef = ETypeAlias . compileElmRecordAliasWith "Link"
 
 mkScore :: [Problem] -> Store -> Team -> Score
 mkScore problems store team
