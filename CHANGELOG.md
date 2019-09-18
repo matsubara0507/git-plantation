@@ -32,9 +32,16 @@
   * スコアボードなどの負荷対策
   * App で GitHub Webohook 取得時・DroneCI での採点終了時に更新をする
 * Drone とのやりとりに http を指定できるようにした(#42)
-* LTS を 13.24 に更新(#45)
 * `stack image container` を使わないで Docker Image を作れるように変更(#45)
   * stack v2 対応するため
+* LTS を 14.6 に更新(#45)
+  * `extensible` のバージョンを 0.6.1 に変更
+  * `drone` のバージョンを 1.0.1 に更新
+  * `github` を更新 (0.22 をマージしたもの)
+  * `elm-export` から `elmap.hs` に変更
+  * `mix.hs` を更新(`extensible` の 0.6 以上に対応したもの)
+* stack docker integration の base image を `matsubara0507/stack-build` に変更(#45)
+  * こっちの方が軽くて CI との相性が良い
 
 ## v0.2.0
 
