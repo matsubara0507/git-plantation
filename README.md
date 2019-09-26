@@ -5,14 +5,9 @@
 
 ![](./image/scoreboard.png)
 
-## Requirement
-
-- [Haskell Stack](https://docs.haskellstack.org/) : use to build application
-- [Elm compiler](http://elm-lang.org/) : use to build scoreboard page
-- Docker and docker-compose : optional, if run Drone on local
-- [ngrok](https://ngrok.com/) : optional, if run Drone and app on local
-
 ## Usage
+
+config 以下で docker-compose を使う
 
 ### 0. Drone の起動
 
@@ -20,11 +15,12 @@
 
 1. ngrok などで外への通信を開ける(`ngrok http 8000`)
 2. Drone の GitHub App を作成し `Authorization callback URL` に `https://{ngrok's url}/login` を追加
-2. `drone/.env` を設定する(ref. `drone/.env.template`)
+3. `config/.env` を設定する(ref. `config/.env.template`)
   - `DRONE_HOST` に ngrok の URL を設定する
   - `DRONE_GITHUB_CLIENT` と `DRONE_GITHUB_SECRET` に GitHub App のものを設定
   - `DRONE_SECRET` には適当な文字列を設定
-4. `drone` ディレクトリで `docker-compose up`
+  - `HOSTNAME` は agent のラベルなので適当な識別用文字列を設定
+4. `config` ディレクトリで `docker-compose up drone agent`
 
 これで ngrok の生成した URL にアクセスすると Drone CI にアクセスできる
 
@@ -34,7 +30,8 @@ ref. `config/.git-plantation.yaml`
 
 ### 2. 環境変数を設定する
 
-ref. `.env.template`
+
+`config/docker-compose.yml` の `app` の `environment` を参照
 
 - `PORT` は app のポート (app を docker で起動する場合)
 - `WORK` は git コマンドを実行するワークディレクトリ (app を docker で起動する場合)
@@ -42,34 +39,45 @@ ref. `.env.template`
 - `DRONE_HOST` は Drone CI の URL
 - `DRONE_PORT` は Drone CI のポート
 - `DRONE_TOKEN` は Drone CI のトークン
+- `DRONE_HTTP` は Drone CI と HTTP 通信するかどうかの設定 (`false` の場合は HTTPS)
 - `GH_TOKEN` は GitHub のトークン
 - `GH_SECRET` は GitHub Webhook のシークレットキー
-- `APP_SERVER` は `git-plantation-app` が動作してる URL (例: `https://example.com`)
+- Slack で回答リポジトリをリセットするための Slack Bot の設定
+    - `SLACK_API_TOKEN` は slack トークン
+    - `SLACK_TEAM_ID` は slack の workspace の ID
+    - `SLACK_CHANNEL_IDS` はリセットできる slack channel の IDs
+    - `SLACK_RESET_REPO_CMD` はリセットボットのコマンド
+- `SLACK_WEBHOOK` は回答者の通知を slack にするための Slack Webhook URL を設定
+- `STORE_URL` は git-plantation-store の URL を設定
+
+`config/docker-compose.yml` の `store` の `environment` を参照するとわかる通り，一部は git-plantation-store でも利用される．
+ちなみに，docker-compose を使う場合は `config/.env.template` に書いてある分だけを設定すれば良い．
+
+git-plantation-tool が利用する環境変数は下記の通り(用途は同じ):
+
+- `DRONE_HOST`
+- `DRONE_PORT`
+- `DRONE_TOKEN`
+- `GH_TOKEN`
+- `GH_SECRET`
+- `APP_SERVER` は git-plantation-app が動作してる URL (例: `https://example.com`) で GitHub Webhook に設定する
 
 ### 3. Create team's repository in team
 
 using `git-plantation-tool`:
 
 ```
-$ stack exec -- git-plantation-tool -c .git-plantation.yaml --work .temp repo new sample
+$ git-plantation-tool -c .git-plantation.yaml --work .temp repo new sample
 ```
 
 ### 4. Run app
 
-run app:
-
 ```
-$ stack exec -- git-plantation-app --port 8080 --work ".temp" --verbose .git-plantation.yaml
+$ docker-compose up app store
 ```
 
 ## Build with Docker
 
-Define environment to `.env` from `.env.template`.
-
 ```
-$ stack docker pull
-$ stack --docker --no-terminal build -j 1 Cabal # if `out of memory`
-$ stack --docker --local-bin-path=./bin install
-$ docker build -t git-plantation . --build-arg local_bin_path=./bin
-$ docker run --rm -it -v `pwd`/config.yaml:/work/config.yaml -p 8080:8080 --env-file .env git-plantation
+$ make image tag=matsubara0507/git-plantation:dev
 ```
