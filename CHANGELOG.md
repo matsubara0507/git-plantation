@@ -2,6 +2,8 @@
 
 ## Unreleased changes
 
+## v0.3.0
+
 * mix パッケージを作成 (#26)
   * [tonatona](http://hackage.haskell.org/package/tonatona) にインスパイアされた [rio](http://hackage.haskell.org/package/rio) の薄いラッパーパッケージ
   * rio-logger, [github-client](https://github.com/matsubara0507/github/tree/collaborator-api), [drone-client](https://github.com/matsubara0507/drone-haskell), [shh](http://hackage.haskell.org/package/shh) プラグインも作成
@@ -42,6 +44,7 @@
   * `mix.hs` を更新(`extensible` の 0.6 以上に対応したもの)
 * stack docker integration の base image を `matsubara0507/stack-build` に変更(#45)
   * こっちの方が軽くて CI との相性が良い
+* docker-compose での Drone のバージョンを 1.4.0 に変更
 
 ## v0.2.0
 
