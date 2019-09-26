@@ -27,8 +27,8 @@ main = execParser parser >>= \opts -> do
   config  <- readConfig (opts ^. #config)
   token   <- liftIO $ fromString <$> getEnv "GH_TOKEN"
   dHost   <- liftIO $ fromString <$> getEnv "DRONE_HOST"
-  dToken  <- liftIO $ fromString <$> getEnv "DRONE_TOKEN"
   dPort   <- liftIO $ readMaybe  <$> getEnv "DRONE_PORT"
+  dToken  <- liftIO $ fromString <$> getEnv "DRONE_TOKEN"
   secret  <- liftIO $ fromString <$> getEnv "GH_SECRET"
   appUrl  <- liftIO $ fromString <$> getEnv "APP_SERVER"
   let client  = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
@@ -47,4 +47,4 @@ main = execParser parser >>= \opts -> do
   where
     parser = info (options <**> version Meta.version <**> helper)
            $ fullDesc
-          <> header "taskpad - operate daily tasks"
+          <> header "git-plantation-tool - operate repository for git-plantation"
