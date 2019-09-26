@@ -27,3 +27,9 @@ jobs:
       - make image tag=matsubara0507/git-plantation
       - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
       - docker push matsubara0507/git-plantation
+    - stage: push docker image with tag
+      if: tag IS present
+      script:
+      - make image tag=matsubara0507/git-plantation:$TRAVIS_TAG
+      - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+      - docker push matsubara0507/git-plantation:$TRAVIS_TAG
