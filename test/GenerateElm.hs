@@ -7,41 +7,29 @@ module Main where
 import           RIO
 
 import           Data.Proxy              (Proxy (..))
-import           Elm                     (ElmType, Spec (Spec), specsToDir,
-                                          toElmDecoderSource,
-                                          toElmEncoderSource, toElmTypeSource)
+import           Elm.Mapping
 import           Git.Plantation          (Config, Link, Problem, Repo, Score,
                                           ScoreBoardConfig, Status, Team, User)
 import           Git.Plantation.API.CRUD (GetAPI)
 import           Servant                 ((:>))
-import           Servant.Elm             (defElmImports, generateElmForAPI)
-import           Shelly                  (run_, shelly)
-
-spec :: Spec
-spec = Spec ["Generated", "API"] $ concat
-            [ [defElmImports]
-            , toElmTypeAll      (Proxy @ Team)
-            , toElmTypeAll      (Proxy @ User)
-            , toElmTypeAll      (Proxy @ Repo)
-            , toElmTypeAll      (Proxy @ Problem)
-            , toElmTypeAll      (Proxy @ Config)
-            , toElmTypeAll      (Proxy @ ScoreBoardConfig)
-            , toElmTypeAll      (Proxy @ Score)
-            , toElmTypeAll      (Proxy @ Status)
-            , toElmTypeAll      (Proxy @ Link)
-            , generateElmForAPI (Proxy @ ("api" :> GetAPI))
-            ]
-
-toElmTypeAll :: ElmType a => Proxy a -> [Text]
-toElmTypeAll proxy =
-  [ toElmTypeSource    proxy
-  , toElmDecoderSource proxy
-  , toElmEncoderSource proxy
-  ]
+import           Servant.Elm.Mapping     (defElmImports, defElmOptions,
+                                          generateElmModuleWith)
 
 main :: IO ()
-main = do
-  specsToDir [spec] "elm-src"
-  shelly $ do
-    run_ "elm" ["make", "elm-src/Main.elm", "--output=static/main.js"]
-    run_ "elm-format" ["--yes", "elm-src/Generated/"]
+main =
+  generateElmModuleWith
+    defElmOptions
+    ["Generated", "API"]
+    defElmImports
+    "elm-src"
+    [ DefineElm (Proxy @ Team)
+    , DefineElm (Proxy @ User)
+    , DefineElm (Proxy @ Repo)
+    , DefineElm (Proxy @ Problem)
+    , DefineElm (Proxy @ Config)
+    , DefineElm (Proxy @ ScoreBoardConfig)
+    , DefineElm (Proxy @ Score)
+    , DefineElm (Proxy @ Status)
+    , DefineElm (Proxy @ Link)
+    ]
+    (Proxy @ ("api" :> GetAPI))

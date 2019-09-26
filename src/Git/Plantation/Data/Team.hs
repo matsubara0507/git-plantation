@@ -9,8 +9,9 @@ import           RIO
 import qualified RIO.List                    as L
 
 import           Data.Extensible
+import           Data.Extensible.Elm.Mapping
+import           Elm.Mapping
 import           Git.Plantation.Data.Problem
-import           Language.Elm
 
 type Team = Record
   '[ "id"       >: Text
@@ -21,16 +22,23 @@ type Team = Record
    , "gh_teams" >: [Text]
    ]
 
-instance ElmType Team where
-  toElmType = toElmRecordType "Team"
+instance IsElmType Team where
+  compileElmType = compileElmRecordTypeWith "Team"
+
+instance IsElmDefinition Team where
+  compileElmDef = ETypeAlias . compileElmRecordAliasWith "Team"
+
 
 type User = Record
   '[ "name"   >: Text
    , "github" >: Text
    ]
 
-instance ElmType User where
-  toElmType = toElmRecordType "User"
+instance IsElmType User where
+  compileElmType = compileElmRecordTypeWith "User"
+
+instance IsElmDefinition User where
+  compileElmDef = ETypeAlias . compileElmRecordAliasWith "User"
 
 type Repo = Record
   '[ "name"    >: Text
@@ -41,8 +49,11 @@ type Repo = Record
    , "only"    >: Maybe Text -- GitHub Org Team
    ]
 
-instance ElmType Repo where
-  toElmType = toElmRecordType "Repo"
+instance IsElmType Repo where
+  compileElmType = compileElmRecordTypeWith "Repo"
+
+instance IsElmDefinition Repo where
+  compileElmDef = ETypeAlias . compileElmRecordAliasWith "Repo"
 
 data MemberTarget
   = TargetRepo Repo

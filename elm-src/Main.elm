@@ -219,7 +219,7 @@ update msg model =
 
 fetchScores : Cmd Msg
 fetchScores =
-    Http.send FetchScores API.getApiScores
+    API.getApiScores FetchScores
 
 
 subscriptions : Model -> Sub Msg

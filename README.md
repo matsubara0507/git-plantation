@@ -67,10 +67,9 @@ $ stack exec -- git-plantation-app --port 8080 --work ".temp" --verbose .git-pla
 Define environment to `.env` from `.env.template`.
 
 ```
-$ stack test # ganerate elm code
 $ stack docker pull
 $ stack --docker --no-terminal build -j 1 Cabal # if `out of memory`
-$ stack --docker image container
-$ docker build -t git-plantation .
+$ stack --docker --local-bin-path=./bin install
+$ docker build -t git-plantation . --build-arg local_bin_path=./bin
 $ docker run --rm -it -v `pwd`/config.yaml:/work/config.yaml -p 8080:8080 --env-file .env git-plantation
 ```

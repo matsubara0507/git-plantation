@@ -8,3 +8,5 @@ git-plantation.cabal
 .elm
 main.js
 elm-stuff
+
+bin/

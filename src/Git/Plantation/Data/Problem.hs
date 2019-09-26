@@ -7,7 +7,8 @@ module Git.Plantation.Data.Problem where
 import           RIO
 
 import           Data.Extensible
-import           Language.Elm
+import           Data.Extensible.Elm.Mapping
+import           Elm.Mapping
 
 type Problem = Record
   '[ "id"                 >: Int
@@ -20,7 +21,10 @@ type Problem = Record
    , "default_branch"     >: Branch
    ]
 
-instance ElmType Problem where
-  toElmType = toElmRecordType "Problem"
+instance IsElmType Problem where
+  compileElmType = compileElmRecordTypeWith "Problem"
+
+instance IsElmDefinition Problem where
+  compileElmDef = ETypeAlias . compileElmRecordAliasWith "Problem"
 
 type Branch = Text

@@ -14,9 +14,9 @@ import           Data.Extensible
 import           Git.Plantation.Config
 import           Git.Plantation.Data
 import qualified Git.Plantation.Data.Slack as Slack
-import qualified GitHub.Auth               as GitHub
 import qualified GitHub.Data               as GitHub
 import qualified Mix.Plugin.Drone          as Mix
+import qualified Mix.Plugin.GitHub         as GitHub
 import           Mix.Plugin.Logger         ()
 import qualified Mix.Plugin.Logger.JSON    as Mix
 import qualified RIO.Text.Lazy             as TL
@@ -48,7 +48,7 @@ fromJustWithThrow (Just x) _ = pure x
 fromJustWithThrow Nothing e  = throwIO e
 
 mkLogMessage' ::
-  Forall (KeyValue KnownSymbol (Instance1 ToJSON Identity)) xs
+  Forall (KeyTargetAre KnownSymbol (Instance1 ToJSON Identity)) xs
   => Text -> Record xs -> String
 mkLogMessage' message =
   TL.unpack . Json.encodeToLazyText . Mix.mkLogMessage message LevelError

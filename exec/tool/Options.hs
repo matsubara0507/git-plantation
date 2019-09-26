@@ -17,7 +17,6 @@ import           Data.Extensible
 import           Data.Version        (Version)
 import qualified Data.Version        as Version
 import           Development.GitRev
-import           GHC.TypeLits        hiding (Mod)
 import           Git.Plantation.Cmd
 import           Options.Applicative
 
@@ -122,8 +121,7 @@ variantFrom ::
 variantFrom = subparser . subcmdVariant
   where
     subcmdVariant = hfoldMapWithIndexFor (Proxy @ (KeyIs KnownSymbol)) $ \m x ->
-      let k = symbolVal (proxyAssocKey m)
-      in command k (EmbedAt m . Field . pure <$> getField x)
+      command (stringKeyOf m) (EmbedAt m . Field . pure <$> getField x)
 
 instance Wrapper ParserInfo where
   type Repr ParserInfo a = ParserInfo a
