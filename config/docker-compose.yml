@@ -45,7 +45,7 @@ services:
       - DRONE_HTTP=true
 
   drone:
-    image: drone/drone:1
+    image: drone/drone:1.4.0
     ports:
       - 8000:80
       - 443:443
@@ -64,7 +64,7 @@ services:
       - DRONE_TLS_AUTOCERT=true
 
   agent:
-    image: drone/agent:1
+    image: drone/agent:1.4.0
     restart: always
     depends_on:
       - drone
