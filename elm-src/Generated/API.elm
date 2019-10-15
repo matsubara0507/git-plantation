@@ -1,10 +1,28 @@
-module Generated.API exposing (Config, Link, Problem, Repo, Score, ScoreBoardConfig, Status, Team, User, decodeConfig, decodeLink, decodeProblem, decodeRepo, decodeScore, decodeScoreBoardConfig, decodeStatus, decodeTeam, decodeUser, encodeConfig, encodeLink, encodeProblem, encodeRepo, encodeScore, encodeScoreBoardConfig, encodeStatus, encodeTeam, encodeUser, getApiProblems, getApiScores, getApiTeams)
+module Generated.API exposing (Config, Link, Problem, Repo, Score, ScoreBoardConfig, Status, Team, User, getApiProblems, getApiScores, getApiTeams, jsonDecConfig, jsonDecLink, jsonDecProblem, jsonDecRepo, jsonDecScore, jsonDecScoreBoardConfig, jsonDecStatus, jsonDecTeam, jsonDecUser, jsonEncConfig, jsonEncLink, jsonEncProblem, jsonEncRepo, jsonEncScore, jsonEncScoreBoardConfig, jsonEncStatus, jsonEncTeam, jsonEncUser, maybeBoolToIntStr)
 
+-- The following module comes from bartavelle/json-helpers
+
+import Dict exposing (Dict)
 import Http
-import Json.Decode exposing (..)
-import Json.Decode.Pipeline exposing (..)
-import Json.Encode
+import Json.Decode
+import Json.Encode exposing (Value)
+import Json.Helpers exposing (..)
+import Set
 import String
+import Url.Builder
+
+
+maybeBoolToIntStr : Maybe Bool -> String
+maybeBoolToIntStr mx =
+    case mx of
+        Nothing ->
+            ""
+
+        Just True ->
+            "1"
+
+        Just False ->
+            "0"
 
 
 type alias Team =
@@ -12,25 +30,31 @@ type alias Team =
     , name : String
     , repos : List Repo
     , member : List User
+    , org : Maybe String
+    , gh_teams : List String
     }
 
 
-decodeTeam : Decoder Team
-decodeTeam =
-    Json.Decode.succeed Team
-        |> required "id" string
-        |> required "name" string
-        |> required "repos" (list decodeRepo)
-        |> required "member" (list decodeUser)
+jsonDecTeam : Json.Decode.Decoder Team
+jsonDecTeam =
+    Json.Decode.succeed (\pid pname prepos pmember porg pgh_teams -> { id = pid, name = pname, repos = prepos, member = pmember, org = porg, gh_teams = pgh_teams })
+        |> required "id" Json.Decode.string
+        |> required "name" Json.Decode.string
+        |> required "repos" (Json.Decode.list jsonDecRepo)
+        |> required "member" (Json.Decode.list jsonDecUser)
+        |> fnullable "org" Json.Decode.string
+        |> required "gh_teams" (Json.Decode.list Json.Decode.string)
 
 
-encodeTeam : Team -> Json.Encode.Value
-encodeTeam x =
+jsonEncTeam : Team -> Value
+jsonEncTeam val =
     Json.Encode.object
-        [ ( "id", Json.Encode.string x.id )
-        , ( "name", Json.Encode.string x.name )
-        , ( "repos", Json.Encode.list encodeRepo x.repos )
-        , ( "member", Json.Encode.list encodeUser x.member )
+        [ ( "id", Json.Encode.string val.id )
+        , ( "name", Json.Encode.string val.name )
+        , ( "repos", Json.Encode.list jsonEncRepo val.repos )
+        , ( "member", Json.Encode.list jsonEncUser val.member )
+        , ( "org", maybeEncode Json.Encode.string val.org )
+        , ( "gh_teams", Json.Encode.list Json.Encode.string val.gh_teams )
         ]
 
 
@@ -40,18 +64,18 @@ type alias User =
     }
 
 
-decodeUser : Decoder User
-decodeUser =
-    Json.Decode.succeed User
-        |> required "name" string
-        |> required "github" string
+jsonDecUser : Json.Decode.Decoder User
+jsonDecUser =
+    Json.Decode.succeed (\pname pgithub -> { name = pname, github = pgithub })
+        |> required "name" Json.Decode.string
+        |> required "github" Json.Decode.string
 
 
-encodeUser : User -> Json.Encode.Value
-encodeUser x =
+jsonEncUser : User -> Value
+jsonEncUser val =
     Json.Encode.object
-        [ ( "name", Json.Encode.string x.name )
-        , ( "github", Json.Encode.string x.github )
+        [ ( "name", Json.Encode.string val.name )
+        , ( "github", Json.Encode.string val.github )
         ]
 
 
@@ -61,27 +85,30 @@ type alias Repo =
     , org : Maybe String
     , problem : Int
     , private : Bool
+    , only : Maybe String
     }
 
 
-decodeRepo : Decoder Repo
-decodeRepo =
-    Json.Decode.succeed Repo
-        |> required "name" string
-        |> required "owner" (maybe string)
-        |> required "org" (maybe string)
-        |> required "problem" int
-        |> required "private" bool
+jsonDecRepo : Json.Decode.Decoder Repo
+jsonDecRepo =
+    Json.Decode.succeed (\pname powner porg pproblem pprivate ponly -> { name = pname, owner = powner, org = porg, problem = pproblem, private = pprivate, only = ponly })
+        |> required "name" Json.Decode.string
+        |> fnullable "owner" Json.Decode.string
+        |> fnullable "org" Json.Decode.string
+        |> required "problem" Json.Decode.int
+        |> required "private" Json.Decode.bool
+        |> fnullable "only" Json.Decode.string
 
 
-encodeRepo : Repo -> Json.Encode.Value
-encodeRepo x =
+jsonEncRepo : Repo -> Value
+jsonEncRepo val =
     Json.Encode.object
-        [ ( "name", Json.Encode.string x.name )
-        , ( "owner", (Maybe.withDefault Json.Encode.null << Maybe.map Json.Encode.string) x.owner )
-        , ( "org", (Maybe.withDefault Json.Encode.null << Maybe.map Json.Encode.string) x.org )
-        , ( "problem", Json.Encode.int x.problem )
-        , ( "private", Json.Encode.bool x.private )
+        [ ( "name", Json.Encode.string val.name )
+        , ( "owner", maybeEncode Json.Encode.string val.owner )
+        , ( "org", maybeEncode Json.Encode.string val.org )
+        , ( "problem", Json.Encode.int val.problem )
+        , ( "private", Json.Encode.bool val.private )
+        , ( "only", maybeEncode Json.Encode.string val.only )
         ]
 
 
@@ -93,31 +120,34 @@ type alias Problem =
     , challenge_branches : List String
     , answer_branch : String
     , ci_branch : String
+    , default_branch : String
     }
 
 
-decodeProblem : Decoder Problem
-decodeProblem =
-    Json.Decode.succeed Problem
-        |> required "id" int
-        |> required "name" string
-        |> required "repo" string
-        |> required "difficulty" int
-        |> required "challenge_branches" (list string)
-        |> required "answer_branch" string
-        |> required "ci_branch" string
+jsonDecProblem : Json.Decode.Decoder Problem
+jsonDecProblem =
+    Json.Decode.succeed (\pid pname prepo pdifficulty pchallenge_branches panswer_branch pci_branch pdefault_branch -> { id = pid, name = pname, repo = prepo, difficulty = pdifficulty, challenge_branches = pchallenge_branches, answer_branch = panswer_branch, ci_branch = pci_branch, default_branch = pdefault_branch })
+        |> required "id" Json.Decode.int
+        |> required "name" Json.Decode.string
+        |> required "repo" Json.Decode.string
+        |> required "difficulty" Json.Decode.int
+        |> required "challenge_branches" (Json.Decode.list Json.Decode.string)
+        |> required "answer_branch" Json.Decode.string
+        |> required "ci_branch" Json.Decode.string
+        |> required "default_branch" Json.Decode.string
 
 
-encodeProblem : Problem -> Json.Encode.Value
-encodeProblem x =
+jsonEncProblem : Problem -> Value
+jsonEncProblem val =
     Json.Encode.object
-        [ ( "id", Json.Encode.int x.id )
-        , ( "name", Json.Encode.string x.name )
-        , ( "repo", Json.Encode.string x.repo )
-        , ( "difficulty", Json.Encode.int x.difficulty )
-        , ( "challenge_branches", Json.Encode.list Json.Encode.string x.challenge_branches )
-        , ( "answer_branch", Json.Encode.string x.answer_branch )
-        , ( "ci_branch", Json.Encode.string x.ci_branch )
+        [ ( "id", Json.Encode.int val.id )
+        , ( "name", Json.Encode.string val.name )
+        , ( "repo", Json.Encode.string val.repo )
+        , ( "difficulty", Json.Encode.int val.difficulty )
+        , ( "challenge_branches", Json.Encode.list Json.Encode.string val.challenge_branches )
+        , ( "answer_branch", Json.Encode.string val.answer_branch )
+        , ( "ci_branch", Json.Encode.string val.ci_branch )
+        , ( "default_branch", Json.Encode.string val.default_branch )
         ]
 
 
@@ -128,20 +158,20 @@ type alias Config =
     }
 
 
-decodeConfig : Decoder Config
-decodeConfig =
-    Json.Decode.succeed Config
-        |> required "scoreboard" decodeScoreBoardConfig
-        |> required "problems" (list decodeProblem)
-        |> required "teams" (list decodeTeam)
+jsonDecConfig : Json.Decode.Decoder Config
+jsonDecConfig =
+    Json.Decode.succeed (\pscoreboard pproblems pteams -> { scoreboard = pscoreboard, problems = pproblems, teams = pteams })
+        |> required "scoreboard" jsonDecScoreBoardConfig
+        |> required "problems" (Json.Decode.list jsonDecProblem)
+        |> required "teams" (Json.Decode.list jsonDecTeam)
 
 
-encodeConfig : Config -> Json.Encode.Value
-encodeConfig x =
+jsonEncConfig : Config -> Value
+jsonEncConfig val =
     Json.Encode.object
-        [ ( "scoreboard", encodeScoreBoardConfig x.scoreboard )
-        , ( "problems", Json.Encode.list encodeProblem x.problems )
-        , ( "teams", Json.Encode.list encodeTeam x.teams )
+        [ ( "scoreboard", jsonEncScoreBoardConfig val.scoreboard )
+        , ( "problems", Json.Encode.list jsonEncProblem val.problems )
+        , ( "teams", Json.Encode.list jsonEncTeam val.teams )
         ]
 
 
@@ -150,17 +180,14 @@ type alias ScoreBoardConfig =
     }
 
 
-decodeScoreBoardConfig : Decoder ScoreBoardConfig
-decodeScoreBoardConfig =
-    Json.Decode.succeed ScoreBoardConfig
-        |> required "interval" float
+jsonDecScoreBoardConfig : Json.Decode.Decoder ScoreBoardConfig
+jsonDecScoreBoardConfig =
+    Json.Decode.succeed (\pinterval -> { interval = pinterval }) |> custom Json.Decode.float
 
 
-encodeScoreBoardConfig : ScoreBoardConfig -> Json.Encode.Value
-encodeScoreBoardConfig x =
-    Json.Encode.object
-        [ ( "interval", Json.Encode.float x.interval )
-        ]
+jsonEncScoreBoardConfig : ScoreBoardConfig -> Value
+jsonEncScoreBoardConfig val =
+    Json.Encode.float val.interval
 
 
 type alias Score =
@@ -171,46 +198,46 @@ type alias Score =
     }
 
 
-decodeScore : Decoder Score
-decodeScore =
-    Json.Decode.succeed Score
-        |> required "team" string
-        |> required "point" int
-        |> required "stats" (list decodeStatus)
-        |> required "links" (list decodeLink)
+jsonDecScore : Json.Decode.Decoder Score
+jsonDecScore =
+    Json.Decode.succeed (\pteam ppoint pstats plinks -> { team = pteam, point = ppoint, stats = pstats, links = plinks })
+        |> required "team" Json.Decode.string
+        |> required "point" Json.Decode.int
+        |> required "stats" (Json.Decode.list jsonDecStatus)
+        |> required "links" (Json.Decode.list jsonDecLink)
 
 
-encodeScore : Score -> Json.Encode.Value
-encodeScore x =
+jsonEncScore : Score -> Value
+jsonEncScore val =
     Json.Encode.object
-        [ ( "team", Json.Encode.string x.team )
-        , ( "point", Json.Encode.int x.point )
-        , ( "stats", Json.Encode.list encodeStatus x.stats )
-        , ( "links", Json.Encode.list encodeLink x.links )
+        [ ( "team", Json.Encode.string val.team )
+        , ( "point", Json.Encode.int val.point )
+        , ( "stats", Json.Encode.list jsonEncStatus val.stats )
+        , ( "links", Json.Encode.list jsonEncLink val.links )
         ]
 
 
 type alias Status =
-    { problem : String
+    { problem_id : Int
     , correct : Bool
     , pending : Bool
     }
 
 
-decodeStatus : Decoder Status
-decodeStatus =
-    Json.Decode.succeed Status
-        |> required "problem" string
-        |> required "correct" bool
-        |> required "pending" bool
+jsonDecStatus : Json.Decode.Decoder Status
+jsonDecStatus =
+    Json.Decode.succeed (\pproblem_id pcorrect ppending -> { problem_id = pproblem_id, correct = pcorrect, pending = ppending })
+        |> required "problem_id" Json.Decode.int
+        |> required "correct" Json.Decode.bool
+        |> required "pending" Json.Decode.bool
 
 
-encodeStatus : Status -> Json.Encode.Value
-encodeStatus x =
+jsonEncStatus : Status -> Value
+jsonEncStatus val =
     Json.Encode.object
-        [ ( "problem", Json.Encode.string x.problem )
-        , ( "correct", Json.Encode.bool x.correct )
-        , ( "pending", Json.Encode.bool x.pending )
+        [ ( "problem_id", Json.Encode.int val.problem_id )
+        , ( "correct", Json.Encode.bool val.correct )
+        , ( "pending", Json.Encode.bool val.pending )
         ]
 
 
@@ -220,88 +247,109 @@ type alias Link =
     }
 
 
-decodeLink : Decoder Link
-decodeLink =
-    Json.Decode.succeed Link
-        |> required "problem_id" int
-        |> required "url" string
+jsonDecLink : Json.Decode.Decoder Link
+jsonDecLink =
+    Json.Decode.succeed (\pproblem_id purl -> { problem_id = pproblem_id, url = purl })
+        |> required "problem_id" Json.Decode.int
+        |> required "url" Json.Decode.string
 
 
-encodeLink : Link -> Json.Encode.Value
-encodeLink x =
+jsonEncLink : Link -> Value
+jsonEncLink val =
     Json.Encode.object
-        [ ( "problem_id", Json.Encode.int x.problem_id )
-        , ( "url", Json.Encode.string x.url )
+        [ ( "problem_id", Json.Encode.int val.problem_id )
+        , ( "url", Json.Encode.string val.url )
         ]
 
 
-getApiTeams : Http.Request (List Team)
-getApiTeams =
+getApiTeams : (Result Http.Error (List Team) -> msg) -> Cmd msg
+getApiTeams toMsg =
+    let
+        params =
+            List.filterMap identity
+                (List.concat
+                    []
+                )
+    in
     Http.request
         { method =
             "GET"
         , headers =
             []
         , url =
-            String.join "/"
-                [ ""
-                , "api"
+            Url.Builder.crossOrigin ""
+                [ "api"
                 , "teams"
                 ]
+                params
         , body =
             Http.emptyBody
         , expect =
-            Http.expectJson (list decodeTeam)
+            Http.expectJson toMsg (Json.Decode.list jsonDecTeam)
         , timeout =
             Nothing
-        , withCredentials =
-            False
+        , tracker =
+            Nothing
         }
 
 
-getApiProblems : Http.Request (List Problem)
-getApiProblems =
+getApiProblems : (Result Http.Error (List Problem) -> msg) -> Cmd msg
+getApiProblems toMsg =
+    let
+        params =
+            List.filterMap identity
+                (List.concat
+                    []
+                )
+    in
     Http.request
         { method =
             "GET"
         , headers =
             []
         , url =
-            String.join "/"
-                [ ""
-                , "api"
+            Url.Builder.crossOrigin ""
+                [ "api"
                 , "problems"
                 ]
+                params
         , body =
             Http.emptyBody
         , expect =
-            Http.expectJson (list decodeProblem)
+            Http.expectJson toMsg (Json.Decode.list jsonDecProblem)
         , timeout =
             Nothing
-        , withCredentials =
-            False
+        , tracker =
+            Nothing
         }
 
 
-getApiScores : Http.Request (List Score)
-getApiScores =
+getApiScores : (Result Http.Error (List Score) -> msg) -> Cmd msg
+getApiScores toMsg =
+    let
+        params =
+            List.filterMap identity
+                (List.concat
+                    []
+                )
+    in
     Http.request
         { method =
             "GET"
         , headers =
             []
         , url =
-            String.join "/"
-                [ ""
-                , "api"
+            Url.Builder.crossOrigin ""
+                [ "api"
                 , "scores"
                 ]
+                params
         , body =
             Http.emptyBody
         , expect =
-            Http.expectJson (list decodeScore)
+            Http.expectJson toMsg (Json.Decode.list jsonDecScore)
         , timeout =
             Nothing
-        , withCredentials =
-            False
+        , tracker =
+            Nothing
         }

@@ -7,30 +7,29 @@ module Git.Plantation.API.CRUD where
 
 import           RIO
 import qualified RIO.List             as L
-import qualified RIO.Map              as Map
+import qualified RIO.Text             as Text
 
-import           Data.Default.Class
-import           Data.Extensible
-import qualified Drone.Client         as Drone
-import qualified Drone.Endpoints      as Drone
-import qualified Drone.Types          as Drone
-import           Git.Plantation       (Problem, Repo, Team, repoGithubPath)
-import           Git.Plantation.Cmd   (splitRepoName)
+import           Git.Plantation       (Problem, Team)
 import           Git.Plantation.Env   (Plant)
-import           Git.Plantation.Score (Link, Score, Status)
-import           Network.HTTP.Req
-import           Servant              hiding (Link, toLink)
+import           Git.Plantation.Score (Score, mkScore)
+import           Git.Plantation.Store (Store)
+import qualified Network.Wreq         as W
+import           Servant
 
 type CRUD
-      = "teams"    :> Get '[JSON] [Team]
-   :<|> "problems" :> Get '[JSON] [Problem]
-   :<|> "scores"   :> Get '[JSON] [Score]
+      = GetAPI
+   :<|> "scores" :> Capture "owner" Text :> Capture "repo" Text :> Put '[JSON] NoContent
+
+type GetAPI
+     = "teams"    :> Get '[JSON] [Team]
+  :<|> "problems" :> Get '[JSON] [Problem]
+  :<|> "scores"   :> Get '[JSON] [Score]
+
 
 crud :: ServerT CRUD Plant
-crud
-      = getTeams
-   :<|> getProblems
-   :<|> getScores
+crud = getAPI :<|> updateScore
+  where
+    getAPI = getTeams :<|> getProblems :<|> getScores
 
 getTeams :: Plant [Team]
 getTeams = do
@@ -45,57 +44,31 @@ getProblems = do
 getScores :: Plant [Score]
 getScores = do
   logInfo "[GET] /scores"
-  teams    <- asks (view #teams . view #config)
+  store <- tryAny fetchStore >>= \case
+    Left err -> logError (displayShow err) >> pure mempty
+    Right s  -> pure s
+  config <- asks (view #config)
+  pure $ map (mkScore (config ^. #problems) store) (config ^. #teams)
+
+fetchStore :: Plant Store
+fetchStore = do
+  url  <- Text.unpack <$> asks (view #store)
+  resp <- W.asJSON =<< liftIO (W.get url)
+  pure $ resp ^. W.responseBody
+
+updateScore :: Text -> Text -> Plant NoContent
+updateScore owner repo = do
   problems <- asks (view #problems . view #config)
-  client   <- asks (view #client)
-  builds   <- Map.fromList <$> mapM (fetchBuilds client) problems
-  pure $ map (mkScore problems builds) teams
+  let repo' = owner <> "/" <> repo
+  logInfo $ display ("[PUT] /score/" <> repo')
+  case L.find (\p -> p ^. #repo == repo') problems of
+    Nothing -> logError $ display ("not found problem: " <> repo')
+    Just p  -> updateScore' $ p ^. #id
+  pure NoContent
 
-fetchBuilds :: Drone.Client c => c -> Problem -> Plant (Text, [Drone.Build])
-fetchBuilds client problem = do
-  let (owner, repo) = splitRepoName $ problem ^. #repo
-  builds <- tryAny (getAllBuilds client owner repo) >>= \case
-    Left err     -> logError (display err) >> pure []
-    Right builds -> pure builds
-  pure (problem ^. #name, builds)
-
-getAllBuilds :: (MonadIO m, Drone.Client c) => c -> Text -> Text -> m [Drone.Build]
-getAllBuilds client owner repo = mconcat <$> getAllBuilds' [] 1
-  where
-    getAllBuilds' xss n = do
-      resp <- runReq def $ Drone.getBuilds client owner repo (Just n)
-      case responseBody resp of
-        []     -> pure xss
-        builds -> getAllBuilds' (builds : xss) (n + 1)
-
-mkScore :: [Problem] -> Map Text [Drone.Build] -> Team -> Score
-mkScore problems builds team
-    = #team  @= team ^. #name
-   <: #point @= sum (map (toPoint stats) problems)
-   <: #stats @= stats
-   <: #links @= links
-   <: nil
-  where
-    isTeamBuild b = b ^. #source == team ^. #name
-    builds' = Map.filter (not . null) $ Map.map (filter isTeamBuild) builds
-    stats = Map.elems $ Map.mapWithKey toStatus builds'
-    links = map toLink $ team ^. #repos
-
-toStatus :: Text -> [Drone.Build] -> Status
-toStatus name builds
-    = #problem @= name
-   <: #correct @= any (\b -> b ^. #status == "success") builds
-   <: #pending @= any (\b -> b ^. #status == "running" || b ^. #status == "pending") builds
-   <: nil
-
-toPoint :: [Status] -> Problem -> Int
-toPoint stats problem =
-  case L.find (\s -> s ^. #problem == problem ^. #name) stats of
-    Just s | s ^. #correct -> problem ^. #difficulty
-    _                      -> 0
-
-toLink :: Repo -> Link
-toLink repo
-    = #problem_id @= repo ^. #problem
-   <: #url        @= maybe "" ("https://github.com/" <>) (repoGithubPath repo)
-   <: nil
+updateScore' :: Int -> Plant ()
+updateScore' pid = do
+  url <- Text.unpack <$> asks (view #store)
+  tryAny (liftIO $ W.customMethod "PATCH" $ url <> "/" <> show pid) >>= \case
+    Left err -> logError (displayShow err)
+    Right _  -> pure ()

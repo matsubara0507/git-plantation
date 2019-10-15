@@ -14,4 +14,4 @@ showNotImpl :: MonadIO m => m ()
 showNotImpl = hPutBuilder stdout "not yet implement command."
 
 class Run kv where
-  run' :: proxy kv -> AssocValue kv -> Plant ()
+  run' :: proxy kv -> TargetOf kv -> Plant ()

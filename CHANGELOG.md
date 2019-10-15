@@ -2,6 +2,50 @@
 
 ## Unreleased changes
 
+## v0.3.0
+
+* mix パッケージを作成 (#26)
+  * [tonatona](http://hackage.haskell.org/package/tonatona) にインスパイアされた [rio](http://hackage.haskell.org/package/rio) の薄いラッパーパッケージ
+  * rio-logger, [github-client](https://github.com/matsubara0507/github/tree/collaborator-api), [drone-client](https://github.com/matsubara0507/drone-haskell), [shh](http://hackage.haskell.org/package/shh) プラグインも作成
+  * ~~shelly を shh に移行~~ thred unsafe だったので shelly に戻した(#40)　
+* リセットするSlackボット用のAPIを追加 (#27)
+* shh-cmd パッケージを作成 (#28)
+  * [shh](http://hackage.haskell.org/package/shh) の薄いラッパーパッケージ
+  * よく使うコマンド関数を作成
+* `tool` をサブサブコマンド化 (#29)
+  * `git-plantation-tool (config|problem|member|repo) COMMAND` と指定する形式に変更
+  * 合わせてディレクトリ構造も刷新
+  * `problem` コマンドも追加
+* `mix-json-logger` パッケージを作成(#30)
+* GitHub Team に関するコマンドを追加(#31)
+  * `github` パッケージを更新
+  * `member invite/kick` に `--org` `--gh_team` オプションを追加して GitHub Team に招待/除外
+  * `org create_team` コマンドで GitHub Team を作成
+  * `repo add_gh_team` コマンドでリポジトリを GitHub Team に追加する
+* 問題リポジトリの Drone CI をアクティベイトするコマンドを追加(#32)
+* リポジトリのリセット処理を修正(#33)
+  * ワークディレクトリをチームごとに区切ってたが、さらに問題リポジトリ用のサブディレクトリ `/problem` を追加
+* 回答者を Slack に通知する機能を追加(#34)
+* 回答リポジトのリデフォルトブランチを更新するコマンドを追加(#35)
+  * `repo new` の時にも実行される
+  * `github` パッケージが対応してなかったので独自で更新
+* 独自キャッシュサーバー `git-plantation-store` を作成(#41)
+  * DroneCI のビルドデータを必要な分だけキャッシュしている
+  * スコアボードなどの負荷対策
+  * App で GitHub Webohook 取得時・DroneCI での採点終了時に更新をする
+* Drone とのやりとりに http を指定できるようにした(#42)
+* `stack image container` を使わないで Docker Image を作れるように変更(#45)
+  * stack v2 対応するため
+* LTS を 14.6 に更新(#45)
+  * `extensible` のバージョンを 0.6.1 に変更
+  * `drone` のバージョンを 1.0.1 に更新
+  * `github` を更新 (0.22 をマージしたもの)
+  * `elm-export` から `elmap.hs` に変更
+  * `mix.hs` を更新(`extensible` の 0.6 以上に対応したもの)
+* stack docker integration の base image を `matsubara0507/stack-build` に変更(#45)
+  * こっちの方が軽くて CI との相性が良い
+* docker-compose での Drone のバージョンを 1.4.0 に変更
+
 ## v0.2.0
 
 * org アカウント以外で config 設定 (#10)
@@ -58,3 +102,9 @@
 * `new_repo` コマンドで任意の処理をスキップできるように変更(#21)
 * スコアボードの更新間隔を設定ファイルから指定できるように変更(#21)
 * 参加者をリポジトリからキックするコマンドを追加(#24)
+* スコア取得失敗時に画面を真っ白にしないように修正(#39)
+  * `api/scores` で取得できないときに前のモデルを見るようにした
+* shell コマンド実行が thread unsafe だったのを修正(#40)
+  * shh から shelly に戻した
+* [mix パッケージ](https://github.com/matsubara0507/mix.hs)を外部のに変更(#38)
+* LTS を 13.21 に更新(#38)

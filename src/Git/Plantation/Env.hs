@@ -3,31 +3,34 @@
 {-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeOperators    #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Git.Plantation.Env where
 
 import           RIO
 
-import           Data.Aeson            (ToJSON)
-import qualified Data.Aeson.Text       as Json
+import           Data.Aeson                (ToJSON)
+import qualified Data.Aeson.Text           as Json
 import           Data.Extensible
-import qualified Drone.Client          as Drone
 import           Git.Plantation.Config
-import           Git.Plantation.Data   (Problem, Repo, Team, User)
-import qualified GitHub.Auth           as GitHub
-import qualified GitHub.Data           as GitHub
-import qualified RIO.Text.Lazy         as TL
-import           Shelly                hiding (FilePath)
+import           Git.Plantation.Data
+import qualified Git.Plantation.Data.Slack as Slack
+import qualified GitHub.Data               as GitHub
+import qualified Mix.Plugin.Drone          as Mix
+import qualified Mix.Plugin.GitHub         as GitHub
+import           Mix.Plugin.Logger         ()
+import qualified Mix.Plugin.Logger.JSON    as Mix
+import qualified RIO.Text.Lazy             as TL
 
 type Plant = RIO Env
 
 type Env = Record
   '[ "config"  >: Config
-   , "token"   >: GitHub.Token
+   , "github"  >: GitHub.Token
+   , "slack"   >: Maybe Slack.Config
    , "work"    >: FilePath
-   , "client"  >: Drone.HttpsClient
+   , "drone"   >: Mix.Config
    , "webhook" >: WebhookConfig
+   , "store"   >: Text -- URL for store
    , "logger"  >: LogFunc
    ]
 
@@ -40,41 +43,26 @@ mkWebhookConf url secret =
   , ("secret", secret)
   ]
 
-instance HasLogFunc Env where
-  logFuncL = lens (view #logger) (\x y -> x & #logger `set` y)
-
 fromJustWithThrow :: Exception e => Maybe a -> e -> Plant a
 fromJustWithThrow (Just x) _ = pure x
-fromJustWithThrow Nothing  e = throwIO e
-
-tryAnyWithLogError :: Plant a -> Plant ()
-tryAnyWithLogError act = tryAny act >>= \case
-  Left  e -> logError $ display e
-  Right _ -> pure ()
-
-shelly' :: Sh a -> Plant a
-shelly' sh = do
-  env <- ask
-  shelly
-    $ log_stdout_with (runRIO env . logDebug . display)
-    $ log_stderr_with (runRIO env . logDebug . display) sh
-
-mkLogMessage :: Text -> Record xs -> Record ("error_message" >: Text ': xs)
-mkLogMessage message r = #error_message @= message <: r
+fromJustWithThrow Nothing e  = throwIO e
 
 mkLogMessage' ::
-  Forall (KeyValue KnownSymbol (Instance1 ToJSON Identity)) xs
+  Forall (KeyTargetAre KnownSymbol (Instance1 ToJSON Identity)) xs
   => Text -> Record xs -> String
 mkLogMessage' message =
-  TL.unpack . Json.encodeToLazyText . mkLogMessage message
+  TL.unpack . Json.encodeToLazyText . Mix.mkLogMessage message LevelError
 
 data GitPlantException
   = UndefinedTeamProblem Team Problem
-  | CreateRepoError GitHub.Error Team Problem
+  | UndefinedProblem Int
+  | CreateRepoError GitHub.Error Team Repo
   | DeleteRepoError GitHub.Error Repo
   | SetupWebhookError GitHub.Error Repo
-  | InviteUserError GitHub.Error User Repo
-  | KickUserError GitHub.Error User Repo
+  | AddRepoToGitHubTeamError GitHub.Error Text Text Repo
+  | InviteUserError GitHub.Error User MemberTarget
+  | KickUserError GitHub.Error User MemberTarget
+  | CreateGitHubTeamError GitHub.Error Team Text
   | InvalidRepoConfig Repo
   deriving (Typeable)
 
@@ -86,6 +74,10 @@ instance Show GitPlantException where
       mkLogMessage'
         "undefined team repo"
         (#team @= team <: #problem @= problem <: nil)
+    UndefinedProblem idx ->
+      mkLogMessage'
+        "undefined problem"
+        (#id @= idx <: nil)
     CreateRepoError _err team problem ->
       mkLogMessage'
         "can't create repository"
@@ -98,14 +90,22 @@ instance Show GitPlantException where
       mkLogMessage'
         "can't setup github webhook"
         (#repo @= repo <: nil)
-    InviteUserError _err user repo ->
+    AddRepoToGitHubTeamError _err org name repo ->
+      mkLogMessage'
+        "cant't add repository to GitHub team"
+        (#org @= org <: #gh_team @= name <: #repo @= repo <: nil)
+    InviteUserError _err user target ->
       mkLogMessage'
         "can't invite user to repository"
-        (#user @= user <: #repo @= repo <: nil)
-    KickUserError _err user repo ->
+        (#user @= user <: #target @= toMemberTargetRecord target <: nil)
+    KickUserError _err user target ->
       mkLogMessage'
         "can't kick user from repository"
-        (#user @= user <: #repo @= repo <: nil)
+        (#user @= user <: #target @= toMemberTargetRecord target <: nil)
+    CreateGitHubTeamError _err team name ->
+      mkLogMessage'
+        "can't create GitHub team in org"
+        (#team @= team <: #gh_team @= name <: nil)
     InvalidRepoConfig repo ->
       mkLogMessage'
         "invalid repo config"

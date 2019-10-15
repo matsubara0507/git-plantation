@@ -7,10 +7,10 @@ module Git.Plantation.Config where
 import           RIO
 
 import           Data.Extensible
-import qualified Data.Yaml           as Y
-import           Elm                 (ElmType (..))
-import           Git.Plantation.Data (Problem, Team)
-import           Language.Elm
+import           Data.Extensible.Elm.Mapping
+import qualified Data.Yaml                   as Y
+import           Elm.Mapping
+import           Git.Plantation.Data         (Problem, Team)
 
 type Config = Record
   '[ "scoreboard" >: ScoreBoardConfig
@@ -25,11 +25,17 @@ type ScoreBoardConfig = Record
 readConfig :: MonadIO m => FilePath -> m Config
 readConfig = Y.decodeFileThrow
 
-instance ElmType Config where
-  toElmType = toElmRecordType "Config"
+instance IsElmType Config where
+  compileElmType = compileElmRecordTypeWith "Config"
 
-instance ElmType ScoreBoardConfig where
-  toElmType = toElmRecordType "ScoreBoardConfig"
+instance IsElmDefinition Config where
+  compileElmDef = ETypeAlias . compileElmRecordAliasWith "Config"
+
+instance IsElmType ScoreBoardConfig where
+  compileElmType = compileElmRecordTypeWith "ScoreBoardConfig"
+
+instance IsElmDefinition ScoreBoardConfig where
+  compileElmDef = ETypeAlias . compileElmRecordAliasWith "ScoreBoardConfig"
 
 verify :: Config -> Either Text Config
 verify = pure

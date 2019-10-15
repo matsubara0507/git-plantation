@@ -3,28 +3,33 @@ services:
   - docker
 language: elm
 cache:
-  timeout: 360
+  timeout: 1000
   directories:
-  - "$HOME/.stack/"
-  - "$HOME/.local/bin/"
-  - ".stack-work/"
+  - $HOME/.local/bin
+  - $HOME/.stack
+  - $TRAVIS_BUILD_DIR/.stack-work
 install:
 - mkdir -p ~/.local/bin
 - export PATH=$HOME/.local/bin:$PATH
 - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
-- stack docker pull
 jobs:
   include:
     - stage: build dependencies
-      script: stack --no-terminal --install-ghc test --bench --only-dependencies
+      script:
+      - stack --no-terminal --docker --install-ghc build -j 1 Cabal
+      - stack --no-terminal --docker --install-ghc test --only-dependencies
     - stage: run test
-      script: stack --no-terminal test --bench --no-run-benchmarks --no-haddock-deps --pedantic
+      script:
+      - stack --no-terminal --docker test --no-run-benchmarks --no-haddock-deps --pedantic
     - stage: push docker image
       if: branch = master AND type = push
       script:
-      - stack test
-      - stack --docker --no-terminal build -j 1 Cabal
-      - stack --docker image container
-      - docker build -t matsubara0507/git-plantation .
+      - make image tag=matsubara0507/git-plantation
       - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
       - docker push matsubara0507/git-plantation
+    - stage: push docker image with tag
+      if: tag IS present
+      script:
+      - make image tag=matsubara0507/git-plantation:$TRAVIS_TAG
+      - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+      - docker push matsubara0507/git-plantation:$TRAVIS_TAG

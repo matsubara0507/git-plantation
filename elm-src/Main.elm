@@ -149,7 +149,7 @@ viewStatus : API.Score -> API.Problem -> Html msg
 viewStatus score problem =
     let
         status =
-            List.find (\st -> st.problem == problem.name) score.stats
+            List.find (\st -> st.problem_id == problem.id) score.stats
 
         url =
             List.find (\l -> l.problem_id == problem.id) score.links
@@ -214,12 +214,12 @@ update msg model =
             ( { model | scores = Success scores }, Cmd.none )
 
         FetchScores (Err _) ->
-            ( { model | scores = Failure "Something went wrong.." }, Cmd.none )
+            ( model, Cmd.none )
 
 
 fetchScores : Cmd Msg
 fetchScores =
-    Http.send FetchScores API.getApiScores
+    API.getApiScores FetchScores
 
 
 subscriptions : Model -> Sub Msg

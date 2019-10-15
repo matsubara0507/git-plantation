@@ -1,139 +1,167 @@
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE LambdaCase       #-}
-{-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeOperators    #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE ExtendedDefaultRules #-}
+{-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE OverloadedLabels     #-}
+{-# LANGUAGE TypeOperators        #-}
 
-module Git.Plantation.Cmd.Repo where
+module Git.Plantation.Cmd.Repo
+  ( RepoCmdArg
+  , RepoArg
+  , NewRepoFlags
+  , actForRepo
+  , createRepo
+  , createRepoInGitHub
+  , initRepoInGitHub
+  , setupDefaultBranch
+  , setupWebhook
+  , initProblemCI
+  , resetRepo
+  , pushForCI
+  , deleteRepo
+  , addGitHubTeam
+  , splitRepoName
+  , repoGithub
+  ) where
 
 import           RIO
-import qualified RIO.List                        as L
-import qualified RIO.Map                         as Map
-import qualified RIO.Text                        as Text
-import qualified RIO.Vector                      as V
+import qualified RIO.Map                              as Map
+import qualified RIO.Text                             as Text
+import qualified RIO.Vector                           as V
 
+import           Data.Coerce                          (coerce)
 import           Data.Extensible
-import qualified Git.Cmd                         as Git
-import           Git.Plantation.Data             (Problem, Repo, Team)
-import qualified Git.Plantation.Data.Team        as Team
+import           Git.Plantation.Cmd.Arg
+import           Git.Plantation.Data                  (Problem, Repo, Team)
+import qualified Git.Plantation.Data.Team             as Team
 import           Git.Plantation.Env
-import           GitHub.Data.Name                (mkName)
-import           GitHub.Data.Repos               (newRepo, newRepoPrivate)
-import           GitHub.Data.Webhooks            (NewRepoWebhook (..),
-                                                  RepoWebhookEvent (..))
-import           GitHub.Endpoints.Repos          (Auth (..))
-import qualified GitHub.Endpoints.Repos          as GitHub
-import qualified GitHub.Endpoints.Repos.Webhooks as GitHub
-import           Shelly                          hiding (FilePath)
-import qualified Shelly                          as S
+import           GitHub.Data.Name                     (mkName)
+import           GitHub.Data.Repos                    (newRepo, newRepoPrivate)
+import           GitHub.Data.Webhooks                 (NewRepoWebhook (..),
+                                                       RepoWebhookEvent (..))
+import qualified GitHub.Endpoints.Organizations.Teams as GitHub
+import qualified GitHub.Endpoints.Repos               as GitHub
+import qualified GitHub.Endpoints.Repos.Webhooks      as GitHub
 
-type NewRepoCmd = Record
-  '[ "repos" >: [Int]
-   , "team"  >: Text
-   , "skip_create_repo"   >: Bool
-   , "skip_init_repo"     >: Bool
-   , "skip_setup_webhook" >: Bool
-   , "skip_init_ci"       >: Bool
+import qualified Git.Cmd                              as Git
+import qualified Mix.Plugin.GitHub                    as MixGitHub
+import qualified Mix.Plugin.Logger.JSON               as Mix
+import qualified Mix.Plugin.Shell                     as MixShell
+import qualified Shelly                               as Shell
+
+type RepoCmdArg = Record
+  '[ "repos" >: [RepoId]
+   , "team"  >: TeamId
    ]
 
-type NewRepoSkipFlags = Record
-  '[ "skip_create_repo"   >: Bool
-   , "skip_init_repo"     >: Bool
-   , "skip_setup_webhook" >: Bool
-   , "skip_init_ci"       >: Bool
+type RepoArg = Record
+  '[ "repo" >: Repo
+   , "team" >: Team
    ]
 
-type DeleteRepoCmd = Record
-  '[ "repos" >: [Int]
-   , "team"  >: Text
+type NewRepoFlags = Record
+  '[ "skip_create_repo"          >: Bool
+   , "skip_init_repo"            >: Bool
+   , "skip_setup_default_branch" >: Bool
+   , "skip_setup_webhook"        >: Bool
+   , "skip_init_ci"              >: Bool
    ]
 
-type RepoCmdFields =
-  '[ "repo" >: Int
-   , "team" >: Text
-   ]
+actForRepo :: (RepoArg -> Plant ()) -> RepoCmdArg -> Plant ()
+actForRepo act args =
+  findByIdWith (view #teams) (args ^. #team) >>= \case
+    Nothing   -> Mix.logErrorR "not found by config" (toArgInfo $ args ^. #team)
+    Just team -> do
+      repos <- findRepos (args ^. #repos) team
+      mapM_ act $ hsequence $ #repo <@=> repos <: #team <@=> pure team <: nil
 
-type NewGitHubRepoCmd = Record RepoCmdFields
+findRepos :: [RepoId] -> Team -> Plant [Repo]
+findRepos [] team = pure $ team ^. #repos
+findRepos ids team = fmap catMaybes . forM ids $ \idx ->
+  case findById idx (team ^. #repos) of
+    Nothing -> Mix.logErrorR "not found by config" (toArgInfo idx) >> pure Nothing
+    Just r  -> pure (Just r)
 
-type InitGitHubRepoCmd = Record RepoCmdFields
+findProblemWithThrow :: ProblemId -> Plant Problem
+findProblemWithThrow idx =
+  findByIdWith (view #problems) idx >>= \case
+    Nothing  -> throwIO $ UndefinedProblem (coerce idx)
+    Just p   -> pure p
 
-type SetupWebhookCmd = Record RepoCmdFields
+createRepo :: NewRepoFlags -> RepoArg -> Plant ()
+createRepo flags args = do
+  Mix.logInfoR "create team repository" args
+  unless (flags ^. #skip_create_repo)          $ createRepoInGitHub args
+  unless (flags ^. #skip_init_repo)            $ initRepoInGitHub args
+  unless (flags ^. #skip_setup_default_branch) $ setupDefaultBranch args
+  unless (flags ^. #skip_setup_webhook)        $ setupWebhook args
+  unless (flags ^. #skip_init_ci)              $ initProblemCI args
 
-type InitCICmd = Record RepoCmdFields
-
-type ResetRepoCmd = Record RepoCmdFields
-
-actByProblemId :: (Team -> Problem -> Plant a) -> Team -> Int -> Plant ()
-actByProblemId act team pid = do
-  conf <- asks (view #config)
-  let problem = L.find (\p -> p ^. #id == pid) $ conf ^. #problems
-  case problem of
-    Nothing       -> logError $ "repo is not found by problem id: " <> display pid
-    Just problem' -> tryAnyWithLogError $ act team problem'
-
-createRepo :: NewRepoSkipFlags -> Team -> Problem -> Plant ()
-createRepo flags team problem = do
-  logInfo $ mconcat
-    [ "create repo: ", displayShow $ problem ^. #repo
-    , " to team: ", displayShow $ team ^. #name
-    ]
-  info <- Team.lookupRepo problem team `fromJustWithThrow` UndefinedTeamProblem team problem
-  unless (flags ^. #skip_create_repo)   $ createRepoInGitHub info team problem
-  unless (flags ^. #skip_init_repo)     $ initRepoInGitHub info team problem
-  unless (flags ^. #skip_setup_webhook) $ setupWebhook info
-  unless (flags ^. #skip_init_ci)       $ initProblemCI info team problem
-
-createRepoInGitHub :: Repo -> Team -> Problem -> Plant ()
-createRepoInGitHub info team problem = do
-  (owner, repo) <- splitRepoName <$> repoGithub info
-  token <- asks (view #token)
+createRepoInGitHub :: RepoArg -> Plant ()
+createRepoInGitHub args = do
+  (owner, repo) <- splitRepoName <$> repoGithub (args ^. #repo)
   logInfo $ "create repo in github: " <> displayShow (owner <> "/" <> repo)
-  resp <- liftIO $ request owner (OAuth token)
-    ((newRepo $ mkName Proxy repo) { newRepoPrivate = Just (info ^. #private) })
+  resp <- MixGitHub.fetch $ \auth -> request owner auth
+    ((newRepo $ mkName Proxy repo) { newRepoPrivate = Just (args ^. #repo ^. #private) })
   case resp of
-    Left err -> logDebug (displayShow err) >> throwIO (CreateRepoError err team problem)
+    Left err -> logDebug (displayShow err) >> throwIO (mkErr err)
     Right _  -> logInfo "Success: create repository in GitHub"
   where
     request owner =
-      if Team.repoIsOrg info then
+      if Team.repoIsOrg (args ^. #repo) then
         flip GitHub.createOrganizationRepo' (mkName Proxy owner)
       else
         GitHub.createRepo'
+    mkErr err = CreateRepoError err (args ^. #team) (args ^. #repo)
 
-initRepoInGitHub :: Repo -> Team -> Problem -> Plant ()
-initRepoInGitHub info team problem = do
-  token   <- getTextToken
-  workDir <- getWorkDir team
-  github  <- repoGithub info
+initRepoInGitHub :: RepoArg -> Plant ()
+initRepoInGitHub args = do
+  token   <- MixGitHub.tokenText
+  github  <- repoGithub (args ^. #repo)
+  problem <- findProblemWithThrow (ProblemId $ args ^. #repo ^. #problem)
   let (owner, repo) = splitRepoName $ problem ^. #repo
       (_, teamRepo) = splitRepoName github
       teamUrl       = mconcat ["https://", token, "@github.com/", github, ".git"]
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
-  shelly' $ chdir_p workDir (Git.cloneOrFetch teamUrl teamRepo)
-  shelly' $ chdir_p (workDir </> teamRepo) $ do
-    Git.existBranch "temp" >>= \case
-      False -> Git.checkout ["-b", "temp"]
-      True  -> Git.checkout ["temp"]
-    errExit False $ Git.branch $ "-D" : problem ^. #challenge_branches
-    errExit False $ Git.remote ["add", "problem", problemUrl]
+  execGitForTeam (args ^. #team) teamRepo False teamUrl $ do
+    Shell.errExit False $ Git.branch ["-D", "temp"]
+    Shell.errExit False $ Git.checkout ["-b", "temp"]
+    Shell.errExit False $ Git.branch $ "-D" : problem ^. #challenge_branches
+    Shell.errExit False $ Git.remote ["add", "problem", problemUrl]
     Git.fetch ["--all"]
     forM_ (problem ^. #challenge_branches) $
       \branch -> Git.checkout ["-b", branch, "problem/" <> branch]
     Git.push $ "-f" : "-u" : "origin" : problem ^. #challenge_branches
-    errExit False $ Git.branch ["-D", "temp"]
   logInfo $ "Success: create repo as " <> displayShow github
 
-setupWebhook :: Repo -> Plant ()
-setupWebhook info = do
-  (owner, repo) <- splitRepoName <$> repoGithub info
-  token         <- asks (view #token)
+setupDefaultBranch :: RepoArg -> Plant ()
+setupDefaultBranch args = do
+  (owner, repo) <- splitRepoName <$> repoGithub (args ^. #repo)
+  problem <- findProblemWithThrow (ProblemId $ args ^. #repo ^. #problem)
+  resp <- MixGitHub.fetch $ \auth -> GitHub.editRepo auth
+    (mkName Proxy owner)
+    (mkName Proxy repo)
+    $ edit { GitHub.editDefaultBranch = Just $ problem ^. #default_branch
+           , GitHub.editPrivate = Just (args ^. #repo ^. #private)
+           }
+  case resp of
+    Left err -> logDebug (displayShow err) >> throwIO (DeleteRepoError err $ args ^. #repo)
+    Right _  -> logInfo "Success: set default branch in GitHub"
+  where
+    edit = GitHub.EditRepo
+      Nothing Nothing Nothing Nothing Nothing Nothing
+      Nothing Nothing Nothing Nothing Nothing Nothing
+
+setupWebhook :: RepoArg -> Plant ()
+setupWebhook args = do
+  (owner, repo) <- splitRepoName <$> repoGithub (args ^. #repo)
   webhookConfig <- asks (view #webhook)
   logInfo $ "setup github webhook to repo: " <> displayShow (owner <> "/" <> repo)
-  resp <- liftIO $ GitHub.createRepoWebhook'
-    (OAuth token) (mkName Proxy owner) (mkName Proxy repo) (webhook webhookConfig)
+  resp <- MixGitHub.fetch $ \auth -> GitHub.createRepoWebhook'
+    auth (mkName Proxy owner) (mkName Proxy repo) (webhook webhookConfig)
   case resp of
-    Left err -> logDebug (displayShow err) >> throwIO (SetupWebhookError err info)
-    Right _  -> logDebug "Success: setup GitHub Webhook to repository"
+    Left err -> logDebug (displayShow err) >> throwIO (mkErr err)
+    Right _  -> logInfo "Success: setup GitHub Webhook to repository"
   where
     webhook conf = NewRepoWebhook
       { newRepoWebhookName   = "web"
@@ -141,94 +169,119 @@ setupWebhook info = do
       , newRepoWebhookEvents = Just $ V.fromList [WebhookPushEvent]
       , newRepoWebhookActive = Just True
       }
+    mkErr err = SetupWebhookError err (args ^. #repo)
 
-initProblemCI :: Repo -> Team -> Problem -> Plant ()
-initProblemCI info team problem = do
-  token   <- getTextToken
-  workDir <- getWorkDir team
-  github  <- repoGithub info
+initProblemCI :: RepoArg -> Plant ()
+initProblemCI args = do
+  token   <- MixGitHub.tokenText
+  github  <- repoGithub (args ^. #repo)
+  problem <- findProblemWithThrow (ProblemId $ args ^. #repo ^. #problem)
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
-  shelly' $ chdir_p workDir (Git.cloneOrFetch problemUrl repo)
-  shelly' $ chdir_p (workDir </> repo) $ do
+  execGitForTeam (args ^. #team) repo True problemUrl $ do
     Git.checkout [problem ^. #ci_branch]
     Git.pull []
-    errExit False $ Git.branch ["-D", team ^. #name]
-    Git.checkout ["-b", team ^. #name]
-    writefile ciFileName github
+    Shell.errExit False $ Git.branch ["-D", args ^. #team ^. #name]
+    Git.checkout ["-b", args ^. #team ^. #name]
+    Shell.writefile ciFileName github
     Git.add [ciFileName]
     Git.commit ["-m", "[CI SKIP] Add ci branch"]
-    Git.push ["-f", "-u", "origin", team ^. #name]
+    Git.push ["-f", "-u", "origin", args ^. #team ^. #name]
   logInfo $ "Success: create ci branch in " <> displayShow (problem ^. #repo)
 
-resetRepo :: Repo -> Team -> Problem -> Plant ()
-resetRepo info team problem = do
-  workDir <- getWorkDir team
+resetRepo :: RepoArg -> Plant ()
+resetRepo args = do
+  problem <- findProblemWithThrow (ProblemId $ args ^. #repo ^. #problem)
   let (_, repo) = splitRepoName $ problem ^. #repo
-  paths <- shelly' $ chdir_p (workDir </> repo) $ ls "."
-  logDebug $ "Remove file: " <> display (Text.intercalate " " $ map toTextIgnore paths)
-  shelly' $ chdir_p workDir $ rm_rf (fromText repo)
-  initRepoInGitHub info team problem
+  local (over #work $ toTeamWork (args ^. #team) False) $ do
+    local (over #work $ toWorkWith $ Text.unpack repo) $ MixShell.exec (Shell.ls "." >> pure ())
+    MixShell.exec $ Shell.rm_rf $ Shell.fromText repo
+  initRepoInGitHub args
 
 pushForCI :: Team -> Problem -> Plant ()
 pushForCI team problem = do
-  token   <- getTextToken
-  workDir <- getWorkDir team
+  token <- MixGitHub.tokenText
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
-  shelly' $ chdir_p workDir (Git.cloneOrFetch problemUrl repo)
-  shelly' $ chdir_p (workDir </> repo) $ do
+
+  execGitForTeam team repo True problemUrl $ do
     Git.checkout [team ^. #name]
     Git.pull []
     Git.commit ["--allow-empty", "-m", "Empty Commit!!"]
     Git.push ["origin", team ^. #name]
   logInfo "Success push"
 
-deleteRepo :: Team -> Problem -> Plant ()
-deleteRepo team problem = do
-  logInfo $ mconcat
-    [ "delete repo: ", displayShow $ problem ^. #repo
-    , " to team: ", displayShow $ team ^. #name
-    ]
-  info <- Team.lookupRepo problem team `fromJustWithThrow` UndefinedTeamProblem team problem
-  deleteRepoInGithub info
-  deleteProblemCI team problem
+deleteRepo :: RepoArg -> Plant ()
+deleteRepo args = do
+  Mix.logInfoR "delete team repository" args
+  problem <- findProblemWithThrow (ProblemId $ args ^. #repo ^. #problem)
+  deleteRepoInGithub (args ^. #repo)
+  deleteProblemCI (args ^. #team) problem
 
 deleteRepoInGithub :: Repo -> Plant ()
 deleteRepoInGithub info = do
   (owner, repo) <- splitRepoName <$> repoGithub info
-  token <- asks (view #token)
   logInfo $ "delete repo in github: " <> displayShow (owner <> "/" <> repo)
-  resp <- liftIO $ GitHub.deleteRepo (OAuth token) (mkName Proxy owner) (mkName Proxy repo)
+  resp <- MixGitHub.fetch $ \auth ->
+    GitHub.deleteRepo auth (mkName Proxy owner) (mkName Proxy repo)
   case resp of
     Left err -> logDebug (displayShow err) >> throwIO (DeleteRepoError err info)
-    Right _  -> logDebug "Success: delete repository in GitHub"
+    Right _  -> logInfo "Success: delete repository in GitHub"
 
 deleteProblemCI :: Team -> Problem -> Plant ()
 deleteProblemCI team problem = do
-  token   <- getTextToken
-  workDir <- getWorkDir team
+  token <- MixGitHub.tokenText
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
-
-  shelly' $ chdir_p workDir (Git.cloneOrFetch problemUrl repo)
-  shelly' $ chdir_p (workDir </> repo) $
-    errExit False $ Git.push [ "--delete", "origin", team ^. #name]
+  execGitForTeam team repo True problemUrl $
+    Shell.errExit False $ Git.push  [ "--delete", "origin", team ^. #name]
   logInfo $ "Success: delete ci branch in " <> displayShow (problem ^. #repo)
 
+execGitForTeam :: Team -> Text -> Bool -> Text -> MixShell.Sh () -> Plant ()
+execGitForTeam team repo isProblem url act =
+  local (over #work $ toTeamWork team isProblem) $ do
+    MixShell.exec $ unlessM (Shell.test_d $ fromString repo') $ Git.clone [url, repo]
+    local (over #work $ toWorkWith repo') $ MixShell.exec act
+  where
+    repo' = Text.unpack repo
+
+addGitHubTeam :: RepoArg -> Plant ()
+addGitHubTeam args = case (args ^. #team ^. #org, args ^. #repo ^. #only) of
+  (Nothing, _)   -> logError "Undefined GitHub org in team"
+  (_, Nothing)   -> logError "Undefined 'only' option in team repo."
+  (Just org, Just name)
+    | valid name -> addGitHubTeam' org name (args ^. #repo)
+    | otherwise  -> logError $ display $ "Undefined GitHub team in team: " <> name
+  where
+    valid name = name `elem` args ^. #team ^. #gh_teams
+
+    addGitHubTeam' :: Text -> Text -> Repo -> Plant ()
+    addGitHubTeam' org name repo = do
+      resp <- MixGitHub.fetch $ \auth -> GitHub.teamInfoByName' (Just auth)
+        (mkName Proxy org)
+        (mkName Proxy name)
+      team <- case resp of
+        Left err   -> logDebug (displayShow err) >> throwIO (failure err org name)
+        Right team -> pure team
+      (owner, repoName) <- splitRepoName <$> repoGithub repo
+      resp' <- MixGitHub.fetch $ \auth -> GitHub.addOrUpdateTeamRepo' auth
+        (GitHub.teamId team)
+        (mkName Proxy owner)
+        (mkName Proxy repoName)
+        GitHub.PermissionPush
+      case resp' of
+        Left err -> logDebug (displayShow err) >> throwIO (failure err org name)
+        Right _  -> logInfo $ display $ "Success: add repository to GitHub team: " <> name
+
+    failure err org name =
+      AddRepoToGitHubTeamError err org name $ args ^. #repo
 
 -- |
 -- helper functions
 
 splitRepoName :: Text -> (Text, Text)
 splitRepoName = fmap (Text.drop 1) . Text.span(/= '/')
-
-getTextToken :: Plant Text
-getTextToken =
-  Text.decodeUtf8' <$> asks (view #token) >>= \case
-    Left  _ -> logError "cannot decode token to utf8." >> pure ""
-    Right t -> pure t
 
 repoGithub :: Repo -> Plant Text
 repoGithub repo =
@@ -237,7 +290,9 @@ repoGithub repo =
 ciFileName :: IsString s => s
 ciFileName = "REPOSITORY"
 
-getWorkDir :: Team -> Plant S.FilePath
-getWorkDir team = do
-  base <- asks (view #work)
-  pure $ base </> (team ^. #name)
+toWorkWith :: FilePath -> FilePath -> FilePath
+toWorkWith path = (<> "/" <> path)
+
+toTeamWork :: Team -> Bool -> FilePath -> FilePath
+toTeamWork team isProblem =
+  toWorkWith $ Text.unpack $ team ^. #name <> if isProblem then "/problem" else ""

@@ -1,5 +1,5 @@
 name:                git-plantation
-version:             0.2.0.0
+version:             0.3.0
 github:              "matsubara0507/git-plantation"
 license:             MIT
 author:              "MATSUBARA Nobutada"
@@ -36,23 +36,32 @@ default-extensions:
 dependencies:
 - base >= 4.7 && < 5
 - rio >= 0.1.1.0
+- mix
+- mix-json-logger
+- mix-plugin-github
+- mix-plugin-drone
+- mix-plugin-shell
 - aeson
 - blaze-html
-- data-default-class
+- containers
 - dotenv
 - drone
-- elm-export
-- extensible >= 0.4.9
+- elmap
+- extensible >= 0.6
+- extensible-elmap
 - github
 - github-webhooks
 - http-media
-- req
+- req >= 2.0
 - servant-blaze
-- servant-elm
+- servant-elmap
 - servant-github-webhook
 - servant-server
-- shelly
 - yaml >= 0.8.31
+- http-api-data
+- unliftio
+- wreq
+- shelly
 
 library:
   source-dirs: src
@@ -61,6 +70,13 @@ executables:
   git-plantation-app:
     main:                Main.hs
     source-dirs:         exec/app
+    dependencies:
+    - git-plantation
+    - gitrev
+    - warp
+  git-plantation-store:
+    main:                Main.hs
+    source-dirs:         exec/store
     dependencies:
     - git-plantation
     - gitrev
@@ -77,10 +93,6 @@ tests:
   git-plantation-test:
     main:                Spec.hs
     source-dirs:         test
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
     dependencies:
     - git-plantation
     - tasty
