@@ -1,7 +1,8 @@
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE LambdaCase       #-}
-{-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeOperators    #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedLabels   #-}
+{-# LANGUAGE TypeOperators      #-}
 
 module Git.Plantation.API.CRUD where
 
@@ -15,6 +16,7 @@ import           Git.Plantation.Score (Score, mkScore)
 import           Git.Plantation.Store (Store)
 import qualified Network.Wreq         as W
 import           Servant
+import           UnliftIO.Concurrent  (forkIO)
 
 type CRUD
       = GetAPI
@@ -58,12 +60,14 @@ fetchStore = do
 
 updateScore :: Text -> Text -> Plant NoContent
 updateScore owner repo = do
-  problems <- asks (view #problems . view #config)
-  let repo' = owner <> "/" <> repo
-  logInfo $ display ("[PUT] /score/" <> repo')
-  case L.find (\p -> p ^. #repo == repo') problems of
-    Nothing -> logError $ display ("not found problem: " <> repo')
-    Just p  -> updateScore' $ p ^. #id
+  _ <- forkIO $ do
+    problems <- asks (view #problems . view #config)
+    let repo' = owner <> "/" <> repo
+    logInfo $ display ("[PUT] /score/" <> repo')
+    threadDelay 3_000_000 -- ToDo
+    case L.find (\p -> p ^. #repo == repo') problems of
+      Nothing -> logError $ display ("not found problem: " <> repo')
+      Just p  -> updateScore' $ p ^. #id
   pure NoContent
 
 updateScore' :: Int -> Plant ()
