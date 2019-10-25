@@ -44,6 +44,28 @@ services:
       - DRONE_PORT=80
       - DRONE_HTTP=true
 
+  slack:
+    image: matsubara0507/git-plantation:dev
+    command: run-slack-api.sh
+    ports:
+    - 8070:80
+    volumes:
+      - ./config.yaml:/work/config.yaml
+    restart: always
+    environment:
+      - PORT=80
+      - WORK=.temp
+      - CONFIG=config.yaml
+      - DRONE_HOST=drone
+      - DRONE_TOKEN=${DRONE_TOKEN}
+      - DRONE_PORT=80
+      - GH_TOKEN=${GH_TOKEN}
+      - SLACK_API_TOKEN=${SLACK_API_TOKEN}
+      - SLACK_TEAM_ID=${SLACK_TEAM_ID}
+      - SLACK_CHANNEL_IDS=${SLACK_CHANNEL_IDS}
+      - SLACK_RESET_REPO_CMD=/reset-repo
+      - SLACK_WEBHOOK=${SLACK_WEBHOOK}
+
   drone:
     image: drone/drone:1.4.0
     ports:

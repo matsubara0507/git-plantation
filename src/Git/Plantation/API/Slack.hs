@@ -54,7 +54,9 @@ resetRepo postData = do
         Nothing   -> returnMessage "うーん、リポジトリが見つからなーい..."
         Just info -> returnMessage =<< reset info
       logDebug $ display ("reset-cmd: response: " <> message ^. #text)
-      Slack.respondMessage postData message
+      (view #webhook =<<) <$> asks (view #slack) >>= \case
+        Just url -> Slack.sendWebhook url message
+        Nothing  -> Slack.respondMessage postData message
 
     reset :: (Team, Problem, Repo) -> Plant Text
     reset (team, problem, repo) = do

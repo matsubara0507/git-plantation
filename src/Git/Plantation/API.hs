@@ -9,7 +9,6 @@ import           RIO
 
 import qualified Data.Aeson.Text             as Json
 import           Git.Plantation.API.CRUD     (CRUD, crud)
-import           Git.Plantation.API.Slack    (SlackAPI, slackAPI)
 import           Git.Plantation.API.Webhook  (WebhookAPI, webhook)
 import           Git.Plantation.Env          (Plant)
 import           Servant
@@ -24,7 +23,6 @@ type API
    :<|> "static" :> Raw
    :<|> "hook"   :> WebhookAPI
    :<|> "api"    :> CRUD
-   :<|> "slack"  :> SlackAPI
 
 api :: Proxy API
 api = Proxy
@@ -34,7 +32,6 @@ server = indexHtml
     :<|> serveDirectoryFileServer "static"
     :<|> webhook
     :<|> crud
-    :<|> slackAPI
 
 indexHtml :: Plant H.Html
 indexHtml = do
