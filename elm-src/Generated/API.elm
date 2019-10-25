@@ -153,6 +153,7 @@ jsonEncProblem val =
 
 type alias Config =
     { scoreboard : ScoreBoardConfig
+    , start_time : Maybe Int
     , problems : List Problem
     , teams : List Team
     }
@@ -160,8 +161,9 @@ type alias Config =
 
 jsonDecConfig : Json.Decode.Decoder Config
 jsonDecConfig =
-    Json.Decode.succeed (\pscoreboard pproblems pteams -> { scoreboard = pscoreboard, problems = pproblems, teams = pteams })
+    Json.Decode.succeed (\pscoreboard pstart_time pproblems pteams -> { scoreboard = pscoreboard, start_time = pstart_time, problems = pproblems, teams = pteams })
         |> required "scoreboard" jsonDecScoreBoardConfig
+        |> fnullable "start_time" Json.Decode.int
         |> required "problems" (Json.Decode.list jsonDecProblem)
         |> required "teams" (Json.Decode.list jsonDecTeam)
 
@@ -170,6 +172,7 @@ jsonEncConfig : Config -> Value
 jsonEncConfig val =
     Json.Encode.object
         [ ( "scoreboard", jsonEncScoreBoardConfig val.scoreboard )
+        , ( "start_time", maybeEncode Json.Encode.int val.start_time )
         , ( "problems", Json.Encode.list jsonEncProblem val.problems )
         , ( "teams", Json.Encode.list jsonEncTeam val.teams )
         ]

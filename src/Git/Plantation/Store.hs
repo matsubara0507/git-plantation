@@ -37,6 +37,7 @@ type Build = Record
   '[ "source"      >: Text
    , "status"      >: Text
    , "source_repo" >: Text
+   , "created"     >: Int64
    ]
 
 initial :: Plant Store
@@ -62,13 +63,19 @@ uniqByTeam =
     ordStatus'  _ "pending" = LT
     ordStatus' _ _          = EQ
 
+filterWithStartTime :: [Build] -> Plant [Build]
+filterWithStartTime builds =
+  asks (view #start_time . view #config) <&> \case
+    Nothing -> builds
+    Just st -> filter (\b -> b ^. #created >= st) builds
+
 fetchBuilds :: Problem -> Plant [Build]
 fetchBuilds problem = do
   let (owner, repo) = splitRepoName $ problem ^. #repo
   builds <- tryAny (getAllBuilds owner repo) >>= \case
     Left err     -> logError (display err) >> pure []
     Right builds -> pure builds
-  pure $ shrink <$> builds
+  filterWithStartTime $ shrink <$> builds
 
 getAllBuilds :: Text -> Text -> Plant [Drone.Build]
 getAllBuilds owner repo = mconcat <$> getAllBuilds' [] 1
