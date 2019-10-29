@@ -224,15 +224,17 @@ type alias Status =
     { problem_id : Int
     , correct : Bool
     , pending : Bool
+    , corrected_at : Maybe Int
     }
 
 
 jsonDecStatus : Json.Decode.Decoder Status
 jsonDecStatus =
-    Json.Decode.succeed (\pproblem_id pcorrect ppending -> { problem_id = pproblem_id, correct = pcorrect, pending = ppending })
+    Json.Decode.succeed (\pproblem_id pcorrect ppending pcorrected_at -> { problem_id = pproblem_id, correct = pcorrect, pending = ppending, corrected_at = pcorrected_at })
         |> required "problem_id" Json.Decode.int
         |> required "correct" Json.Decode.bool
         |> required "pending" Json.Decode.bool
+        |> fnullable "corrected_at" Json.Decode.int
 
 
 jsonEncStatus : Status -> Value
@@ -241,6 +243,7 @@ jsonEncStatus val =
         [ ( "problem_id", Json.Encode.int val.problem_id )
         , ( "correct", Json.Encode.bool val.correct )
         , ( "pending", Json.Encode.bool val.pending )
+        , ( "corrected_at", maybeEncode Json.Encode.int val.corrected_at )
         ]
 
 

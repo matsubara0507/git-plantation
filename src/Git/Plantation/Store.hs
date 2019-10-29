@@ -7,6 +7,8 @@
 module Git.Plantation.Store
   ( Store
   , Build
+  , isCorrect
+  , isPending
   , initial
   , modifyWith
   , uniqByTeam
@@ -39,6 +41,12 @@ type Build = Record
    , "source_repo" >: Text
    , "created"     >: Int64
    ]
+
+isCorrect :: Build -> Bool
+isCorrect b = b ^. #status == "success"
+
+isPending :: Build -> Bool
+isPending b = b ^. #status == "running" || b ^. #status == "pending"
 
 initial :: Plant Store
 initial = do
