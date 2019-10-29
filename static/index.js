@@ -4,7 +4,7 @@ var json = JSON.parse(
   document.getElementById('config').textContent
 );
 
-Elm.Pages.Board.init(
+Elm.Main.init(
   { node: document.getElementById('main')
   , flags: { config: json }
   }

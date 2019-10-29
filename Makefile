@@ -5,7 +5,7 @@ app:
 
 .PHONY: elm-src
 elm-src:
-	stack --docker test
+	stack --docker --local-bin-path=./bin test
 	elm-format --yes elm-src/Generated
 
 image: app elm-src

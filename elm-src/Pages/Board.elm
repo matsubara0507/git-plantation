@@ -1,4 +1,4 @@
-module Pages.Board exposing (Model, Msg(..), init, main, subscriptions, update, view, viewCheckReload)
+module Main exposing (main)
 
 import Browser as Browser
 import Generated.API as API exposing (..)
