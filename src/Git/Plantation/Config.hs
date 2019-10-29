@@ -11,9 +11,11 @@ import           Data.Extensible.Elm.Mapping
 import qualified Data.Yaml                   as Y
 import           Elm.Mapping
 import           Git.Plantation.Data         (Problem, Team)
+import           Orphans                     ()
 
 type Config = Record
   '[ "scoreboard" >: ScoreBoardConfig
+   , "start_time" >: Maybe Int64  -- unix time
    , "problems"   >: [Problem]
    , "teams"      >: [Team]
    ]

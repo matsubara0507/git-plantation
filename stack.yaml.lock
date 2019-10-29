@@ -33,12 +33,19 @@ packages:
   original:
     hackage: servant-github-webhook-0.4.1.0
 - completed:
-    hackage: drone-1.0.1@sha256:13745ac6ca79db908e7ff2b4ab3a595f53c4a039abfa9ccc430b88845ec638b1,2607
+    size: 11811
+    url: https://github.com/matsubara0507/drone-haskell/archive/d71e7473508a88922575ab95330b1e94d2114f9c.tar.gz
+    cabal-file:
+      size: 2607
+      sha256: 5c70500c3da54351d6a2d3fcedddc11bd71bffb4251f277b02808a3ac65320e0
+    name: drone
+    version: 1.0.1
+    sha256: 7810e98a024de3b0df8c6849d3506331d603d857c5c221a80af502bf570f8a5a
     pantry-tree:
-      size: 2422
-      sha256: e129988826e929fe1b695f5b4e52525a9a23167a4362e73c8c60f8fedea3ac84
+      size: 2673
+      sha256: c2e3460ade37eb75150ce34d938e4d412c01e08e6e0cb16fdefd9015885bed9a
   original:
-    hackage: drone-1.0.1
+    url: https://github.com/matsubara0507/drone-haskell/archive/d71e7473508a88922575ab95330b1e94d2114f9c.tar.gz
 - completed:
     size: 93288
     url: https://github.com/matsubara0507/github/archive/0e53921d2433c3e86b7231e6be7d234ae75c095f.tar.gz

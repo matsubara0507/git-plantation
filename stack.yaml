@@ -6,7 +6,8 @@ extra-deps:
 - membership-0
 - binary-instances-1
 - servant-github-webhook-0.4.1.0
-- drone-1.0.1
+- github: matsubara0507/drone-haskell
+  commit: d71e7473508a88922575ab95330b1e94d2114f9c
 - github: matsubara0507/github
   commit: 0e53921d2433c3e86b7231e6be7d234ae75c095f
 - github: matsubara0507/elmap.hs
