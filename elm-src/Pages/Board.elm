@@ -1,6 +1,6 @@
-module Pages.Board exposing (view)
+module Pages.Board exposing (Model, Msg(..), init, main, subscriptions, update, view, viewCheckReload)
 
-import Data exposing (Model, Msg(..))
+import Browser as Browser
 import Generated.API as API exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (checked, class, href, id, style, target, type_)
@@ -9,6 +9,49 @@ import Http
 import List.Extra as List
 import RemoteData exposing (RemoteData(..))
 import Time exposing (Posix)
+
+
+main =
+    Browser.element
+        { init = init
+        , view = view
+        , update = update
+        , subscriptions = subscriptions
+        }
+
+
+type alias Model =
+    { reload : Bool
+    , problems : List API.Problem
+    , teams : List API.Team
+    , scores : RemoteData String (List API.Score)
+    , interval : Float
+    }
+
+
+type Msg
+    = CheckReload Bool
+    | Reload
+    | Tick Posix
+    | FetchScores (Result Http.Error (List API.Score))
+
+
+type alias Flags =
+    { config : API.Config }
+
+
+init : Flags -> ( Model, Cmd Msg )
+init flags =
+    let
+        model =
+            { reload = True
+            , problems = flags.config.problems
+            , teams = flags.config.teams
+            , scores = NotAsked
+            , interval = flags.config.scoreboard.interval
+            }
+    in
+    ( model, Cmd.batch [ fetchScores ] )
 
 
 view : Model -> Html Msg
@@ -147,3 +190,38 @@ stars n =
 
     else
         div [ class "f5" ] [ star, text ("x" ++ String.fromInt n) ]
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
+        CheckReload reload ->
+            ( { model | reload = reload }, Cmd.none )
+
+        Reload ->
+            ( model, fetchScores )
+
+        Tick _ ->
+            ( model
+            , if model.reload then
+                fetchScores
+
+              else
+                Cmd.none
+            )
+
+        FetchScores (Ok scores) ->
+            ( { model | scores = Success scores }, Cmd.none )
+
+        FetchScores (Err _) ->
+            ( model, Cmd.none )
+
+
+fetchScores : Cmd Msg
+fetchScores =
+    API.getApiScores FetchScores
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Time.every model.interval Tick
