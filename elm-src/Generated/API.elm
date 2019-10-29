@@ -179,15 +179,17 @@ type alias ScoreBoardConfig =
     { interval : Float
     , start_time : Maybe Int
     , end_time : Maybe Int
+    , zone : Maybe String
     }
 
 
 jsonDecScoreBoardConfig : Json.Decode.Decoder ScoreBoardConfig
 jsonDecScoreBoardConfig =
-    Json.Decode.succeed (\pinterval pstart_time pend_time -> { interval = pinterval, start_time = pstart_time, end_time = pend_time })
+    Json.Decode.succeed (\pinterval pstart_time pend_time pzone -> { interval = pinterval, start_time = pstart_time, end_time = pend_time, zone = pzone })
         |> required "interval" Json.Decode.float
         |> fnullable "start_time" Json.Decode.int
         |> fnullable "end_time" Json.Decode.int
+        |> fnullable "zone" Json.Decode.string
 
 
 jsonEncScoreBoardConfig : ScoreBoardConfig -> Value
@@ -196,6 +198,7 @@ jsonEncScoreBoardConfig val =
         [ ( "interval", Json.Encode.float val.interval )
         , ( "start_time", maybeEncode Json.Encode.int val.start_time )
         , ( "end_time", maybeEncode Json.Encode.int val.end_time )
+        , ( "zone", maybeEncode Json.Encode.string val.zone )
         ]
 
 

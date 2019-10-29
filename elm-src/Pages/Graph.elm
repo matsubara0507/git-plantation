@@ -2,6 +2,7 @@ module Main exposing (main)
 
 import Browser as Browser
 import Color exposing (Color)
+import Dict
 import Generated.API as API exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (checked, class, href, id, style, target, type_)
@@ -27,7 +28,8 @@ import LineChart.Legends as Legends
 import LineChart.Line as Line
 import List.Extra as List
 import RemoteData exposing (RemoteData(..))
-import Time exposing (Posix)
+import Time exposing (Posix, Zone)
+import TimeZone
 
 
 main =
@@ -46,6 +48,7 @@ type alias Model =
     , scores : RemoteData String (List API.Score)
     , interval : Float
     , hinted : Maybe ScoreHistory
+    , zone : Zone
     }
 
 
@@ -70,6 +73,11 @@ type alias Flags =
 init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
+        zone =
+            flags.config.scoreboard.zone
+                |> Maybe.andThen (\k -> Dict.get k TimeZone.zones)
+                |> Maybe.withDefault (\_ -> Time.utc)
+
         model =
             { reload = True
             , problems = flags.config.problems
@@ -77,6 +85,7 @@ init flags =
             , scores = NotAsked
             , interval = flags.config.scoreboard.interval
             , hinted = Nothing
+            , zone = zone ()
             }
     in
     ( model, Cmd.batch [ API.getApiScores FetchScores ] )
@@ -169,11 +178,11 @@ chart model =
         , x =
             Axis.custom
                 { title = Title.default "Time"
-                , variable = Maybe.map toFloat << Maybe.andThen .corrected_at << .latest
+                , variable = Maybe.map toFloat << Maybe.map (\n -> n * 1000) << Maybe.andThen .corrected_at << .latest
                 , pixels = 1270
                 , range = Range.padded 20 20
                 , axisLine = AxisLine.full Colors.gray
-                , ticks = Ticks.time Time.utc 10
+                , ticks = Ticks.time model.zone 10
                 }
         , container =
             Container.custom
@@ -189,8 +198,8 @@ chart model =
         , events = Events.hoverOne Hint
         , junk =
             Junk.hoverOne model.hinted
-                [ ( "problem", findProblemName model.problems )
-                , ( "time", toCorrectTime )
+                [ ( "Problem", findProblemName model.problems )
+                , ( "Time", toCorrectTime model.zone )
                 ]
         , grid = Grid.default
         , area = Area.default
@@ -252,12 +261,31 @@ findProblemPoint model status =
         |> Maybe.withDefault 0
 
 
-toCorrectTime : ScoreHistory -> String
-toCorrectTime score =
-    score.latest
-        |> Maybe.andThen .corrected_at
-        |> Maybe.map String.fromInt
-        |> Maybe.withDefault "none"
+toCorrectTime : Zone -> ScoreHistory -> String
+toCorrectTime zone score =
+    let
+        time =
+            score.latest
+                |> Maybe.andThen .corrected_at
+                |> Maybe.map (\n -> n * 1000)
+                |> Maybe.map Time.millisToPosix
+    in
+    String.concat
+        [ Maybe.map (Time.toHour zone) time
+            |> Maybe.withDefault 0
+            |> String.fromInt
+            |> String.padLeft 2 '0'
+        , ":"
+        , Maybe.map (Time.toMinute zone) time
+            |> Maybe.withDefault 0
+            |> String.fromInt
+            |> String.padLeft 2 '0'
+        , ":"
+        , Maybe.map (Time.toSecond zone) time
+            |> Maybe.withDefault 0
+            |> String.fromInt
+            |> String.padLeft 2 '0'
+        ]
 
 
 findProblemName : List API.Problem -> ScoreHistory -> String
