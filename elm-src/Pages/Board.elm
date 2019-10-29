@@ -57,7 +57,7 @@ init flags =
 view : Model -> Html Msg
 view model =
     div [ class "" ]
-        [ div [ class "my-3 mx-auto col-10 col-lg-8" ]
+        [ div [ class "my-3 mx-auto col-10" ]
             [ div []
                 [ h2
                     [ class "f1-light float-left link-gray-dark"

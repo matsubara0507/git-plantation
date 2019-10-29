@@ -1,6 +1,7 @@
 module Main exposing (main)
 
 import Browser as Browser
+import Color exposing (Color)
 import Generated.API as API exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (checked, class, href, id, style, target, type_)
@@ -114,9 +115,43 @@ subscriptions model =
     Time.every model.interval Tick
 
 
-view : Model -> Html.Html Msg
+view : Model -> Html Msg
 view model =
-    Html.div [] [ chart model ]
+    div [ class "" ]
+        [ div [ class "my-3 mx-auto col-10" ]
+            [ div []
+                [ h2
+                    [ class "f1-light float-left link-gray-dark"
+                    , onClick Reload
+                    ]
+                    [ text "Git Challenge ScoreBoard" ]
+                , div [ class "float-right" ] [ viewCheckReload model ]
+                ]
+            , viewGrpah model
+            ]
+        ]
+
+
+viewCheckReload : Model -> Html Msg
+viewCheckReload model =
+    form []
+        [ div [ class "form-checkbox" ]
+            [ label []
+                [ input
+                    [ type_ "checkbox"
+                    , checked model.reload
+                    , onCheck CheckReload
+                    ]
+                    []
+                , text "Auto Reload"
+                ]
+            ]
+        ]
+
+
+viewGrpah : Model -> Html.Html Msg
+viewGrpah model =
+    Html.div [ style "margin-top" "1em" ] [ chart model ]
 
 
 chart : Model -> Html.Html Msg
@@ -184,20 +219,22 @@ buildData : Model -> List (LineChart.Series ScoreHistory)
 buildData model =
     case model.scores of
         Success scores ->
-            List.map (buildScoreHistories model) scores
+            List.sortBy .point scores
+                |> List.reverse
+                |> List.map2 (buildScoreHistories model) colors
 
         _ ->
             []
 
 
-buildScoreHistories : Model -> API.Score -> LineChart.Series ScoreHistory
-buildScoreHistories model score =
+buildScoreHistories : Model -> Color -> API.Score -> LineChart.Series ScoreHistory
+buildScoreHistories model color score =
     score.stats
         |> List.filter .correct
         |> List.sortBy (Maybe.withDefault 0 << .corrected_at)
         |> List.scanl (::) []
         |> List.map (buildScoreHistory model)
-        |> LineChart.line Colors.pink Dots.circle score.team
+        |> LineChart.line color Dots.circle score.team
 
 
 buildScoreHistory : Model -> List API.Status -> ScoreHistory
@@ -234,3 +271,26 @@ findProblemName problems score =
                 |> List.find (\p -> p.id == status.problem_id)
                 |> Maybe.map .name
                 |> Maybe.withDefault "none"
+
+
+colors : List Color
+colors =
+    [ Colors.pink
+    , Colors.blue
+    , Colors.gold
+    , Colors.red
+    , Colors.green
+    , Colors.cyan
+    , Colors.teal
+    , Colors.purple
+    , Colors.rust
+    , Colors.strongBlue
+    , Colors.pinkLight
+    , Colors.blueLight
+    , Colors.goldLight
+    , Colors.redLight
+    , Colors.greenLight
+    , Colors.cyanLight
+    , Colors.tealLight
+    , Colors.purpleLight
+    ]
