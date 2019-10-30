@@ -5,7 +5,7 @@ import Color exposing (Color)
 import Dict
 import Generated.API as API exposing (..)
 import Html exposing (..)
-import Html.Attributes exposing (checked, class, href, id, style, target, type_)
+import Html.Attributes exposing (checked, class, style, type_)
 import Html.Events exposing (onCheck, onClick)
 import Http
 import LineChart
@@ -29,7 +29,7 @@ import LineChart.Line as Line
 import List.Extra as List
 import Palette.Cubehelix as Palette
 import Palette.Tango as Palette
-import RemoteData exposing (RemoteData(..))
+import Score exposing (Score)
 import Time exposing (Posix, Zone)
 import TimeZone
 
@@ -47,7 +47,7 @@ type alias Model =
     { reload : Bool
     , problems : List API.Problem
     , teams : List API.Team
-    , scores : RemoteData String (List API.Score)
+    , scores : List Score
     , interval : Float
     , hinted : Maybe ScoreHistory
     , zone : Zone
@@ -56,7 +56,7 @@ type alias Model =
 
 type alias ScoreHistory =
     { point : Int
-    , latest : Maybe API.Status
+    , latest : Maybe Score.Status
     }
 
 
@@ -84,13 +84,13 @@ init flags =
             { reload = True
             , problems = flags.config.problems
             , teams = flags.config.teams
-            , scores = NotAsked
+            , scores = []
             , interval = flags.config.scoreboard.interval
             , hinted = Nothing
             , zone = zone ()
             }
     in
-    ( model, Cmd.batch [ API.getApiScores FetchScores ] )
+    ( { model | scores = Score.build model [] }, Cmd.batch [ API.getApiScores FetchScores ] )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -111,8 +111,8 @@ update msg model =
                 Cmd.none
             )
 
-        FetchScores (Ok scores) ->
-            ( { model | scores = Success scores }, Cmd.none )
+        FetchScores (Ok resp) ->
+            ( { model | scores = Score.updateBy resp model.scores }, Cmd.none )
 
         FetchScores (Err _) ->
             ( model, Cmd.none )
@@ -180,7 +180,7 @@ chart model =
         , x =
             Axis.custom
                 { title = Title.default "Time"
-                , variable = Maybe.map toFloat << Maybe.map (\n -> n * 1000) << Maybe.andThen .corrected_at << .latest
+                , variable = Maybe.map toFloat << Maybe.map (\n -> n * 1000) << Maybe.map .correctTime << .latest
                 , pixels = 1270
                 , range = Range.padded 20 20
                 , axisLine = AxisLine.full Colors.gray
@@ -200,7 +200,7 @@ chart model =
         , events = Events.hoverOne Hint
         , junk =
             Junk.hoverOne model.hinted
-                [ ( "Problem", findProblemName model.problems )
+                [ ( "Problem", Maybe.withDefault "" << Maybe.map .problemName << .latest )
                 , ( "Time", toCorrectTime model.zone )
                 ]
         , grid = Grid.default
@@ -228,49 +228,36 @@ chart model =
 
 buildData : Model -> List (LineChart.Series ScoreHistory)
 buildData model =
-    case model.scores of
-        Success scores ->
-            let
-                colors =
-                    Palette.generateAdvanced (List.length scores + 4)
-                        { start = Color.fromHSL ( 0, 100, 50 )
-                        , rotationDirection = Palette.RGB
-                        , rotations = 1.5
-                        , gamma = 1.2
-                        }
-                        |> List.drop 2
-                        |> List.take (List.length scores)
-            in
-            List.sortBy .team scores
-                |> List.map2 (buildScoreHistories model) colors
-
-        _ ->
-            []
+    let
+        colors =
+            Palette.generateAdvanced (List.length model.scores + 4)
+                { start = Color.fromHSL ( 0, 100, 50 )
+                , rotationDirection = Palette.RGB
+                , rotations = 1.5
+                , gamma = 1.2
+                }
+                |> List.drop 2
+                |> List.take (List.length model.scores)
+    in
+    List.sortBy (.name << .team) model.scores
+        |> List.map2 buildScoreHistories colors
 
 
-buildScoreHistories : Model -> Color -> API.Score -> LineChart.Series ScoreHistory
-buildScoreHistories model color score =
+buildScoreHistories : Color -> Score -> LineChart.Series ScoreHistory
+buildScoreHistories color score =
     score.stats
-        |> List.filter .correct
-        |> List.sortBy (Maybe.withDefault 0 << .corrected_at)
+        |> List.filter (\s -> s.state == Score.Correct)
+        |> List.sortBy .correctTime
         |> List.scanl (::) []
-        |> List.map (buildScoreHistory model)
-        |> LineChart.line color Dots.circle score.team
+        |> List.map buildScoreHistory
+        |> LineChart.line color Dots.circle score.team.name
 
 
-buildScoreHistory : Model -> List API.Status -> ScoreHistory
-buildScoreHistory model stats =
-    { point = List.sum (List.map (findProblemPoint model) stats)
+buildScoreHistory : List Score.Status -> ScoreHistory
+buildScoreHistory stats =
+    { point = List.sum (List.map .difficulty stats)
     , latest = List.head stats
     }
-
-
-findProblemPoint : Model -> API.Status -> Int
-findProblemPoint model status =
-    model.problems
-        |> List.find (\p -> p.id == status.problem_id)
-        |> Maybe.map .difficulty
-        |> Maybe.withDefault 0
 
 
 toCorrectTime : Zone -> ScoreHistory -> String
@@ -278,7 +265,7 @@ toCorrectTime zone score =
     let
         time =
             score.latest
-                |> Maybe.andThen .corrected_at
+                |> Maybe.map .correctTime
                 |> Maybe.map (\n -> n * 1000)
                 |> Maybe.map Time.millisToPosix
     in
@@ -298,16 +285,3 @@ toCorrectTime zone score =
             |> String.fromInt
             |> String.padLeft 2 '0'
         ]
-
-
-findProblemName : List API.Problem -> ScoreHistory -> String
-findProblemName problems score =
-    case score.latest of
-        Nothing ->
-            "none"
-
-        Just status ->
-            problems
-                |> List.find (\p -> p.id == status.problem_id)
-                |> Maybe.map .name
-                |> Maybe.withDefault "none"
