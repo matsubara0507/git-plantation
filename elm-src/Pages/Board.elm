@@ -6,8 +6,7 @@ import Html exposing (..)
 import Html.Attributes exposing (checked, class, href, id, style, target, type_)
 import Html.Events exposing (onCheck, onClick)
 import Http
-import List.Extra as List
-import RemoteData exposing (RemoteData(..))
+import Score exposing (Score)
 import Time exposing (Posix)
 
 
@@ -24,7 +23,7 @@ type alias Model =
     { reload : Bool
     , problems : List API.Problem
     , teams : List API.Team
-    , scores : RemoteData String (List API.Score)
+    , scores : List Score
     , interval : Float
     }
 
@@ -47,11 +46,11 @@ init flags =
             { reload = True
             , problems = flags.config.problems
             , teams = flags.config.teams
-            , scores = NotAsked
+            , scores = []
             , interval = flags.config.scoreboard.interval
             }
     in
-    ( model, Cmd.batch [ fetchScores ] )
+    ( { model | scores = Score.build model [] }, Cmd.batch [ API.getApiScores FetchScores ] )
 
 
 view : Model -> Html Msg
@@ -117,16 +116,11 @@ viewHeaderCol problem =
 
 viewBody : Model -> List (Html msg)
 viewBody model =
-    case model.scores of
-        Success scores ->
-            List.indexedMap (viewScore model.problems) scores
-
-        _ ->
-            []
+    List.indexedMap viewScore model.scores
 
 
-viewScore : List API.Problem -> Int -> API.Score -> Html msg
-viewScore problems idx score =
+viewScore : Int -> Score -> Html msg
+viewScore idx score =
     tr
         [ class "border-top"
         , class
@@ -138,44 +132,35 @@ viewScore problems idx score =
             )
         ]
         (List.concat
-            [ [ th [ class "text-right p-2 f4" ] [ text score.team ] ]
-            , List.map (viewStatus score) problems
+            [ [ th [ class "text-right p-2 f4" ] [ text score.team.name ] ]
+            , List.map viewStatus score.stats
             , [ th [ class "text-center p-2 f4" ] [ text (String.fromInt score.point) ] ]
             ]
         )
 
 
-viewStatus : API.Score -> API.Problem -> Html msg
-viewStatus score problem =
-    let
-        status =
-            List.find (\st -> st.problem_id == problem.id) score.stats
-
-        url =
-            List.find (\l -> l.problem_id == problem.id) score.links
-                |> Maybe.map .url
-                |> Maybe.withDefault ""
-    in
+viewStatus : Score.Status -> Html msg
+viewStatus status =
     th
         [ class "text-center p-2" ]
-        [ a [ href url, target "_blank" ] [ statBadge status ]
-        , div [] [ stars problem.difficulty ]
+        [ a [ href status.url, target "_blank" ] [ statBadge status.state ]
+        , div [] [ stars status.difficulty ]
         ]
 
 
-statBadge : Maybe API.Status -> Html msg
-statBadge status =
-    case ( Maybe.map .correct status, Maybe.map .pending status ) of
-        ( Nothing, _ ) ->
+statBadge : Score.State -> Html msg
+statBadge state =
+    case state of
+        Score.None ->
             span [ class "Label Label--gray-darker" ] [ text "未提出" ]
 
-        ( _, Just True ) ->
+        Score.Pending ->
             span [ class "Label bg-yellow" ] [ text "採点中" ]
 
-        ( Just False, _ ) ->
+        Score.Incorrect ->
             span [ class "Label bg-red" ] [ text "不正解" ]
 
-        ( Just True, _ ) ->
+        Score.Correct ->
             span [ class "Label bg-green" ] [ text "正解" ]
 
 
@@ -199,27 +184,22 @@ update msg model =
             ( { model | reload = reload }, Cmd.none )
 
         Reload ->
-            ( model, fetchScores )
+            ( model, API.getApiScores FetchScores )
 
         Tick _ ->
             ( model
             , if model.reload then
-                fetchScores
+                API.getApiScores FetchScores
 
               else
                 Cmd.none
             )
 
-        FetchScores (Ok scores) ->
-            ( { model | scores = Success scores }, Cmd.none )
+        FetchScores (Ok resp) ->
+            ( { model | scores = Score.updateBy resp model.scores }, Cmd.none )
 
         FetchScores (Err _) ->
             ( model, Cmd.none )
-
-
-fetchScores : Cmd Msg
-fetchScores =
-    API.getApiScores FetchScores
 
 
 subscriptions : Model -> Sub Msg
