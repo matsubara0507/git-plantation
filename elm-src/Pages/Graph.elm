@@ -27,6 +27,8 @@ import LineChart.Junk as Junk
 import LineChart.Legends as Legends
 import LineChart.Line as Line
 import List.Extra as List
+import Palette.Cubehelix as Palette
+import Palette.Tango as Palette
 import RemoteData exposing (RemoteData(..))
 import Time exposing (Posix, Zone)
 import TimeZone
@@ -228,8 +230,18 @@ buildData : Model -> List (LineChart.Series ScoreHistory)
 buildData model =
     case model.scores of
         Success scores ->
-            List.sortBy .point scores
-                |> List.reverse
+            let
+                colors =
+                    Palette.generateAdvanced (List.length scores + 4)
+                        { start = Color.fromHSL ( 0, 100, 50 )
+                        , rotationDirection = Palette.RGB
+                        , rotations = 1.5
+                        , gamma = 1.2
+                        }
+                        |> List.drop 2
+                        |> List.take (List.length scores)
+            in
+            List.sortBy .team scores
                 |> List.map2 (buildScoreHistories model) colors
 
         _ ->
@@ -299,26 +311,3 @@ findProblemName problems score =
                 |> List.find (\p -> p.id == status.problem_id)
                 |> Maybe.map .name
                 |> Maybe.withDefault "none"
-
-
-colors : List Color
-colors =
-    [ Colors.pink
-    , Colors.blue
-    , Colors.gold
-    , Colors.red
-    , Colors.green
-    , Colors.cyan
-    , Colors.teal
-    , Colors.purple
-    , Colors.rust
-    , Colors.strongBlue
-    , Colors.pinkLight
-    , Colors.blueLight
-    , Colors.goldLight
-    , Colors.redLight
-    , Colors.greenLight
-    , Colors.cyanLight
-    , Colors.tealLight
-    , Colors.purpleLight
-    ]
