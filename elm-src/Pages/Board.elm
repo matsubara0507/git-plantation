@@ -1,4 +1,4 @@
-module Main exposing (main)
+module Pages.Board exposing (view)
 
 import Browser as Browser
 import Generated.API as API exposing (..)
@@ -10,85 +10,15 @@ import Score exposing (Score)
 import Time exposing (Posix)
 
 
-main =
-    Browser.element
-        { init = init
-        , view = view
-        , update = update
-        , subscriptions = subscriptions
-        }
-
-
-type alias Model =
-    { reload : Bool
-    , problems : List API.Problem
-    , teams : List API.Team
-    , scores : List Score
-    , interval : Float
+type alias Model a =
+    { a
+        | problems : List API.Problem
+        , scores : List Score
     }
 
 
-type Msg
-    = CheckReload Bool
-    | Reload
-    | Tick Posix
-    | FetchScores (Result Http.Error (List API.Score))
-
-
-type alias Flags =
-    { config : API.Config }
-
-
-init : Flags -> ( Model, Cmd Msg )
-init flags =
-    let
-        model =
-            { reload = True
-            , problems = flags.config.problems
-            , teams = flags.config.teams
-            , scores = []
-            , interval = flags.config.scoreboard.interval
-            }
-    in
-    ( { model | scores = Score.build model [] }, Cmd.batch [ API.getApiScores FetchScores ] )
-
-
-view : Model -> Html Msg
+view : Model a -> Html msg
 view model =
-    div [ class "" ]
-        [ div [ class "my-3 mx-auto col-10" ]
-            [ div []
-                [ h2
-                    [ class "f1-light float-left link-gray-dark"
-                    , onClick Reload
-                    ]
-                    [ text "Git Challenge ScoreBoard" ]
-                , div [ class "float-right" ] [ viewCheckReload model ]
-                ]
-            , viewScores model
-            ]
-        ]
-
-
-viewCheckReload : Model -> Html Msg
-viewCheckReload model =
-    form []
-        [ div [ class "form-checkbox" ]
-            [ label []
-                [ input
-                    [ type_ "checkbox"
-                    , checked model.reload
-                    , onCheck CheckReload
-                    ]
-                    []
-                , text "Auto Reload"
-                ]
-            ]
-        ]
-
-
-viewScores : Model -> Html Msg
-viewScores model =
     div [ id "scoreboard" ]
         [ table
             [ class "scoreboard-table col-12 f3" ]
@@ -98,7 +28,7 @@ viewScores model =
         ]
 
 
-viewHeader : Model -> List (Html msg)
+viewHeader : Model a -> List (Html msg)
 viewHeader model =
     List.concat
         [ [ th [] [] ]
@@ -114,7 +44,7 @@ viewHeaderCol problem =
         [ text problem.name ]
 
 
-viewBody : Model -> List (Html msg)
+viewBody : Model a -> List (Html msg)
 viewBody model =
     List.indexedMap viewScore model.scores
 
@@ -175,33 +105,3 @@ stars n =
 
     else
         div [ class "f5" ] [ star, text ("x" ++ String.fromInt n) ]
-
-
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-    case msg of
-        CheckReload reload ->
-            ( { model | reload = reload }, Cmd.none )
-
-        Reload ->
-            ( model, API.getApiScores FetchScores )
-
-        Tick _ ->
-            ( model
-            , if model.reload then
-                API.getApiScores FetchScores
-
-              else
-                Cmd.none
-            )
-
-        FetchScores (Ok resp) ->
-            ( { model | scores = Score.updateBy resp model.scores }, Cmd.none )
-
-        FetchScores (Err _) ->
-            ( model, Cmd.none )
-
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    Time.every model.interval Tick
