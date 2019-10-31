@@ -15,13 +15,15 @@ import           Orphans                     ()
 
 type Config = Record
   '[ "scoreboard" >: ScoreBoardConfig
-   , "start_time" >: Maybe Int64  -- unix time
    , "problems"   >: [Problem]
    , "teams"      >: [Team]
    ]
 
 type ScoreBoardConfig = Record
-  '[ "interval" >: Float
+  '[ "interval"   >: Float
+   , "start_time" >: Maybe Int64  -- unix time
+   , "end_time"   >: Maybe Int64  -- unix time
+   , "zone"       >: Maybe Text
    ]
 
 readConfig :: MonadIO m => FilePath -> m Config

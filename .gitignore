@@ -6,7 +6,8 @@ git-plantation.cabal
 *.sqlite
 
 .elm
-main.js
+*.js
+!index.js
 elm-stuff
 
 bin/

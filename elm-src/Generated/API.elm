@@ -153,7 +153,6 @@ jsonEncProblem val =
 
 type alias Config =
     { scoreboard : ScoreBoardConfig
-    , start_time : Maybe Int
     , problems : List Problem
     , teams : List Team
     }
@@ -161,9 +160,8 @@ type alias Config =
 
 jsonDecConfig : Json.Decode.Decoder Config
 jsonDecConfig =
-    Json.Decode.succeed (\pscoreboard pstart_time pproblems pteams -> { scoreboard = pscoreboard, start_time = pstart_time, problems = pproblems, teams = pteams })
+    Json.Decode.succeed (\pscoreboard pproblems pteams -> { scoreboard = pscoreboard, problems = pproblems, teams = pteams })
         |> required "scoreboard" jsonDecScoreBoardConfig
-        |> fnullable "start_time" Json.Decode.int
         |> required "problems" (Json.Decode.list jsonDecProblem)
         |> required "teams" (Json.Decode.list jsonDecTeam)
 
@@ -172,7 +170,6 @@ jsonEncConfig : Config -> Value
 jsonEncConfig val =
     Json.Encode.object
         [ ( "scoreboard", jsonEncScoreBoardConfig val.scoreboard )
-        , ( "start_time", maybeEncode Json.Encode.int val.start_time )
         , ( "problems", Json.Encode.list jsonEncProblem val.problems )
         , ( "teams", Json.Encode.list jsonEncTeam val.teams )
         ]
@@ -180,17 +177,29 @@ jsonEncConfig val =
 
 type alias ScoreBoardConfig =
     { interval : Float
+    , start_time : Maybe Int
+    , end_time : Maybe Int
+    , zone : Maybe String
     }
 
 
 jsonDecScoreBoardConfig : Json.Decode.Decoder ScoreBoardConfig
 jsonDecScoreBoardConfig =
-    Json.Decode.succeed (\pinterval -> { interval = pinterval }) |> custom Json.Decode.float
+    Json.Decode.succeed (\pinterval pstart_time pend_time pzone -> { interval = pinterval, start_time = pstart_time, end_time = pend_time, zone = pzone })
+        |> required "interval" Json.Decode.float
+        |> fnullable "start_time" Json.Decode.int
+        |> fnullable "end_time" Json.Decode.int
+        |> fnullable "zone" Json.Decode.string
 
 
 jsonEncScoreBoardConfig : ScoreBoardConfig -> Value
 jsonEncScoreBoardConfig val =
-    Json.Encode.float val.interval
+    Json.Encode.object
+        [ ( "interval", Json.Encode.float val.interval )
+        , ( "start_time", maybeEncode Json.Encode.int val.start_time )
+        , ( "end_time", maybeEncode Json.Encode.int val.end_time )
+        , ( "zone", maybeEncode Json.Encode.string val.zone )
+        ]
 
 
 type alias Score =
@@ -224,15 +233,17 @@ type alias Status =
     { problem_id : Int
     , correct : Bool
     , pending : Bool
+    , corrected_at : Maybe Int
     }
 
 
 jsonDecStatus : Json.Decode.Decoder Status
 jsonDecStatus =
-    Json.Decode.succeed (\pproblem_id pcorrect ppending -> { problem_id = pproblem_id, correct = pcorrect, pending = ppending })
+    Json.Decode.succeed (\pproblem_id pcorrect ppending pcorrected_at -> { problem_id = pproblem_id, correct = pcorrect, pending = ppending, corrected_at = pcorrected_at })
         |> required "problem_id" Json.Decode.int
         |> required "correct" Json.Decode.bool
         |> required "pending" Json.Decode.bool
+        |> fnullable "corrected_at" Json.Decode.int
 
 
 jsonEncStatus : Status -> Value
@@ -241,6 +252,7 @@ jsonEncStatus val =
         [ ( "problem_id", Json.Encode.int val.problem_id )
         , ( "correct", Json.Encode.bool val.correct )
         , ( "pending", Json.Encode.bool val.pending )
+        , ( "corrected_at", maybeEncode Json.Encode.int val.corrected_at )
         ]
 
 

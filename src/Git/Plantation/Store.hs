@@ -7,6 +7,8 @@
 module Git.Plantation.Store
   ( Store
   , Build
+  , isCorrect
+  , isPending
   , initial
   , modifyWith
   , uniqByTeam
@@ -40,6 +42,12 @@ type Build = Record
    , "created"     >: Int64
    ]
 
+isCorrect :: Build -> Bool
+isCorrect b = b ^. #status == "success"
+
+isPending :: Build -> Bool
+isPending b = b ^. #status == "running" || b ^. #status == "pending"
+
 initial :: Plant Store
 initial = do
   problems <- asks (view #problems . view #config)
@@ -63,11 +71,14 @@ uniqByTeam =
     ordStatus'  _ "pending" = LT
     ordStatus' _ _          = EQ
 
-filterWithStartTime :: [Build] -> Plant [Build]
-filterWithStartTime builds =
-  asks (view #start_time . view #config) <&> \case
-    Nothing -> builds
-    Just st -> filter (\b -> b ^. #created >= st) builds
+filterWithTime :: [Build] -> Plant [Build]
+filterWithTime builds = do
+  config <- asks (view #scoreboard . view #config)
+  pure $ case (config ^. #start_time, config ^. #end_time) of
+    (Just st, Just et) -> filter (\b -> b ^. #created >= st && b ^. #created <= et) builds
+    (Just st, Nothing) -> filter (\b -> b ^. #created >= st) builds
+    (Nothing, Just et) -> filter (\b -> et <= b ^. #created) builds
+    _                  -> builds
 
 fetchBuilds :: Problem -> Plant [Build]
 fetchBuilds problem = do
@@ -75,7 +86,7 @@ fetchBuilds problem = do
   builds <- tryAny (getAllBuilds owner repo) >>= \case
     Left err     -> logError (display err) >> pure []
     Right builds -> pure builds
-  filterWithStartTime $ shrink <$> builds
+  filterWithTime $ shrink <$> builds
 
 getAllBuilds :: Text -> Text -> Plant [Drone.Build]
 getAllBuilds owner repo = mconcat <$> getAllBuilds' [] 1

@@ -6,6 +6,7 @@
 module Git.Plantation.Score where
 
 import           RIO
+import qualified RIO.List                    as L
 
 import           Data.Extensible
 import           Data.Extensible.Elm.Mapping
@@ -15,6 +16,7 @@ import           Git.Plantation.Data         (Problem, Repo, Team,
                                               repoGithubPath)
 import           Git.Plantation.Store        (Store)
 import qualified Git.Plantation.Store        as Store
+import qualified Git.Plantation.Store        as Build
 
 type Score = Record
   '[ "team"  >: Text
@@ -24,9 +26,10 @@ type Score = Record
    ]
 
 type Status = Record
-  '[ "problem_id" >: Int
-   , "correct"    >: Bool
-   , "pending"    >: Bool
+  '[ "problem_id"   >: Int
+   , "correct"      >: Bool
+   , "pending"      >: Bool
+   , "corrected_at" >: Maybe Int64
    ]
 
 type Link = Record
@@ -67,9 +70,10 @@ mkScore problems store team
 
 toStatus :: Int -> [Store.Build] -> Status
 toStatus idx builds
-    = #problem_id @= idx
-   <: #correct    @= any (\b -> b ^. #status == "success") builds
-   <: #pending    @= any (\b -> b ^. #status == "running" || b ^. #status == "pending") builds
+    = #problem_id   @= idx
+   <: #correct      @= any Build.isCorrect builds
+   <: #pending      @= any Build.isPending builds
+   <: #corrected_at @= L.minimumMaybe (view #created <$> filter Build.isCorrect builds)
    <: nil
 
 calcPoint :: IntMap Status -> [Problem] -> Int
