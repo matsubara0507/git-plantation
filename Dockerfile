@@ -2,7 +2,6 @@ FROM codesimple/elm:0.19 as build-elm
 WORKDIR /work
 COPY . /work
 RUN elm make elm-src/Main.elm --output=static/main.js
-RUN elm make elm-src/Pages/Graph.elm --output=static/graph.js
 
 FROM matsubara0507/ubuntu-for-haskell:git
 ARG local_bin_path

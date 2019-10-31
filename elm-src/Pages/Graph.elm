@@ -1,13 +1,12 @@
-module Main exposing (main)
+module Pages.Graph exposing (Model, Msg(..), init, update, view)
 
 import Browser as Browser
 import Color exposing (Color)
 import Dict
 import Generated.API as API exposing (..)
 import Html exposing (..)
-import Html.Attributes exposing (checked, class, style, type_)
+import Html.Attributes exposing (style)
 import Html.Events exposing (onCheck, onClick)
-import Http
 import LineChart
 import LineChart.Area as Area
 import LineChart.Axis as Axis
@@ -34,23 +33,16 @@ import Time exposing (Posix, Zone)
 import TimeZone
 
 
-main =
-    Browser.element
-        { init = init
-        , view = view
-        , update = update
-        , subscriptions = subscriptions
-        }
+type alias Global a =
+    { a
+        | config : API.ScoreBoardConfig
+        , scores : List Score
+    }
 
 
 type alias Model =
-    { reload : Bool
-    , problems : List API.Problem
-    , teams : List API.Team
-    , scores : List Score
-    , interval : Float
+    { zone : Zone
     , hinted : Maybe ScoreHistory
-    , zone : Zone
     }
 
 
@@ -61,112 +53,34 @@ type alias ScoreHistory =
 
 
 type Msg
-    = CheckReload Bool
-    | Reload
-    | Tick Posix
-    | FetchScores (Result Http.Error (List API.Score))
-    | Hint (Maybe ScoreHistory)
+    = Hint (Maybe ScoreHistory)
 
 
-type alias Flags =
-    { config : API.Config }
-
-
-init : Flags -> ( Model, Cmd Msg )
-init flags =
+init : Global a -> Model
+init model =
     let
         zone =
-            flags.config.scoreboard.zone
+            model.config.zone
                 |> Maybe.andThen (\k -> Dict.get k TimeZone.zones)
                 |> Maybe.withDefault (\_ -> Time.utc)
-
-        model =
-            { reload = True
-            , problems = flags.config.problems
-            , teams = flags.config.teams
-            , scores = []
-            , interval = flags.config.scoreboard.interval
-            , hinted = Nothing
-            , zone = zone ()
-            }
     in
-    ( { model | scores = Score.build model [] }, Cmd.batch [ API.getApiScores FetchScores ] )
+    { hinted = Nothing, zone = zone () }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        CheckReload reload ->
-            ( { model | reload = reload }, Cmd.none )
-
-        Reload ->
-            ( model, API.getApiScores FetchScores )
-
-        Tick _ ->
-            ( model
-            , if model.reload then
-                API.getApiScores FetchScores
-
-              else
-                Cmd.none
-            )
-
-        FetchScores (Ok resp) ->
-            ( { model | scores = Score.updateBy resp model.scores }, Cmd.none )
-
-        FetchScores (Err _) ->
-            ( model, Cmd.none )
-
         Hint point ->
             ( { model | hinted = point }, Cmd.none )
 
 
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    Time.every model.interval Tick
+view : Global a -> Model -> Html.Html Msg
+view global model =
+    Html.div [ style "margin-top" "1em" ] [ chart global model ]
 
 
-view : Model -> Html Msg
-view model =
-    div [ class "" ]
-        [ div [ class "my-3 mx-auto col-10" ]
-            [ div []
-                [ h2
-                    [ class "f1-light float-left link-gray-dark"
-                    , onClick Reload
-                    ]
-                    [ text "Git Challenge ScoreBoard" ]
-                , div [ class "float-right" ] [ viewCheckReload model ]
-                ]
-            , viewGrpah model
-            ]
-        ]
-
-
-viewCheckReload : Model -> Html Msg
-viewCheckReload model =
-    form []
-        [ div [ class "form-checkbox" ]
-            [ label []
-                [ input
-                    [ type_ "checkbox"
-                    , checked model.reload
-                    , onCheck CheckReload
-                    ]
-                    []
-                , text "Auto Reload"
-                ]
-            ]
-        ]
-
-
-viewGrpah : Model -> Html.Html Msg
-viewGrpah model =
-    Html.div [ style "margin-top" "1em" ] [ chart model ]
-
-
-chart : Model -> Html.Html Msg
-chart model =
+chart : Global a -> Model -> Html.Html Msg
+chart global model =
     LineChart.viewCustom
         { y =
             Axis.custom
@@ -223,23 +137,23 @@ chart model =
                 , individual = styleIndividual
                 }
         }
-        (buildData model)
+        (buildData global.scores)
 
 
-buildData : Model -> List (LineChart.Series ScoreHistory)
-buildData model =
+buildData : List Score -> List (LineChart.Series ScoreHistory)
+buildData scores =
     let
         colors =
-            Palette.generateAdvanced (List.length model.scores + 4)
+            Palette.generateAdvanced (List.length scores + 4)
                 { start = Color.fromHSL ( 0, 100, 50 )
                 , rotationDirection = Palette.RGB
                 , rotations = 1.5
                 , gamma = 1.2
                 }
                 |> List.drop 2
-                |> List.take (List.length model.scores)
+                |> List.take (List.length scores)
     in
-    List.sortBy (.name << .team) model.scores
+    List.sortBy (.name << .team) scores
         |> List.map2 buildScoreHistories colors
 
 

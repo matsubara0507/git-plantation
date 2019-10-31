@@ -30,7 +30,7 @@ api = Proxy
 
 server :: ServerT API Plant
 server = indexHtml
-    :<|> graphHtml
+    :<|> indexHtml
     :<|> serveDirectoryFileServer "static"
     :<|> webhook
     :<|> crud
@@ -46,19 +46,6 @@ indexHtml = do
     H.script ! H.type_ "application/json" ! H.id "config" $
       H.preEscapedLazyText (Json.encodeToLazyText config)
     H.script ! H.src "static/main.js" $ H.text ""
-    H.script ! H.src "static/index.js" $ H.text ""
-
-graphHtml :: Plant H.Html
-graphHtml = do
-  config <- asks (view #config)
-  pure $ H.docTypeHtml $ do
-    H.head $ do
-      stylesheet "https://cdnjs.cloudflare.com/ajax/libs/Primer/10.8.1/build.css"
-      stylesheet "https://use.fontawesome.com/releases/v5.2.0/css/all.css"
-    H.div ! H.id "main" $ H.text ""
-    H.script ! H.type_ "application/json" ! H.id "config" $
-      H.preEscapedLazyText (Json.encodeToLazyText config)
-    H.script ! H.src "static/graph.js" $ H.text ""
     H.script ! H.src "static/index.js" $ H.text ""
 
 stylesheet :: H.AttributeValue -> H.Html

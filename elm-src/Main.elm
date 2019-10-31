@@ -8,9 +8,11 @@ import Html.Attributes exposing (checked, class, href, id, style, target, type_)
 import Html.Events exposing (onCheck, onClick)
 import Http
 import Pages.Board as Board
+import Pages.Graph as Graph
 import Score exposing (Score)
 import Time exposing (Posix)
 import Url
+import Url.Parser as Parser exposing ((</>), Parser, custom, fragment, map, oneOf, s, top)
 
 
 main =
@@ -36,6 +38,7 @@ type alias Model =
 
 type Page
     = Home -- Board
+    | Graph Graph.Model
 
 
 type Msg
@@ -45,6 +48,7 @@ type Msg
     | Reload
     | Tick Posix
     | FetchScores (Result Http.Error (List API.Score))
+    | GraphMsg Graph.Msg
 
 
 init : { config : API.Config } -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -60,13 +64,37 @@ init { config } url key =
 
 
 stepUrl : Url.Url -> Model -> ( Model, Cmd Msg )
-stepUrl _ model =
-    ( model, Cmd.batch [ API.getApiScores FetchScores ] )
+stepUrl url model =
+    let
+        parser =
+            oneOf
+                [ route top
+                    ( model, API.getApiScores FetchScores )
+                , route (s "graph")
+                    ( { model | page = Graph (Graph.init model) }, API.getApiScores FetchScores )
+                ]
+    in
+    case Parser.parse parser url of
+        Just answer ->
+            answer
+
+        Nothing ->
+            ( model, Cmd.none )
+
+
+route : Parser a b -> a -> Parser (b -> c) c
+route parser handler =
+    Parser.map handler parser
+
+
+stepPageWith : ( model -> Page, msg -> Msg ) -> Model -> ( model, Cmd msg ) -> ( Model, Cmd Msg )
+stepPageWith ( toPage, toMsg ) model ( local, msg ) =
+    ( { model | page = toPage local }, Cmd.map toMsg msg )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-    case msg of
+update message model =
+    case message of
         LinkClicked (Browser.Internal url) ->
             ( model, Nav.pushUrl model.key (Url.toString url) )
 
@@ -96,6 +124,14 @@ update msg model =
 
         FetchScores (Err _) ->
             ( model, Cmd.none )
+
+        GraphMsg msg ->
+            case model.page of
+                Graph local ->
+                    stepPageWith ( Graph, GraphMsg ) model (Graph.update msg local)
+
+                _ ->
+                    ( model, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
@@ -148,3 +184,6 @@ viewPage model =
     case model.page of
         Home ->
             Board.view model
+
+        Graph local ->
+            Html.map GraphMsg (Graph.view model local)
