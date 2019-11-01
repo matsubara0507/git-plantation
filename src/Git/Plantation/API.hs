@@ -19,21 +19,25 @@ import qualified Text.Blaze.Html5            as H
 import qualified Text.Blaze.Html5.Attributes as H
 
 type API
-      = Get '[HTML] H.Html
-   :<|> "graph"  :> Get '[HTML] H.Html
-   :<|> "static" :> Raw
+      = "static" :> Raw
    :<|> "hook"   :> WebhookAPI
    :<|> "api"    :> CRUD
+   :<|> Index
+
+type Index
+      = Get '[HTML] H.Html
+   :<|> "graph" :> Get '[HTML] H.Html
 
 api :: Proxy API
 api = Proxy
 
 server :: ServerT API Plant
-server = indexHtml
-    :<|> indexHtml
-    :<|> serveDirectoryFileServer "static"
+server = serveDirectoryFileServer "static"
     :<|> webhook
     :<|> crud
+    :<|> index
+    where
+      index = indexHtml :<|> indexHtml
 
 indexHtml :: Plant H.Html
 indexHtml = do
