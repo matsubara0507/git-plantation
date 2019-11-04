@@ -7,6 +7,7 @@ module Orphans () where
 import           RIO
 
 import           Data.Extensible
+import           Elm.Mapping
 import           Web.FormUrlEncoded
 import           Web.HttpApiData
 
@@ -17,3 +18,6 @@ instance Forall (KeyTargetAre KnownSymbol FromHttpApiData) xs => FromForm (Recor
 
 instance FromHttpApiData a => FromHttpApiData (Identity a) where
   parseUrlPiece = fmap pure . parseUrlPiece
+
+instance IsElmType Int64 where
+  compileElmType _ = toElmType (Proxy @ Int)

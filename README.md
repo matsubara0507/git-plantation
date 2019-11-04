@@ -81,3 +81,11 @@ $ docker-compose up app store
 ```
 $ make image tag=matsubara0507/git-plantation:dev
 ```
+
+## Reset repository By Slack
+
+use `git-plantation-slack` with docker-compose:
+
+```
+$ docker-compose up slack
+```
