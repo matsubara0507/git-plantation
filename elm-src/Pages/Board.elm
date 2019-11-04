@@ -21,7 +21,7 @@ view : Model a -> Html msg
 view model =
     div [ id "scoreboard" ]
         [ table
-            [ class "scoreboard-table col-12 f5" ]
+            [ class "scoreboard-table col-12 f5 break-word", style "table-layout" "fixed" ]
             [ thead [] [ tr [ class "border-bottum" ] (viewHeader model) ]
             , tbody [] (viewBody model)
             ]
