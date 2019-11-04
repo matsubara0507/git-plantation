@@ -19,21 +19,25 @@ import qualified Text.Blaze.Html5            as H
 import qualified Text.Blaze.Html5.Attributes as H
 
 type API
-      = Get '[HTML] H.Html
-   :<|> "graph"  :> Get '[HTML] H.Html
-   :<|> "static" :> Raw
+      = "static" :> Raw
    :<|> "hook"   :> WebhookAPI
    :<|> "api"    :> CRUD
+   :<|> Index
+
+type Index
+      = Get '[HTML] H.Html
+   :<|> "graph" :> Get '[HTML] H.Html
 
 api :: Proxy API
 api = Proxy
 
 server :: ServerT API Plant
-server = indexHtml
-    :<|> graphHtml
-    :<|> serveDirectoryFileServer "static"
+server = serveDirectoryFileServer "static"
     :<|> webhook
     :<|> crud
+    :<|> index
+    where
+      index = indexHtml :<|> indexHtml
 
 indexHtml :: Plant H.Html
 indexHtml = do
@@ -46,19 +50,6 @@ indexHtml = do
     H.script ! H.type_ "application/json" ! H.id "config" $
       H.preEscapedLazyText (Json.encodeToLazyText config)
     H.script ! H.src "static/main.js" $ H.text ""
-    H.script ! H.src "static/index.js" $ H.text ""
-
-graphHtml :: Plant H.Html
-graphHtml = do
-  config <- asks (view #config)
-  pure $ H.docTypeHtml $ do
-    H.head $ do
-      stylesheet "https://cdnjs.cloudflare.com/ajax/libs/Primer/10.8.1/build.css"
-      stylesheet "https://use.fontawesome.com/releases/v5.2.0/css/all.css"
-    H.div ! H.id "main" $ H.text ""
-    H.script ! H.type_ "application/json" ! H.id "config" $
-      H.preEscapedLazyText (Json.encodeToLazyText config)
-    H.script ! H.src "static/graph.js" $ H.text ""
     H.script ! H.src "static/index.js" $ H.text ""
 
 stylesheet :: H.AttributeValue -> H.Html
