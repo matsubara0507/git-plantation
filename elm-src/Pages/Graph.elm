@@ -1,12 +1,10 @@
 module Pages.Graph exposing (Model, Msg(..), init, update, view)
 
-import Browser as Browser
 import Color exposing (Color)
 import Dict
 import Generated.API as API exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (style)
-import Html.Events exposing (onCheck, onClick)
 import LineChart
 import LineChart.Area as Area
 import LineChart.Axis as Axis
@@ -74,12 +72,12 @@ update msg model =
             ( { model | hinted = point }, Cmd.none )
 
 
-view : Global a -> Model -> Html.Html Msg
+view : Global a -> Model -> Html Msg
 view global model =
     Html.div [ style "margin-top" "1em" ] [ chart global model ]
 
 
-chart : Global a -> Model -> Html.Html Msg
+chart : Global a -> Model -> Html Msg
 chart global model =
     LineChart.viewCustom
         { y =

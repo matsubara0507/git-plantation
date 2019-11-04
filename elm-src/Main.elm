@@ -4,8 +4,8 @@ import Browser as Browser
 import Browser.Navigation as Nav
 import Generated.API as API exposing (..)
 import Html exposing (..)
-import Html.Attributes exposing (checked, class, href, id, style, target, type_)
-import Html.Events exposing (onCheck, onClick)
+import Html.Attributes exposing (checked, class, href, id, style, type_)
+import Html.Events exposing (onCheck)
 import Http
 import Pages.Board as Board
 import Pages.Graph as Graph
@@ -13,7 +13,7 @@ import Pages.Team as Team
 import Score exposing (Score)
 import Time exposing (Posix)
 import Url
-import Url.Parser as Parser exposing ((</>), Parser, custom, fragment, map, oneOf, s, top)
+import Url.Parser as Parser exposing ((</>), Parser, oneOf, s, top)
 
 
 main =

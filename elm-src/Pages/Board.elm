@@ -1,13 +1,9 @@
 module Pages.Board exposing (view)
 
-import Browser as Browser
 import Generated.API as API exposing (..)
 import Html exposing (..)
-import Html.Attributes exposing (checked, class, href, id, style, target, type_)
-import Html.Events exposing (onCheck, onClick)
-import Http
+import Html.Attributes exposing (class, href, id, style, target)
 import Score exposing (Score)
-import Time exposing (Posix)
 
 
 type alias Model a =

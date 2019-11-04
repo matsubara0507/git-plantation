@@ -1,9 +1,7 @@
 module Pages.Team exposing (Model, Msg, init, update, view)
 
 import Generated.API as API exposing (..)
-import Html exposing (..)
-import Html.Attributes exposing (style)
-import Html.Events exposing (onCheck, onClick)
+import Html exposing (Html)
 import Pages.Board as Board
 import Pages.Graph as Graph
 import Score exposing (Score)
