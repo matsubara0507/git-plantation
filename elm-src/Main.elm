@@ -47,10 +47,8 @@ type Msg
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
     | CheckReload Bool
-    | Reload
     | Tick Posix
     | FetchScores (Result Http.Error (List API.Score))
-    | FetchTeamScores String (Result Http.Error (List API.Score))
     | GraphMsg Graph.Msg
     | TeamMsg Team.Msg
 
@@ -73,11 +71,11 @@ stepUrl url model =
         parser =
             oneOf
                 [ route top
-                    ( model, API.getApiScores FetchScores )
+                    ( { model | page = Home }, API.getApiScores FetchScores )
                 , route (s "graph")
                     ( { model | page = Graph (Graph.init model) }, API.getApiScores FetchScores )
                 , route (s "teams" </> Parser.string)
-                    (\id -> ( { model | page = Team (Team.init model id) }, API.getApiScores (FetchTeamScores id) ))
+                    (\id -> ( { model | page = Team (Team.init model id) }, API.getApiScores FetchScores ))
                 ]
     in
     case Parser.parse parser url of
@@ -113,9 +111,6 @@ update message model =
         CheckReload reload ->
             ( { model | reload = reload }, Cmd.none )
 
-        Reload ->
-            ( model, API.getApiScores FetchScores )
-
         Tick _ ->
             ( model
             , if model.reload then
@@ -130,16 +125,6 @@ update message model =
 
         FetchScores (Err _) ->
             ( model, Cmd.none )
-
-        FetchTeamScores id (Ok resp) ->
-            let
-                filtered =
-                    Score.filterByTeamIDs [ id ] model.scores
-            in
-            ( { model | scores = Score.updateBy resp filtered }, Cmd.none )
-
-        FetchTeamScores id (Err _) ->
-            ( { model | scores = Score.filterByTeamIDs [ id ] model.scores }, Cmd.none )
 
         GraphMsg msg ->
             case model.page of
@@ -173,13 +158,16 @@ view model =
 viewBody : Model -> List (Html Msg)
 viewBody model =
     [ div [ class "my-3 mx-auto col-10" ]
-        [ div []
-            [ h2
-                [ class "f1-light float-left link-gray-dark"
-                , onClick Reload
+        [ div [ class "Header" ]
+            [ div [ class "Header-item Header-item--full" ]
+                [ a [ class "Header-link", href "/" ]
+                    [ h2 [] [ text "Git Challenge ScoreBoard" ] ]
                 ]
-                [ text "Git Challenge ScoreBoard" ]
-            , div [ class "float-right" ] [ viewCheckReload model ]
+            , div [ class "Header-item" ]
+                [ a [ class "Header-link", href "/graph" ]
+                    [ text "Graph" ]
+                ]
+            , div [ class "Header-item mr-0" ] [ viewCheckReload model ]
             ]
         , viewPage model
         ]

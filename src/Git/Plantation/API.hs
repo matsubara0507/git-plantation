@@ -45,7 +45,7 @@ indexHtml = do
   config <- asks (view #config)
   pure $ H.docTypeHtml $ do
     H.head $ do
-      stylesheet "https://cdnjs.cloudflare.com/ajax/libs/Primer/10.8.1/build.css"
+      stylesheet "https://unpkg.com/@primer/css@13.2.0/dist/primer.css"
       stylesheet "https://use.fontawesome.com/releases/v5.2.0/css/all.css"
     H.div ! H.id "main" $ H.text ""
     H.script ! H.type_ "application/json" ! H.id "config" $

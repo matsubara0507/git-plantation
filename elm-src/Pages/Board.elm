@@ -21,7 +21,7 @@ view : Model a -> Html msg
 view model =
     div [ id "scoreboard" ]
         [ table
-            [ class "scoreboard-table col-12 f3" ]
+            [ class "scoreboard-table col-12 f5" ]
             [ thead [] [ tr [ class "border-bottum" ] (viewHeader model) ]
             , tbody [] (viewBody model)
             ]
@@ -33,14 +33,14 @@ viewHeader model =
     List.concat
         [ [ th [] [] ]
         , List.map viewHeaderCol model.problems
-        , [ th [ class "text-center p-2 f4" ] [ text "Score" ] ]
+        , [ th [ class "text-center p-2 f6" ] [ text "Score" ] ]
         ]
 
 
 viewHeaderCol : API.Problem -> Html msg
 viewHeaderCol problem =
     th
-        [ id problem.name, class "text-center p-2 f4", style "width" "100px" ]
+        [ id problem.name, class "text-center p-2 f6" ]
         [ text problem.name ]
 
 
@@ -62,9 +62,13 @@ viewScore idx score =
             )
         ]
         (List.concat
-            [ [ th [ class "text-right p-2 f4" ] [ text score.team.name ] ]
+            [ [ th [ class "text-right p-2 f" ]
+                    [ a [ class "link-gray-dark", href ("/teams/" ++ score.team.id) ]
+                        [ text score.team.name ]
+                    ]
+              ]
             , List.map viewStatus score.stats
-            , [ th [ class "text-center p-2 f4" ] [ text (String.fromInt score.point) ] ]
+            , [ th [ class "text-center p-2 f6" ] [ text (String.fromInt score.point) ] ]
             ]
         )
 
@@ -82,16 +86,16 @@ statBadge : Score.State -> Html msg
 statBadge state =
     case state of
         Score.None ->
-            span [ class "Label Label--gray-darker" ] [ text "未提出" ]
+            span [ class "State State--small" ] [ text "未提出" ]
 
         Score.Pending ->
-            span [ class "Label bg-yellow" ] [ text "採点中" ]
+            span [ class "State State--small bg-yellow" ] [ text "採点中" ]
 
         Score.Incorrect ->
-            span [ class "Label bg-red" ] [ text "不正解" ]
+            span [ class "State State--small bg-red" ] [ text "不正解" ]
 
         Score.Correct ->
-            span [ class "Label bg-green" ] [ text "正解" ]
+            span [ class "State State--small bg-green" ] [ text "正解" ]
 
 
 stars : Int -> Html msg
@@ -101,7 +105,7 @@ stars n =
             i [ class "fas fa-star" ] []
     in
     if n < 4 then
-        div [ class "f5" ] (List.repeat n star)
+        div [ class "f6" ] (List.repeat n star)
 
     else
-        div [ class "f5" ] [ star, text ("x" ++ String.fromInt n) ]
+        div [ class "f6" ] [ star, text ("x" ++ String.fromInt n) ]
