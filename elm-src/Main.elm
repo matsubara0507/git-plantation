@@ -9,6 +9,7 @@ import Html.Events exposing (onCheck, onClick)
 import Http
 import Pages.Board as Board
 import Pages.Graph as Graph
+import Pages.Team as Team
 import Score exposing (Score)
 import Time exposing (Posix)
 import Url
@@ -39,6 +40,7 @@ type alias Model =
 type Page
     = Home -- Board
     | Graph Graph.Model
+    | Team Team.Model
 
 
 type Msg
@@ -48,7 +50,9 @@ type Msg
     | Reload
     | Tick Posix
     | FetchScores (Result Http.Error (List API.Score))
+    | FetchTeamScores String (Result Http.Error (List API.Score))
     | GraphMsg Graph.Msg
+    | TeamMsg Team.Msg
 
 
 init : { config : API.Config } -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -72,6 +76,8 @@ stepUrl url model =
                     ( model, API.getApiScores FetchScores )
                 , route (s "graph")
                     ( { model | page = Graph (Graph.init model) }, API.getApiScores FetchScores )
+                , route (s "teams" </> Parser.string)
+                    (\id -> ( { model | page = Team (Team.init model id) }, API.getApiScores (FetchTeamScores id) ))
                 ]
     in
     case Parser.parse parser url of
@@ -125,10 +131,28 @@ update message model =
         FetchScores (Err _) ->
             ( model, Cmd.none )
 
+        FetchTeamScores id (Ok resp) ->
+            let
+                filtered =
+                    Score.filterByTeamIDs [ id ] model.scores
+            in
+            ( { model | scores = Score.updateBy resp filtered }, Cmd.none )
+
+        FetchTeamScores id (Err _) ->
+            ( { model | scores = Score.filterByTeamIDs [ id ] model.scores }, Cmd.none )
+
         GraphMsg msg ->
             case model.page of
                 Graph local ->
                     stepPageWith ( Graph, GraphMsg ) model (Graph.update msg local)
+
+                _ ->
+                    ( model, Cmd.none )
+
+        TeamMsg msg ->
+            case model.page of
+                Team local ->
+                    stepPageWith ( Team, TeamMsg ) model (Team.update msg local)
 
                 _ ->
                     ( model, Cmd.none )
@@ -187,3 +211,6 @@ viewPage model =
 
         Graph local ->
             Html.map GraphMsg (Graph.view model local)
+
+        Team local ->
+            Html.map TeamMsg (Team.view model local)

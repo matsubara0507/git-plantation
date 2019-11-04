@@ -27,6 +27,7 @@ type API
 type Index
       = Get '[HTML] H.Html
    :<|> "graph" :> Get '[HTML] H.Html
+   :<|> "teams" :> Capture "id" Text :> Get '[HTML] H.Html
 
 api :: Proxy API
 api = Proxy
@@ -37,7 +38,7 @@ server = serveDirectoryFileServer "static"
     :<|> crud
     :<|> index
     where
-      index = indexHtml :<|> indexHtml
+      index = indexHtml :<|> indexHtml :<|> const indexHtml
 
 indexHtml :: Plant H.Html
 indexHtml = do
@@ -49,8 +50,8 @@ indexHtml = do
     H.div ! H.id "main" $ H.text ""
     H.script ! H.type_ "application/json" ! H.id "config" $
       H.preEscapedLazyText (Json.encodeToLazyText config)
-    H.script ! H.src "static/main.js" $ H.text ""
-    H.script ! H.src "static/index.js" $ H.text ""
+    H.script ! H.src "/static/main.js" $ H.text ""
+    H.script ! H.src "/static/index.js" $ H.text ""
 
 stylesheet :: H.AttributeValue -> H.Html
 stylesheet url =
