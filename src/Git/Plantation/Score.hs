@@ -7,6 +7,7 @@ module Git.Plantation.Score where
 
 import           RIO
 import qualified RIO.List                    as L
+import qualified RIO.Text                    as T
 
 import           Data.Extensible
 import           Data.Extensible.Elm.Mapping
@@ -30,6 +31,7 @@ type Status = Record
    , "correct"      >: Bool
    , "pending"      >: Bool
    , "corrected_at" >: Maybe Int64
+   , "answerer"     >: Maybe Text  -- GitHub account
    ]
 
 type Link = Record
@@ -74,6 +76,7 @@ toStatus idx builds
    <: #correct      @= any Build.isCorrect builds
    <: #pending      @= any Build.isPending builds
    <: #corrected_at @= L.minimumMaybe (view #created <$> filter Build.isCorrect builds)
+   <: #answerer     @= listToMaybe (mapMaybe toAnswer builds)
    <: nil
 
 calcPoint :: IntMap Status -> [Problem] -> Int
@@ -90,3 +93,9 @@ toLink repo
     = #problem_id @= repo ^. #problem
    <: #url        @= maybe "" ("https://github.com/" <>) (repoGithubPath repo)
    <: nil
+
+toAnswer :: Store.Build -> Maybe Text
+toAnswer build =
+  case T.takeWhileEnd (/= '@') (build ^. #message) of
+    ""      -> Nothing
+    account -> Just account

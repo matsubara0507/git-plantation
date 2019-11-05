@@ -40,6 +40,7 @@ type Build = Record
    , "status"      >: Text
    , "source_repo" >: Text
    , "created"     >: Int64
+   , "message"     >: Text
    ]
 
 isCorrect :: Build -> Bool
@@ -59,7 +60,7 @@ modifyWith problem builds = IntMap.insert (problem ^. #id) builds
 
 uniqByTeam :: [Build] -> [Build]
 uniqByTeam =
-  mapMaybe (L.maximumByMaybe ordStatus)
+  mapMaybe (L.maximumByMaybe ordStatus . L.sortOn (view #created))
     . L.groupBy (\a b -> a ^. #source == b ^. #source)
   where
     ordStatus a b = ordStatus' (a ^. #status) (b ^. #status)
