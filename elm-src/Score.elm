@@ -1,4 +1,4 @@
-module Score exposing (Score, State(..), Status, Team, build, updateBy)
+module Score exposing (Score, State(..), Status, Team, build, filterByTeamIDs, updateBy)
 
 import Generated.API as API
 import List.Extra as List
@@ -117,6 +117,11 @@ toState status =
 
         ( True, _ ) ->
             Correct
+
+
+filterByTeamIDs : List String -> List Score -> List Score
+filterByTeamIDs ids =
+    List.filter (\s -> List.member s.team.id ids)
 
 
 

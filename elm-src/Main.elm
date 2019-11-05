@@ -4,15 +4,16 @@ import Browser as Browser
 import Browser.Navigation as Nav
 import Generated.API as API exposing (..)
 import Html exposing (..)
-import Html.Attributes exposing (checked, class, href, id, style, target, type_)
-import Html.Events exposing (onCheck, onClick)
+import Html.Attributes exposing (checked, class, href, id, style, type_)
+import Html.Events exposing (onCheck)
 import Http
 import Pages.Board as Board
 import Pages.Graph as Graph
+import Pages.Team as Team
 import Score exposing (Score)
 import Time exposing (Posix)
 import Url
-import Url.Parser as Parser exposing ((</>), Parser, custom, fragment, map, oneOf, s, top)
+import Url.Parser as Parser exposing ((</>), Parser, oneOf, s, top)
 
 
 main =
@@ -39,16 +40,17 @@ type alias Model =
 type Page
     = Home -- Board
     | Graph Graph.Model
+    | Team Team.Model
 
 
 type Msg
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
     | CheckReload Bool
-    | Reload
     | Tick Posix
     | FetchScores (Result Http.Error (List API.Score))
     | GraphMsg Graph.Msg
+    | TeamMsg Team.Msg
 
 
 init : { config : API.Config } -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -69,9 +71,11 @@ stepUrl url model =
         parser =
             oneOf
                 [ route top
-                    ( model, API.getApiScores FetchScores )
+                    ( { model | page = Home }, API.getApiScores FetchScores )
                 , route (s "graph")
                     ( { model | page = Graph (Graph.init model) }, API.getApiScores FetchScores )
+                , route (s "teams" </> Parser.string)
+                    (\id -> ( { model | page = Team (Team.init model id) }, API.getApiScores FetchScores ))
                 ]
     in
     case Parser.parse parser url of
@@ -107,9 +111,6 @@ update message model =
         CheckReload reload ->
             ( { model | reload = reload }, Cmd.none )
 
-        Reload ->
-            ( model, API.getApiScores FetchScores )
-
         Tick _ ->
             ( model
             , if model.reload then
@@ -133,6 +134,14 @@ update message model =
                 _ ->
                     ( model, Cmd.none )
 
+        TeamMsg msg ->
+            case model.page of
+                Team local ->
+                    stepPageWith ( Team, TeamMsg ) model (Team.update msg local)
+
+                _ ->
+                    ( model, Cmd.none )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
@@ -149,13 +158,16 @@ view model =
 viewBody : Model -> List (Html Msg)
 viewBody model =
     [ div [ class "my-3 mx-auto col-10" ]
-        [ div []
-            [ h2
-                [ class "f1-light float-left link-gray-dark"
-                , onClick Reload
+        [ div [ class "Header" ]
+            [ div [ class "Header-item Header-item--full" ]
+                [ a [ class "Header-link", href "/" ]
+                    [ h2 [] [ text "Git Challenge ScoreBoard" ] ]
                 ]
-                [ text "Git Challenge ScoreBoard" ]
-            , div [ class "float-right" ] [ viewCheckReload model ]
+            , div [ class "Header-item" ]
+                [ a [ class "Header-link", href "/graph" ]
+                    [ text "Graph" ]
+                ]
+            , div [ class "Header-item mr-0" ] [ viewCheckReload model ]
             ]
         , viewPage model
         ]
@@ -187,3 +199,6 @@ viewPage model =
 
         Graph local ->
             Html.map GraphMsg (Graph.view model local)
+
+        Team local ->
+            Html.map TeamMsg (Team.view model local)
