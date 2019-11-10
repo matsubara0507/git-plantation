@@ -97,14 +97,14 @@ executables:
     - optparse-applicative
 
 tests:
-  git-plantation-test:
+  spec:
     main:                Spec.hs
-    source-dirs:         test
+    source-dirs:         test/spec
     dependencies:
     - git-plantation
     - tasty
     - tasty-hspec
-    other-modules: []
+    - th-lift-instances
   generateElm:
     main:                GenerateElm.hs
     source-dirs:         test

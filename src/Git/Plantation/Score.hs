@@ -3,7 +3,12 @@
 {-# LANGUAGE TypeOperators    #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Git.Plantation.Score where
+module Git.Plantation.Score
+  ( Score
+  , Status
+  , Link
+  , mkScore
+  ) where
 
 import           RIO
 import qualified RIO.List                    as L
