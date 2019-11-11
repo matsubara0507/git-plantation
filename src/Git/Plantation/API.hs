@@ -28,6 +28,7 @@ type Index
       = Get '[HTML] H.Html
    :<|> "graph" :> Get '[HTML] H.Html
    :<|> "teams" :> Capture "id" Text :> Get '[HTML] H.Html
+   :<|> "players" :> Capture "id" Text :> Get '[HTML] H.Html
 
 api :: Proxy API
 api = Proxy
@@ -38,7 +39,7 @@ server = serveDirectoryFileServer "static"
     :<|> crud
     :<|> index
     where
-      index = indexHtml :<|> indexHtml :<|> const indexHtml
+      index = indexHtml :<|> indexHtml :<|> const indexHtml :<|> const indexHtml
 
 indexHtml :: Plant H.Html
 indexHtml = do

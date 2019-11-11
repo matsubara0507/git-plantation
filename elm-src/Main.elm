@@ -9,6 +9,7 @@ import Html.Events exposing (onCheck)
 import Http
 import Pages.Board as Board
 import Pages.Graph as Graph
+import Pages.Player as Player
 import Pages.Team as Team
 import Score exposing (Score)
 import Time exposing (Posix)
@@ -41,6 +42,7 @@ type Page
     = Home -- Board
     | Graph Graph.Model
     | Team Team.Model
+    | Player Player.Model
 
 
 type Msg
@@ -51,6 +53,7 @@ type Msg
     | FetchScores (Result Http.Error (List API.Score))
     | GraphMsg Graph.Msg
     | TeamMsg Team.Msg
+    | PlayerMsg Player.Msg
 
 
 init : { config : API.Config } -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -76,6 +79,8 @@ stepUrl url model =
                     ( { model | page = Graph (Graph.init model) }, API.getApiScores FetchScores )
                 , route (s "teams" </> Parser.string)
                     (\id -> ( { model | page = Team (Team.init model id) }, API.getApiScores FetchScores ))
+                , route (s "players" </> Parser.string)
+                    (\id -> ( { model | page = Player (Player.init model id) }, API.getApiScores FetchScores ))
                 ]
     in
     case Parser.parse parser url of
@@ -142,6 +147,14 @@ update message model =
                 _ ->
                     ( model, Cmd.none )
 
+        PlayerMsg msg ->
+            case model.page of
+                Player local ->
+                    stepPageWith ( Player, PlayerMsg ) model (Player.update msg local)
+
+                _ ->
+                    ( model, Cmd.none )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
@@ -202,3 +215,6 @@ viewPage model =
 
         Team local ->
             Html.map TeamMsg (Team.view model local)
+
+        Player local ->
+            Html.map PlayerMsg (Player.view model local)
