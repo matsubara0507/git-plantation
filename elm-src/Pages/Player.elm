@@ -9,7 +9,7 @@ import Score exposing (Score)
 
 
 type alias Model =
-    { id : String, graph : Graph.Model }
+    { id : String, teamID : String, graph : Graph.Model }
 
 
 type alias Global a =
@@ -24,9 +24,9 @@ type alias Msg =
     Graph.Msg
 
 
-init : Global a -> String -> Model
-init global id =
-    { id = id, graph = Graph.init global }
+init : Global a -> String -> String -> Model
+init global teamID id =
+    { id = id, teamID = teamID, graph = Graph.init global }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -46,6 +46,6 @@ view global model =
     in
     Html.div []
         [ Board.view filtered
-        , Team.viewFilters filtered model
+        , Team.viewFilters filtered { id = model.teamID, graph = model.graph }
         , Graph.view filtered model.graph
         ]

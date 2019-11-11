@@ -79,12 +79,12 @@ updateScoreBy : API.Score -> Score -> Score
 updateScoreBy respScore score =
     { score
         | point = respScore.point
-        , stats = List.map (updateStatsBy respScore) score.stats
+        , stats = List.map (updateStatusBy respScore) score.stats
     }
 
 
-updateStatsBy : API.Score -> Status -> Status
-updateStatsBy respScore status =
+updateStatusBy : API.Score -> Status -> Status
+updateStatusBy respScore status =
     let
         url =
             respScore.links
@@ -98,12 +98,12 @@ updateStatsBy respScore status =
         state =
             respStatus
                 |> Maybe.map toState
-                |> Maybe.withDefault status.state
+                |> Maybe.withDefault None
 
         correctTime =
             respStatus
                 |> Maybe.andThen .corrected_at
-                |> Maybe.withDefault status.correctTime
+                |> Maybe.withDefault 0
 
         answerer =
             respStatus
@@ -144,21 +144,8 @@ filterByPlayerID idx scores =
                     filtered =
                         { team | member = List.filter (\u -> u.github == idx) team.member }
                 in
-                { score
-                    | point = 0
-                    , stats = List.map (updateStatusForPlayer idx) score.stats
-                    , team = filtered
-                }
+                { score | team = filtered }
             )
-
-
-updateStatusForPlayer : String -> Status -> Status
-updateStatusForPlayer idx status =
-    if status.answerer == idx then
-        status
-
-    else
-        { status | state = None }
 
 
 

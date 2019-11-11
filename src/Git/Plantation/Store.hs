@@ -9,9 +9,11 @@ module Git.Plantation.Store
   , Build
   , isCorrect
   , isPending
+  , toAnswer
   , initial
   , modifyWith
   , uniqByTeam
+  , uniqByPlayer
   , fetchBuilds
   , getAllBuilds
   , API
@@ -21,6 +23,7 @@ module Git.Plantation.Store
 
 import           RIO
 import qualified RIO.List            as L
+import qualified RIO.Text            as T
 
 import           Data.Extensible
 import qualified Data.IntMap.Strict  as IntMap
@@ -49,21 +52,39 @@ isCorrect b = b ^. #status == "success"
 isPending :: Build -> Bool
 isPending b = b ^. #status == "running" || b ^. #status == "pending"
 
+toAnswer :: Build -> Maybe Text
+toAnswer build =
+  case T.takeWhileEnd (/= '@') (build ^. #message) of
+    ""      -> Nothing
+    account -> Just account
+
 initial :: Plant Store
 initial = do
   problems <- asks (view #problems . view #config)
   builds   <- forM problems (\p -> (p ^. #id,) <$> fetchBuilds p)
-  pure $ uniqByTeam <$> IntMap.fromList builds
+  pure $ uniqByPlayer <$> IntMap.fromList builds
 
 modifyWith :: Problem -> [Build] -> Store -> Store
-modifyWith problem builds = IntMap.insert (problem ^. #id) builds
+modifyWith problem = IntMap.insert (problem ^. #id)
 
 uniqByTeam :: [Build] -> [Build]
 uniqByTeam =
-  mapMaybe (L.maximumByMaybe ordStatus . L.sortOn (view #created))
-    . L.groupBy (\a b -> a ^. #source == b ^. #source)
+  mapMaybe (L.maximumByMaybe ordStatus . L.sortOn (view #created)) . groupByTeam
+
+uniqByPlayer :: [Build] -> [Build]
+uniqByPlayer =
+  mapMaybe (L.maximumByMaybe ordStatus . L.sortOn (view #created)) . groupByPlayer
+
+groupByTeam :: [Build] -> [[Build]]
+groupByTeam = L.groupBy ((==) `on` view #source) . L.sortOn (view #source)
+
+groupByPlayer :: [Build] -> [[Build]]
+groupByPlayer =
+  L.concatMap (L.groupBy ((==) `on` toAnswer) . L.sortOn (view #message)) . groupByTeam
+
+ordStatus :: Build -> Build -> Ordering
+ordStatus = ordStatus' `on` view #status
   where
-    ordStatus a b = ordStatus' (a ^. #status) (b ^. #status)
     ordStatus' "success" _  = GT
     ordStatus'  _ "success" = LT
     ordStatus' "running" _  = GT
@@ -112,11 +133,11 @@ server store = getStore :<|> putStore
       logInfo "[GET] /store"
       store' <- liftIO $ readTVarIO store
       logDebug (displayShow store')
-      pure store'
+      pure $ uniqByPlayer <$> store'
     putStore pid = do
       logInfo $ fromString ("[PATCH] /store/" <> show pid)
       findProblemWith pid $ \problem -> do
-        builds <- uniqByTeam <$> fetchBuilds problem
+        builds <- uniqByPlayer <$> fetchBuilds problem
         liftIO $ atomically (modifyTVar' store $ modifyWith problem builds)
       pure NoContent
 

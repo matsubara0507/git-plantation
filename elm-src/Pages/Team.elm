@@ -61,6 +61,6 @@ viewFilters global model =
         members =
             global.scores
                 |> List.concatMap (\s -> s.team.member)
-                |> List.map (\player -> toTag "players" player.github)
+                |> List.map (\player -> toTag ("teams/" ++ model.id) player.github)
     in
     div [ class "m-3" ] (List.concat [ members ])

@@ -74,21 +74,37 @@ stepUrl url model =
         parser =
             oneOf
                 [ route top
-                    ( { model | page = Home }, API.getApiScores FetchScores )
+                    { model | page = Home }
                 , route (s "graph")
-                    ( { model | page = Graph (Graph.init model) }, API.getApiScores FetchScores )
+                    { model | page = Graph (Graph.init model) }
                 , route (s "teams" </> Parser.string)
-                    (\id -> ( { model | page = Team (Team.init model id) }, API.getApiScores FetchScores ))
-                , route (s "players" </> Parser.string)
-                    (\id -> ( { model | page = Player (Player.init model id) }, API.getApiScores FetchScores ))
+                    (\id -> { model | page = Team (Team.init model id) })
+                , route (s "teams" </> Parser.string </> Parser.string)
+                    (\teamID id -> { model | page = Player (Player.init model teamID id) })
                 ]
     in
     case Parser.parse parser url of
         Just answer ->
-            answer
+            answer |> stepScores
 
         Nothing ->
             ( model, Cmd.none )
+
+
+stepScores : Model -> ( Model, Cmd Msg )
+stepScores model =
+    case model.page of
+        Home ->
+            ( model, API.getApiScores FetchScores )
+
+        Graph _ ->
+            ( model, API.getApiScores FetchScores )
+
+        Team local ->
+            ( model, API.getApiScoresByTeam local.id FetchScores )
+
+        Player local ->
+            ( model, API.getApiScoresByTeamByPlayer local.teamID local.id FetchScores )
 
 
 route : Parser a b -> a -> Parser (b -> c) c
@@ -117,13 +133,11 @@ update message model =
             ( { model | reload = reload }, Cmd.none )
 
         Tick _ ->
-            ( model
-            , if model.reload then
-                API.getApiScores FetchScores
+            if model.reload then
+                stepScores model
 
-              else
-                Cmd.none
-            )
+            else
+                ( model, Cmd.none )
 
         FetchScores (Ok resp) ->
             ( { model | scores = Score.updateBy resp model.scores }, Cmd.none )

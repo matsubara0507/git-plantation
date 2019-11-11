@@ -6,7 +6,6 @@ import           RIO                  hiding (link2)
 
 
 import           Data.Extensible
-import           Git.Plantation.Store (Store)
 import qualified Git.Plantation.Store as Store
 import           Test.Tasty.Hspec
 
@@ -54,7 +53,19 @@ spec = do
     context "when contain two success biuld" $
       it "should return fast build" $ do
         let build1' = build1 & #created `set` 1560100000
-        Store.uniqByTeam [build1',  build1] `shouldBe` [build1]
+        Store.uniqByTeam [build1', build1] `shouldBe` [build1]
+
+  describe "uniqByPlayer" $ do
+    it "should return builds uniqued by team" $
+      Store.uniqByPlayer [build1, build2, build3, build4] `shouldBe` [build1, build2]
+    context "when contain two success biuld" $
+      it "should return fast build" $ do
+        let build1' = build1 & #created `set` 1560100000
+        Store.uniqByPlayer [build1', build1] `shouldBe` [build1]
+    context "when contain different players" $
+      it "should return two builds" $ do
+        let build1' = build1 & #created `set` 1560100000 & #message `set` "pushed by: @octcat"
+        Store.uniqByPlayer [build1', build1] `shouldBe` [build1, build1']
 
 build1 :: Store.Build
 build1
