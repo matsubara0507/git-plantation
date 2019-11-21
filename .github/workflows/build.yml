@@ -18,8 +18,9 @@ jobs:
         cache-version: ["v1"]
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v1.1.0
       with:
+        submodules: recursive
         fetch-depth: 1
 
     - name: Cache .stack
