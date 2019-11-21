@@ -14,7 +14,7 @@ import Pages.Team as Team
 import Score exposing (Score)
 import Time exposing (Posix)
 import Url
-import Url.Parser as Parser exposing ((</>), Parser, oneOf, s, top)
+import Url.Parser as Parser exposing ((</>), Parser, oneOf, top)
 
 
 main =
@@ -75,11 +75,11 @@ stepUrl url model =
             oneOf
                 [ route top
                     { model | page = Home }
-                , route (s "graph")
+                , route (Parser.s "graph")
                     { model | page = Graph (Graph.init model) }
-                , route (s "teams" </> Parser.string)
+                , route (Parser.s "teams" </> Parser.string)
                     (\id -> { model | page = Team (Team.init model id) })
-                , route (s "teams" </> Parser.string </> Parser.string)
+                , route (Parser.s "teams" </> Parser.string </> Parser.string)
                     (\teamID id -> { model | page = Player (Player.init model teamID id) })
                 ]
     in
