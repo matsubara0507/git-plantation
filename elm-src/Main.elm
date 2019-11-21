@@ -9,6 +9,7 @@ import Html.Events exposing (onCheck)
 import Http
 import Pages.Board as Board
 import Pages.Graph as Graph
+import Pages.Player as Player
 import Pages.Team as Team
 import Score exposing (Score)
 import Time exposing (Posix)
@@ -41,6 +42,7 @@ type Page
     = Home -- Board
     | Graph Graph.Model
     | Team Team.Model
+    | Player Player.Model
 
 
 type Msg
@@ -51,6 +53,7 @@ type Msg
     | FetchScores (Result Http.Error (List API.Score))
     | GraphMsg Graph.Msg
     | TeamMsg Team.Msg
+    | PlayerMsg Player.Msg
 
 
 init : { config : API.Config } -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -71,19 +74,37 @@ stepUrl url model =
         parser =
             oneOf
                 [ route top
-                    ( { model | page = Home }, API.getApiScores FetchScores )
+                    { model | page = Home }
                 , route (s "graph")
-                    ( { model | page = Graph (Graph.init model) }, API.getApiScores FetchScores )
+                    { model | page = Graph (Graph.init model) }
                 , route (s "teams" </> Parser.string)
-                    (\id -> ( { model | page = Team (Team.init model id) }, API.getApiScores FetchScores ))
+                    (\id -> { model | page = Team (Team.init model id) })
+                , route (s "teams" </> Parser.string </> Parser.string)
+                    (\teamID id -> { model | page = Player (Player.init model teamID id) })
                 ]
     in
     case Parser.parse parser url of
         Just answer ->
-            answer
+            answer |> stepScores
 
         Nothing ->
             ( model, Cmd.none )
+
+
+stepScores : Model -> ( Model, Cmd Msg )
+stepScores model =
+    case model.page of
+        Home ->
+            ( model, API.getApiScores FetchScores )
+
+        Graph _ ->
+            ( model, API.getApiScores FetchScores )
+
+        Team local ->
+            ( model, API.getApiScoresByTeam local.id FetchScores )
+
+        Player local ->
+            ( model, API.getApiScoresByTeamByPlayer local.teamID local.id FetchScores )
 
 
 route : Parser a b -> a -> Parser (b -> c) c
@@ -112,13 +133,11 @@ update message model =
             ( { model | reload = reload }, Cmd.none )
 
         Tick _ ->
-            ( model
-            , if model.reload then
-                API.getApiScores FetchScores
+            if model.reload then
+                stepScores model
 
-              else
-                Cmd.none
-            )
+            else
+                ( model, Cmd.none )
 
         FetchScores (Ok resp) ->
             ( { model | scores = Score.updateBy resp model.scores }, Cmd.none )
@@ -138,6 +157,14 @@ update message model =
             case model.page of
                 Team local ->
                     stepPageWith ( Team, TeamMsg ) model (Team.update msg local)
+
+                _ ->
+                    ( model, Cmd.none )
+
+        PlayerMsg msg ->
+            case model.page of
+                Player local ->
+                    stepPageWith ( Player, PlayerMsg ) model (Player.update msg local)
 
                 _ ->
                     ( model, Cmd.none )
@@ -202,3 +229,6 @@ viewPage model =
 
         Team local ->
             Html.map TeamMsg (Team.view model local)
+
+        Player local ->
+            Html.map PlayerMsg (Player.view model local)

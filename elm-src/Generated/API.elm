@@ -1,4 +1,4 @@
-module Generated.API exposing (Config, Link, Problem, Repo, Score, ScoreBoardConfig, Status, Team, User, getApiProblems, getApiScores, getApiTeams, jsonDecConfig, jsonDecLink, jsonDecProblem, jsonDecRepo, jsonDecScore, jsonDecScoreBoardConfig, jsonDecStatus, jsonDecTeam, jsonDecUser, jsonEncConfig, jsonEncLink, jsonEncProblem, jsonEncRepo, jsonEncScore, jsonEncScoreBoardConfig, jsonEncStatus, jsonEncTeam, jsonEncUser, maybeBoolToIntStr)
+module Generated.API exposing (Config, Link, Problem, Repo, Score, ScoreBoardConfig, Status, Team, User, getApiProblems, getApiScores, getApiScoresByTeam, getApiScoresByTeamByPlayer, getApiTeams, jsonDecConfig, jsonDecLink, jsonDecProblem, jsonDecRepo, jsonDecScore, jsonDecScoreBoardConfig, jsonDecStatus, jsonDecTeam, jsonDecUser, jsonEncConfig, jsonEncLink, jsonEncProblem, jsonEncRepo, jsonEncScore, jsonEncScoreBoardConfig, jsonEncStatus, jsonEncTeam, jsonEncUser, maybeBoolToIntStr)
 
 -- The following module comes from bartavelle/json-helpers
 
@@ -234,16 +234,18 @@ type alias Status =
     , correct : Bool
     , pending : Bool
     , corrected_at : Maybe Int
+    , answerer : Maybe String
     }
 
 
 jsonDecStatus : Json.Decode.Decoder Status
 jsonDecStatus =
-    Json.Decode.succeed (\pproblem_id pcorrect ppending pcorrected_at -> { problem_id = pproblem_id, correct = pcorrect, pending = ppending, corrected_at = pcorrected_at })
+    Json.Decode.succeed (\pproblem_id pcorrect ppending pcorrected_at panswerer -> { problem_id = pproblem_id, correct = pcorrect, pending = ppending, corrected_at = pcorrected_at, answerer = panswerer })
         |> required "problem_id" Json.Decode.int
         |> required "correct" Json.Decode.bool
         |> required "pending" Json.Decode.bool
         |> fnullable "corrected_at" Json.Decode.int
+        |> fnullable "answerer" Json.Decode.string
 
 
 jsonEncStatus : Status -> Value
@@ -253,6 +255,7 @@ jsonEncStatus val =
         , ( "correct", Json.Encode.bool val.correct )
         , ( "pending", Json.Encode.bool val.pending )
         , ( "corrected_at", maybeEncode Json.Encode.int val.corrected_at )
+        , ( "answerer", maybeEncode Json.Encode.string val.answerer )
         ]
 
 
@@ -357,6 +360,71 @@ getApiScores toMsg =
             Url.Builder.crossOrigin ""
                 [ "api"
                 , "scores"
+                ]
+                params
+        , body =
+            Http.emptyBody
+        , expect =
+            Http.expectJson toMsg (Json.Decode.list jsonDecScore)
+        , timeout =
+            Nothing
+        , tracker =
+            Nothing
+        }
+
+
+getApiScoresByTeam : String -> (Result Http.Error (List Score) -> msg) -> Cmd msg
+getApiScoresByTeam capture_team toMsg =
+    let
+        params =
+            List.filterMap identity
+                (List.concat
+                    []
+                )
+    in
+    Http.request
+        { method =
+            "GET"
+        , headers =
+            []
+        , url =
+            Url.Builder.crossOrigin ""
+                [ "api"
+                , "scores"
+                , capture_team
+                ]
+                params
+        , body =
+            Http.emptyBody
+        , expect =
+            Http.expectJson toMsg (Json.Decode.list jsonDecScore)
+        , timeout =
+            Nothing
+        , tracker =
+            Nothing
+        }
+
+
+getApiScoresByTeamByPlayer : String -> String -> (Result Http.Error (List Score) -> msg) -> Cmd msg
+getApiScoresByTeamByPlayer capture_team capture_player toMsg =
+    let
+        params =
+            List.filterMap identity
+                (List.concat
+                    []
+                )
+    in
+    Http.request
+        { method =
+            "GET"
+        , headers =
+            []
+        , url =
+            Url.Builder.crossOrigin ""
+                [ "api"
+                , "scores"
+                , capture_team
+                , capture_player
                 ]
                 params
         , body =

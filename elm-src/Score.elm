@@ -1,4 +1,4 @@
-module Score exposing (Score, State(..), Status, Team, build, filterByTeamIDs, updateBy)
+module Score exposing (Score, State(..), Status, Team, build, filterByPlayerID, filterByTeamIDs, updateBy)
 
 import Generated.API as API
 import List.Extra as List
@@ -25,6 +25,7 @@ type alias Status =
     , url : String
     , state : State
     , correctTime : Int -- unixtime
+    , answerer : String
     }
 
 
@@ -57,6 +58,7 @@ buildEmptyStatus problem =
     , url = ""
     , state = None
     , correctTime = 0
+    , answerer = ""
     }
 
 
@@ -77,12 +79,12 @@ updateScoreBy : API.Score -> Score -> Score
 updateScoreBy respScore score =
     { score
         | point = respScore.point
-        , stats = List.map (updateStatsBy respScore) score.stats
+        , stats = List.map (updateStatusBy respScore) score.stats
     }
 
 
-updateStatsBy : API.Score -> Status -> Status
-updateStatsBy respScore status =
+updateStatusBy : API.Score -> Status -> Status
+updateStatusBy respScore status =
     let
         url =
             respScore.links
@@ -96,14 +98,19 @@ updateStatsBy respScore status =
         state =
             respStatus
                 |> Maybe.map toState
-                |> Maybe.withDefault status.state
+                |> Maybe.withDefault None
 
         correctTime =
             respStatus
                 |> Maybe.andThen .corrected_at
-                |> Maybe.withDefault status.correctTime
+                |> Maybe.withDefault 0
+
+        answerer =
+            respStatus
+                |> Maybe.andThen .answerer
+                |> Maybe.withDefault ""
     in
-    { status | url = url, state = state, correctTime = correctTime }
+    { status | url = url, state = state, correctTime = correctTime, answerer = answerer }
 
 
 toState : API.Status -> State
@@ -122,6 +129,23 @@ toState status =
 filterByTeamIDs : List String -> List Score -> List Score
 filterByTeamIDs ids =
     List.filter (\s -> List.member s.team.id ids)
+
+
+filterByPlayerID : String -> List Score -> List Score
+filterByPlayerID idx scores =
+    scores
+        |> List.filter (\score -> List.member idx (List.map .github score.team.member))
+        |> List.map
+            (\score ->
+                let
+                    team =
+                        score.team
+
+                    filtered =
+                        { team | member = List.filter (\u -> u.github == idx) team.member }
+                in
+                { score | team = filtered }
+            )
 
 
 

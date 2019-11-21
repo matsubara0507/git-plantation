@@ -31,7 +31,8 @@ import qualified RIO.Vector                           as V
 import           Data.Coerce                          (coerce)
 import           Data.Extensible
 import           Git.Plantation.Cmd.Arg
-import           Git.Plantation.Data                  (Problem, Repo, Team)
+import           Git.Plantation.Data                  (Problem, Repo, Team,
+                                                       User)
 import qualified Git.Plantation.Data.Team             as Team
 import           Git.Plantation.Env
 import           GitHub.Data.Name                     (mkName)
@@ -199,8 +200,8 @@ resetRepo args = do
     MixShell.exec $ Shell.rm_rf $ Shell.fromText repo
   initRepoInGitHub args
 
-pushForCI :: Team -> Problem -> Plant ()
-pushForCI team problem = do
+pushForCI :: Team -> Problem -> Maybe User -> Plant ()
+pushForCI team problem user = do
   token <- MixGitHub.tokenText
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
@@ -208,9 +209,11 @@ pushForCI team problem = do
   execGitForTeam team repo True problemUrl $ do
     Git.checkout [team ^. #name]
     Git.pull []
-    Git.commit ["--allow-empty", "-m", "Empty Commit!!"]
+    Git.commit ["--allow-empty", "-m", "pushed by: @" <> userAccount]
     Git.push ["origin", team ^. #name]
   logInfo "Success push"
+  where
+    userAccount = maybe "" (view #github) user
 
 deleteRepo :: RepoArg -> Plant ()
 deleteRepo args = do
