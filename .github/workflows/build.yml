@@ -1,0 +1,85 @@
+name: Build
+
+on:
+  pull_request: null
+  push:
+    branches:
+    - master
+    tags:
+    - v*
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        ghc: ["8.6.5"]
+        cabal: ["3.0"]
+        cache-version: ["v1"]
+
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+
+    - name: Cache .stack
+      id: cache-stack
+      uses: actions/cache@v1
+      with:
+        path: ~/.stack
+        key: ${{ runner.os }}-stack-${{ hashFiles('**/stack.yaml.lock') }}-${{ matrix.cache-version }}
+        restore-keys: |
+          ${{ runner.os }}-stack-
+
+    - name: Cache .stack/pantry
+      id: cache-pantry
+      uses: actions/cache@v1
+      with:
+        path: ~/.stack-temp/pantry
+        key: ${{ runner.os }}-pantry-${{ hashFiles('**/stack.yaml.lock') }}-${{ matrix.cache-version }}
+        restore-keys: |
+          ${{ runner.os }}-pantry-
+
+    - name: Move .stack/pantry to temp
+      uses: matsubara0507/actions/move-files@master
+      with:
+        source_dir: ~/.stack-temp/pantry
+        source_files: |
+          pantry
+        target_dir: ~/.stack
+
+    - uses: actions/setup-haskell@v1
+      name: Setup Haskell
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: ${{ matrix.cabal }}
+
+    - uses: mstksg/setup-stack@v1
+
+    - name: Install dependencies
+      run: stack --system-ghc test --only-dependencies
+
+    - name: Build and Test
+      run: stack --system-ghc test --local-bin-path=./bin
+
+    - name: Build Docker Image
+      run: docker build -t git-plantation . --build-arg local_bin_path=./bin
+
+    - name: Push Docker Image
+      if: github.ref == 'refs/heads/master'
+      run: |
+        echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u matsubara0507 --password-stdin
+        docker tag git-plantation docker.pkg.github.com/matsubara0507/git-plantation/exe
+        docker push docker.pkg.github.com/matsubara0507/git-plantation/exe:latest
+
+    - name: Push Docker Image (tag)
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u matsubara0507 --password-stdin
+        docker tag git-plantation docker.pkg.github.com/matsubara0507/git-plantation/exe:${GITHUB_REF#refs/tags/}
+        docker push docker.pkg.github.com/matsubara0507/git-plantation/exe:${GITHUB_REF#refs/tags/}
+
+    - name: Display .stack size
+      run: |
+        du -sh ~/.stack/*
+        du -sh .stack-work/*
