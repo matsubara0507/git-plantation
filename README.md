@@ -1,6 +1,7 @@
 # git-plantation
 
 [![Build Status](https://travis-ci.org/matsubara0507/git-plantation.svg?branch=master)](https://travis-ci.org/matsubara0507/git-plantation)
+[![](https://github.com/matsubara0507/git-plantation/workflows/.github/workflows/build.yml/badge.svg)](https://github.com/matsubara0507/git-plantation/actions?query=branch%3Amaster)
 [![](https://images.microbadger.com/badges/image/matsubara0507/git-plantation.svg)](https://microbadger.com/images/matsubara0507/git-plantation "Get your own image badge on microbadger.com")
 
 ![](./image/scoreboard.png)
