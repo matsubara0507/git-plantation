@@ -1,4 +1,4 @@
-module Generated.API exposing (Config, Link, Problem, Repo, Score, ScoreBoardConfig, Status, Team, User, getApiProblems, getApiScores, getApiScoresByTeam, getApiScoresByTeamByPlayer, getApiTeams, jsonDecConfig, jsonDecLink, jsonDecProblem, jsonDecRepo, jsonDecScore, jsonDecScoreBoardConfig, jsonDecStatus, jsonDecTeam, jsonDecUser, jsonEncConfig, jsonEncLink, jsonEncProblem, jsonEncRepo, jsonEncScore, jsonEncScoreBoardConfig, jsonEncStatus, jsonEncTeam, jsonEncUser, maybeBoolToIntStr)
+module Generated.API exposing (Config, Link, Problem, Repo, Score, ScoreBoardConfig, Status, Team, User, getApiProblems, getApiScores, getApiScoresByTeam, getApiScoresByTeamByPlayer, getApiTeams, jsonDecConfig, jsonDecLink, jsonDecProblem, jsonDecRepo, jsonDecScore, jsonDecScoreBoardConfig, jsonDecStatus, jsonDecTeam, jsonDecUser, jsonEncConfig, jsonEncLink, jsonEncProblem, jsonEncRepo, jsonEncScore, jsonEncScoreBoardConfig, jsonEncStatus, jsonEncTeam, jsonEncUser)
 
 -- The following module comes from bartavelle/json-helpers
 
@@ -10,19 +10,6 @@ import Json.Helpers exposing (..)
 import Set
 import String
 import Url.Builder
-
-
-maybeBoolToIntStr : Maybe Bool -> String
-maybeBoolToIntStr mx =
-    case mx of
-        Nothing ->
-            ""
-
-        Just True ->
-            "1"
-
-        Just False ->
-            "0"
 
 
 type alias Team =

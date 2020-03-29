@@ -1,23 +1,23 @@
-resolver: lts-14.6
+resolver: lts-15.5
 packages:
 - .
 extra-deps:
-- extensible-0.6.1
+- extensible-0.8
 - membership-0
-- binary-instances-1
-- servant-github-webhook-0.4.1.0
-- github: matsubara0507/drone-haskell
-  commit: d71e7473508a88922575ab95330b1e94d2114f9c
+- binary-instances-1.0.0.1
+- servant-github-webhook-0.4.2.0
+- github-webhooks-0.12.0
+- drone-1.1.0
 - github: matsubara0507/github
-  commit: 0e53921d2433c3e86b7231e6be7d234ae75c095f
+  commit: 8224d498d289c40d3c6d0232ac571a82f8787972
 - github: matsubara0507/elmap.hs
-  commit: a1539c3be6e8b5757a2a10a55e7c1b19c1fc76fd
+  commit: 9c9479d3ead6032a0309b5f80f42e94df85da375
   subdirs:
   - elmap
   - servant-elmap
   - extensible-elmap
 - github: matsubara0507/mix.hs
-  commit: f4cad8e116093169c8849a9ae9acefb93c3eefc5
+  commit: a0b2b9394c340186c9a8a63808f0db1752ada4ae
   subdirs:
   - mix
   - mix-json-logger

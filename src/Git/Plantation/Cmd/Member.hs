@@ -115,7 +115,7 @@ inviteUserToRepo :: MemberArg -> Plant ()
 inviteUserToRepo args = do
   github <- repoGithub $ args ^. #repo
   let (owner, repo) = splitRepoName github
-  resp <- MixGitHub.fetch $ \auth -> GitHub.addCollaborator auth
+  resp <- MixGitHub.fetch $ GitHub.addCollaboratorR
     (mkName Proxy owner)
     (mkName Proxy repo)
     (mkName Proxy $ args ^. #user ^. #github)
@@ -134,7 +134,7 @@ kickUserFromRepo :: MemberArg -> Plant ()
 kickUserFromRepo args = do
   github <- repoGithub $ args ^. #repo
   let (owner, repo) = splitRepoName github
-  resp <- MixGitHub.fetch $ \auth -> GitHub.removeCollaborator auth
+  resp <- MixGitHub.fetch $ GitHub.removeCollaboratorR
     (mkName Proxy owner)
     (mkName Proxy repo)
     (mkName Proxy $ args ^. #user ^. #github)
@@ -151,7 +151,7 @@ kickUserFromRepo args = do
 
 inviteUserToGitHubOrg :: MemberWithOrgArg -> Plant ()
 inviteUserToGitHubOrg args = do
-  resp <- MixGitHub.fetch $ \auth -> GitHub.addOrUpdateMembership' auth
+  resp <- MixGitHub.fetch $ GitHub.addOrUpdateMembershipR
     (mkName Proxy $ args ^. #org)
     (mkName Proxy $ args ^. #user ^. #github)
     False
@@ -168,7 +168,7 @@ inviteUserToGitHubOrg args = do
 
 kickUserFromGitHubOrg :: MemberWithOrgArg -> Plant ()
 kickUserFromGitHubOrg args = do
-  resp <- MixGitHub.fetch $ \auth -> GitHub.removeMembership' auth
+  resp <- MixGitHub.fetch $ GitHub.removeMembershipR
     (mkName Proxy $ args ^. #org)
     (mkName Proxy $ args ^. #user ^. #github)
   case resp of
@@ -184,13 +184,13 @@ kickUserFromGitHubOrg args = do
 
 inviteUserToGitHubOrgTeam :: MemberWithGitHubTeamArg -> Plant ()
 inviteUserToGitHubOrgTeam args = do
-  resp <- MixGitHub.fetch $ \auth -> GitHub.teamInfoByName' (Just auth)
+  resp <- MixGitHub.fetch $ GitHub.teamInfoByNameR
     (mkName Proxy $ args ^. #org)
     (mkName Proxy $ args ^. #gh_team)
   team <- case resp of
     Left err   -> logDebug (displayShow err) >> throwIO (failure err)
     Right team -> pure team
-  resp' <- MixGitHub.fetch $ \auth -> GitHub.addTeamMembershipFor' auth
+  resp' <- MixGitHub.fetch $ GitHub.addTeamMembershipForR
     (GitHub.teamId team)
     (mkName Proxy $ args ^. #user ^. #github)
     GitHub.RoleMember
@@ -207,13 +207,13 @@ inviteUserToGitHubOrgTeam args = do
 
 kickUserFromGitHubOrgTeam :: MemberWithGitHubTeamArg -> Plant ()
 kickUserFromGitHubOrgTeam args = do
-  resp <- MixGitHub.fetch $ \auth -> GitHub.teamInfoByName' (Just auth)
+  resp <- MixGitHub.fetch $ GitHub.teamInfoByNameR
     (mkName Proxy $ args ^. #org)
     (mkName Proxy $ args ^. #gh_team)
   team <- case resp of
     Left err   -> logDebug (displayShow err) >> throwIO (failure err)
     Right team -> pure team
-  resp' <- MixGitHub.fetch $ \auth -> GitHub.deleteTeamMembershipFor' auth
+  resp' <- MixGitHub.fetch $ GitHub.deleteTeamMembershipForR
     (GitHub.teamId team)
     (mkName Proxy $ args ^. #user ^. #github)
   case resp' of
