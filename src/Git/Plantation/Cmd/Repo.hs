@@ -101,7 +101,7 @@ createRepoInGitHub :: RepoArg -> Plant ()
 createRepoInGitHub args = do
   (owner, repo) <- splitRepoName <$> repoGithub (args ^. #repo)
   logInfo $ "create repo in github: " <> displayShow (owner <> "/" <> repo)
-  resp <- MixGitHub.fetch $ \auth -> request owner auth
+  resp <- MixGitHub.fetch $ request owner
     ((newRepo $ mkName Proxy repo) { newRepoPrivate = Just (args ^. #repo ^. #private) })
   case resp of
     Left err -> logDebug (displayShow err) >> throwIO (mkErr err)
@@ -109,9 +109,9 @@ createRepoInGitHub args = do
   where
     request owner =
       if Team.repoIsOrg (args ^. #repo) then
-        flip GitHub.createOrganizationRepo' (mkName Proxy owner)
+        GitHub.createOrganizationRepoR (mkName Proxy owner)
       else
-        GitHub.createRepo'
+        GitHub.createRepoR
     mkErr err = CreateRepoError err (args ^. #team) (args ^. #repo)
 
 initRepoInGitHub :: RepoArg -> Plant ()
@@ -139,7 +139,7 @@ setupDefaultBranch :: RepoArg -> Plant ()
 setupDefaultBranch args = do
   (owner, repo) <- splitRepoName <$> repoGithub (args ^. #repo)
   problem <- findProblemWithThrow (ProblemId $ args ^. #repo ^. #problem)
-  resp <- MixGitHub.fetch $ \auth -> GitHub.editRepo auth
+  resp <- MixGitHub.fetch $ GitHub.editRepoR
     (mkName Proxy owner)
     (mkName Proxy repo)
     $ edit { GitHub.editDefaultBranch = Just $ problem ^. #default_branch
@@ -158,8 +158,8 @@ setupWebhook args = do
   (owner, repo) <- splitRepoName <$> repoGithub (args ^. #repo)
   webhookConfig <- asks (view #webhook)
   logInfo $ "setup github webhook to repo: " <> displayShow (owner <> "/" <> repo)
-  resp <- MixGitHub.fetch $ \auth -> GitHub.createRepoWebhook'
-    auth (mkName Proxy owner) (mkName Proxy repo) (webhook webhookConfig)
+  resp <- MixGitHub.fetch $
+    GitHub.createRepoWebhookR (mkName Proxy owner) (mkName Proxy repo) (webhook webhookConfig)
   case resp of
     Left err -> logDebug (displayShow err) >> throwIO (mkErr err)
     Right _  -> logInfo "Success: setup GitHub Webhook to repository"
@@ -226,8 +226,8 @@ deleteRepoInGithub :: Repo -> Plant ()
 deleteRepoInGithub info = do
   (owner, repo) <- splitRepoName <$> repoGithub info
   logInfo $ "delete repo in github: " <> displayShow (owner <> "/" <> repo)
-  resp <- MixGitHub.fetch $ \auth ->
-    GitHub.deleteRepo auth (mkName Proxy owner) (mkName Proxy repo)
+  resp <- MixGitHub.fetch $
+    GitHub.deleteRepoR (mkName Proxy owner) (mkName Proxy repo)
   case resp of
     Left err -> logDebug (displayShow err) >> throwIO (DeleteRepoError err info)
     Right _  -> logInfo "Success: delete repository in GitHub"
@@ -261,14 +261,14 @@ addGitHubTeam args = case (args ^. #team ^. #org, args ^. #repo ^. #only) of
 
     addGitHubTeam' :: Text -> Text -> Repo -> Plant ()
     addGitHubTeam' org name repo = do
-      resp <- MixGitHub.fetch $ \auth -> GitHub.teamInfoByName' (Just auth)
+      resp <- MixGitHub.fetch $ GitHub.teamInfoByNameR
         (mkName Proxy org)
         (mkName Proxy name)
       team <- case resp of
         Left err   -> logDebug (displayShow err) >> throwIO (failure err org name)
         Right team -> pure team
       (owner, repoName) <- splitRepoName <$> repoGithub repo
-      resp' <- MixGitHub.fetch $ \auth -> GitHub.addOrUpdateTeamRepo' auth
+      resp' <- MixGitHub.fetch $ GitHub.addOrUpdateTeamRepoR
         (GitHub.teamId team)
         (mkName Proxy owner)
         (mkName Proxy repoName)

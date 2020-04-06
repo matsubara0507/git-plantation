@@ -15,6 +15,11 @@
 - スコアボードに個人のページを追加(#56)
 - GitHub Actions の設定を追加(#57)
 - Elm のバージョンを 0.19.1 に変更(#57)
+- LTS を 15.5 に更新(#58)
+  - GHC を 8.8.3 に更新
+  - extensible を 0.8 に更新
+  - github を 0.25 に更新
+  - drone を 1.1.0 に更新
 
 ## Unreleased changes
 

@@ -6,7 +6,6 @@ module Main where
 
 import           RIO
 
-import           Data.Proxy              (Proxy (..))
 import           Elm.Mapping
 import           Git.Plantation          (Config, Link, Problem, Repo, Score,
                                           ScoreBoardConfig, Status, Team, User)

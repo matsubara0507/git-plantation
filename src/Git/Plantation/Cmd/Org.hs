@@ -54,7 +54,7 @@ findGitHubTeams ids team = case (team ^. #org, ids) of
 
 createGitHubTeam :: GitHubTeamArg -> Plant ()
 createGitHubTeam args = do
-  resp <- MixGitHub.fetch $ \auth -> GitHub.createTeamFor' auth
+  resp <- MixGitHub.fetch $ GitHub.createTeamForR
     (mkName Proxy $ args ^. #org)
     (GitHub.CreateTeam (mkName Proxy $ args ^. #gh_team) Nothing mempty GitHub.PermissionPush)
   case resp of
