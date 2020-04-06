@@ -20,6 +20,7 @@ import qualified Mix.Plugin.GitHub         as GitHub
 import           Mix.Plugin.Logger         ()
 import qualified Mix.Plugin.Logger.JSON    as Mix
 import qualified RIO.Text.Lazy             as TL
+import qualified Servant.Auth.Server       as Auth
 
 type Plant = RIO Env
 
@@ -32,6 +33,9 @@ type Env = Record
    , "webhook" >: WebhookConfig
    , "store"   >: Text -- URL for store
    , "logger"  >: LogFunc
+   , "cookie"  >: Auth.CookieSettings
+   , "jwt"     >: Auth.JWTSettings
+   , "oauth"   >: OAuthSettings
    ]
 
 type WebhookConfig = [(Text, Text)]
@@ -43,6 +47,11 @@ mkWebhookConf url secret =
   , ("secret", secret)
   ]
 
+type OAuthSettings = Record
+  '[ "client_id"     >: String
+   , "client_secret" >: String
+   ]
+
 fromJustWithThrow :: Exception e => Maybe a -> e -> Plant a
 fromJustWithThrow (Just x) _ = pure x
 fromJustWithThrow Nothing e  = throwIO e
@@ -53,18 +62,17 @@ mkLogMessage' ::
 mkLogMessage' message =
   TL.unpack . Json.encodeToLazyText . Mix.mkLogMessage message LevelError
 
-data GitPlantException
-  = UndefinedTeamProblem Team Problem
-  | UndefinedProblem Int
-  | CreateRepoError GitHub.Error Team Repo
-  | DeleteRepoError GitHub.Error Repo
-  | SetupWebhookError GitHub.Error Repo
-  | AddRepoToGitHubTeamError GitHub.Error Text Text Repo
-  | InviteUserError GitHub.Error User MemberTarget
-  | KickUserError GitHub.Error User MemberTarget
-  | CreateGitHubTeamError GitHub.Error Team Text
-  | InvalidRepoConfig Repo
-  deriving (Typeable)
+data GitPlantException = UndefinedTeamProblem Team Problem
+    | UndefinedProblem Int
+    | CreateRepoError GitHub.Error Team Repo
+    | DeleteRepoError GitHub.Error Repo
+    | SetupWebhookError GitHub.Error Repo
+    | AddRepoToGitHubTeamError GitHub.Error Text Text Repo
+    | InviteUserError GitHub.Error User MemberTarget
+    | KickUserError GitHub.Error User MemberTarget
+    | CreateGitHubTeamError GitHub.Error Team Text
+    | InvalidRepoConfig Repo
+    deriving (Typeable)
 
 instance Exception GitPlantException
 

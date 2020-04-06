@@ -41,6 +41,7 @@ dependencies:
 - mix-plugin-github
 - mix-plugin-drone
 - mix-plugin-shell
+- mtl
 - aeson
 - blaze-html
 - containers
@@ -49,10 +50,12 @@ dependencies:
 - elmap
 - extensible >= 0.6
 - extensible-elmap
+- fallible
 - github
 - github-webhooks
 - http-media
 - req >= 2.0
+- servant-auth-server
 - servant-blaze
 - servant-elmap
 - servant-github-webhook

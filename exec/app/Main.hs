@@ -11,6 +11,7 @@ import           Paths_git_plantation     (version)
 import           RIO
 import qualified RIO.ByteString           as B
 import qualified RIO.Text                 as Text
+import qualified RIO.Time                 as Time
 
 import           Configuration.Dotenv     (defaultConfig, loadFile)
 import           Data.Extensible
@@ -27,6 +28,7 @@ import qualified Mix.Plugin.Logger        as MixLogger
 import qualified Mix.Plugin.Shell         as MixShell
 import qualified Network.Wai.Handler.Warp as Warp
 import           Servant
+import qualified Servant.Auth.Server      as Auth
 import qualified Servant.GitHub.Webhook   (GitHubKey, gitHubKey)
 import           System.Environment       (getEnv, lookupEnv)
 
@@ -81,9 +83,13 @@ runServer opts config = do
   sResetRepoCmd <- liftIO $ fromString  <$> getEnv "SLACK_RESET_REPO_CMD"
   sWebhook      <- liftIO $ fromString  <$> getEnv "SLACK_WEBHOOK"
   storeUrl      <- liftIO $ fromString  <$> getEnv "STORE_URL"
+  clientId      <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_ID"
+  clientSecret  <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_SECRET"
   dHttp         <- lookupEnv "DRONE_HTTP"
+  jwtSettings   <- Auth.defaultJWTSettings <$> Auth.generateKey
   let client    = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
       logConf   = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
+      oauthConf = #client_id @= clientId <: #client_secret @= clientSecret <: nil
       slackConf
           = #token          @= sToken
          <: #team_id        @= sTeam
@@ -101,17 +107,25 @@ runServer opts config = do
          <: #webhook <@=> pure mempty
          <: #store   <@=> pure storeUrl
          <: #logger  <@=> MixLogger.buildPlugin logConf
+         <: #cookie  <@=> pure cookieSettings
+         <: #jwt     <@=> pure jwtSettings
+         <: #oauth   <@=> pure oauthConf
          <: nil
   B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
   flip Mix.withPlugin plugin $ \env ->
     Warp.run (opts ^. #port) $ app env $ gitHubKey $ fromString <$> getEnv "GH_SECRET"
+  where
+    cookieSettings = Auth.defaultCookieSettings
+      { Auth.cookieMaxAge = Just $ Time.secondsToDiffTime (3 * 60)
+      , Auth.cookieXsrfSetting = Nothing
+      }
 
-app :: Env -> GitHubKey ->Application
+app :: Env -> GitHubKey -> Application
 app env key =
-  serveWithContext api (key :. EmptyContext) $
+  serveWithContext api ( env ^. #cookie :. env ^. #jwt :. key :. EmptyContext) $
     hoistServerWithContext api context (runRIO env) server
 
-context :: Proxy '[ GitHubKey ]
+context :: Proxy '[ Auth.CookieSettings, Auth.JWTSettings, GitHubKey ]
 context = Proxy
 
 showVersion :: Version -> String
