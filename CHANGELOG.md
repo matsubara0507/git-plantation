@@ -20,6 +20,7 @@
   - extensible を 0.8 に更新
   - github を 0.25 に更新
   - drone を 1.1.0 に更新
+- 採点可能かどうかのフラグを設定に追加(#60)
 
 ## Unreleased changes
 
