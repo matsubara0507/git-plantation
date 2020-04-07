@@ -33,9 +33,7 @@ type Env = Record
    , "webhook" >: WebhookConfig
    , "store"   >: Text -- URL for store
    , "logger"  >: LogFunc
-   , "cookie"  >: Auth.CookieSettings
-   , "jwt"     >: Auth.JWTSettings
-   , "oauth"   >: OAuthSettings
+   , "oauth"   >: Maybe OAuthSettings
    ]
 
 type WebhookConfig = [(Text, Text)]
@@ -50,6 +48,8 @@ mkWebhookConf url secret =
 type OAuthSettings = Record
   '[ "client_id"     >: String
    , "client_secret" >: String
+   , "cookie"        >: Auth.CookieSettings
+   , "jwt"           >: Auth.JWTSettings
    ]
 
 fromJustWithThrow :: Exception e => Maybe a -> e -> Plant a

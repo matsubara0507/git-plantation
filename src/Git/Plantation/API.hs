@@ -56,29 +56,33 @@ type JWTCookieHeaders =
 api :: Proxy API
 api = Proxy
 
-server :: ServerT API Plant
-server = protected
+server :: [Text] -> ServerT API Plant
+server whitelist
+       = protected whitelist
     :<|> serveDirectoryFileServer "static"
     :<|> webhook
     :<|> login
     :<|> callback
     where
-      login = redirectTo <$> Auth.authorizeUrl
+      login = asks (view #oauth) >>= \case
+        Nothing     -> Auth.throwAll err401
+        Just config -> pure $ redirectTo (Auth.authorizeUrl config)
+
       callback code = evalContT $ do
-        code' <- code ??? exit throw401
-        token <- lift $ Auth.fetchToken code'
-        user  <- lift (Auth.fetchUser token) !?= const (exit throw401)
-        env   <- lift ask
-        applyCookies <- acceptLogin' env (toAccount user) !?? exit throw401
+        code'  <- code ??? exit throw401
+        config <- asks (view #oauth) !?? exit throw401
+        token  <- lift $ Auth.fetchToken config code'
+        user   <- lift (Auth.fetchUser token) !?= const (exit throw401)
+        applyCookies <- acceptLogin' config (toAccount user) !?? exit throw401
         pure $ addHeader "/" (applyCookies NoContent)
-      acceptLogin' env session =
-        liftIO $ Auth.acceptLogin (env ^. #cookie) (env ^. #jwt) session
+      acceptLogin' config session =
+        liftIO $ Auth.acceptLogin (config ^. #cookie) (config ^. #jwt) session
       throw401 = Auth.throwAll err401
 
-protected :: Auth.AuthResult Account -> ServerT Protected Plant
-protected = \case
-  Auth.Authenticated _ -> crud :<|> index
-  _                    -> Auth.throwAll err401
+protected :: [Text] -> Auth.AuthResult Account -> ServerT Protected Plant
+protected whitelist = \case
+  Auth.Authenticated a | a ^. #login `elem` whitelist -> crud :<|> index
+  _                                                   -> Auth.throwAll err401
   where
     index = indexHtml :<|> indexHtml :<|> const indexHtml :<|> (\_ _ -> indexHtml)
 

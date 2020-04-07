@@ -11,20 +11,18 @@ import           Git.Plantation.Env
 import qualified GitHub
 import           Network.HTTP.Req
 
-authorizeUrl :: Plant String
-authorizeUrl = do
-  clientId <- asks (view #client_id . view #oauth)
-  pure $ "https://github.com/login/oauth/authorize?client_id=" ++ clientId
+authorizeUrl :: OAuthSettings -> String
+authorizeUrl config =
+  "https://github.com/login/oauth/authorize?client_id=" ++ config ^. #client_id
 
 fetchUser :: MonadIO m => ByteString -> m (Either GitHub.Error GitHub.User)
 fetchUser token =
   liftIO $ GitHub.github (GitHub.OAuth token) GitHub.userInfoCurrentR
 
-fetchToken :: String -> Plant ByteString
-fetchToken code = do
-  config <- asks (view #oauth)
-  let params = shrink (#code @= code <: config)
-  runReq defaultHttpConfig $ (toToken . responseBody) <$> postTokenRequest params
+fetchToken :: MonadIO m => OAuthSettings -> String -> m ByteString
+fetchToken config code =
+  runReq defaultHttpConfig $
+    toToken . responseBody <$> postTokenRequest (shrink $ #code @= code <: config)
 
 postTokenRequest :: MonadHttp m => TokenParams -> m (JsonResponse TokenInfo)
 postTokenRequest params =

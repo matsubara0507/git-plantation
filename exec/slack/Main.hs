@@ -27,7 +27,6 @@ import qualified Mix.Plugin.Logger        as MixLogger
 import qualified Mix.Plugin.Shell         as MixShell
 import qualified Network.Wai.Handler.Warp as Warp
 import           Servant
-import qualified Servant.Auth.Server      as Auth
 import           System.Environment       (getEnv)
 import           System.IO                (hSetEncoding, utf8)
 
@@ -83,7 +82,6 @@ runServer opts config = do
   dHost         <- liftIO $ fromString  <$> getEnv "DRONE_HOST"
   dToken        <- liftIO $ fromString  <$> getEnv "DRONE_TOKEN"
   dPort         <- liftIO $ readMaybe   <$> getEnv "DRONE_PORT"
-  jwtSettings   <- Auth.defaultJWTSettings <$> Auth.generateKey
   let dClient = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
       logConf = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
       slackConf
@@ -103,9 +101,7 @@ runServer opts config = do
          <: #webhook <@=> pure mempty
          <: #store   <@=> pure ""
          <: #logger  <@=> MixLogger.buildPlugin logConf
-         <: #cookie  <@=> pure Auth.defaultCookieSettings
-         <: #jwt     <@=> pure jwtSettings
-         <: #oauth   <@=> pure (#client_id @= "" <: #client_secret @= "" <: nil)
+         <: #oauth   <@=> pure Nothing
          <: nil
   B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
   flip Mix.withPlugin plugin $ Warp.run (opts ^. #port) . app

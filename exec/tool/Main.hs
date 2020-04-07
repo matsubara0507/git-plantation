@@ -13,7 +13,6 @@ import           Git.Plantation.Cmd    as Cmd
 import           Git.Plantation.Config (readConfig)
 import           Git.Plantation.Env    (mkWebhookConf)
 import           Options.Applicative
-import qualified Servant.Auth.Server   as Auth
 import           System.Environment    (getEnv)
 
 import qualified Mix
@@ -32,7 +31,6 @@ main = execParser parser >>= \opts -> do
   dToken  <- liftIO $ fromString <$> getEnv "DRONE_TOKEN"
   secret  <- liftIO $ fromString <$> getEnv "GH_SECRET"
   appUrl  <- liftIO $ fromString <$> getEnv "APP_SERVER"
-  jwtSettings <- Auth.defaultJWTSettings <$> Auth.generateKey
   let client  = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
       logConf = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
       plugin  = hsequence
@@ -44,9 +42,7 @@ main = execParser parser >>= \opts -> do
          <: #webhook <@=> pure (mkWebhookConf (appUrl <> "/hook") secret)
          <: #store   <@=> pure ""
          <: #logger  <@=> MixLogger.buildPlugin logConf
-         <: #cookie  <@=> pure Auth.defaultCookieSettings
-         <: #jwt     <@=> pure jwtSettings
-         <: #oauth   <@=> pure (#client_id @= "" <: #client_secret @= "" <: nil)
+         <: #oauth   <@=> pure Nothing
          <: nil
   Mix.run plugin $ Cmd.run (opts ^. #subcmd)
   where

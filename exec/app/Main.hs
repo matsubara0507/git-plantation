@@ -89,7 +89,12 @@ runServer opts config = do
   jwtSettings   <- Auth.defaultJWTSettings <$> Auth.generateKey
   let client    = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
       logConf   = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
-      oauthConf = #client_id @= clientId <: #client_secret @= clientSecret <: nil
+      oauthConf
+          = #client_id     @= clientId
+         <: #client_secret @= clientSecret
+         <: #cookie        @= cookieSettings
+         <: #jwt           @= jwtSettings
+         <: nil
       slackConf
           = #token          @= sToken
          <: #team_id        @= sTeam
@@ -107,23 +112,24 @@ runServer opts config = do
          <: #webhook <@=> pure mempty
          <: #store   <@=> pure storeUrl
          <: #logger  <@=> MixLogger.buildPlugin logConf
-         <: #cookie  <@=> pure cookieSettings
-         <: #jwt     <@=> pure jwtSettings
-         <: #oauth   <@=> pure oauthConf
+         <: #oauth   <@=> pure (Just oauthConf)
          <: nil
   B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
   flip Mix.withPlugin plugin $ \env ->
-    Warp.run (opts ^. #port) $ app env $ gitHubKey $ fromString <$> getEnv "GH_SECRET"
+    let key = gitHubKey $ fromString <$> getEnv "GH_SECRET" in
+    Warp.run (opts ^. #port) $ app env cookieSettings jwtSettings key
   where
     cookieSettings = Auth.defaultCookieSettings
       { Auth.cookieMaxAge = Just $ Time.secondsToDiffTime (3 * 60)
       , Auth.cookieXsrfSetting = Nothing
       }
 
-app :: Env -> GitHubKey -> Application
-app env key =
-  serveWithContext api ( env ^. #cookie :. env ^. #jwt :. key :. EmptyContext) $
-    hoistServerWithContext api context (runRIO env) server
+app :: Env -> Auth.CookieSettings -> Auth.JWTSettings -> GitHubKey -> Application
+app env cookie jwt key =
+  serveWithContext api (cookie :. jwt :. key :. EmptyContext) $
+    hoistServerWithContext api context (runRIO env) (server whitelist)
+  where
+    whitelist = mkAuthnWhitelist (env ^. #config)
 
 context :: Proxy '[ Auth.CookieSettings, Auth.JWTSettings, GitHubKey ]
 context = Proxy
