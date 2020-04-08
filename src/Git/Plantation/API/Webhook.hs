@@ -36,11 +36,13 @@ pingWebhook _ (_, ev) = do
 pushWebhook :: RepoWebhookEvent -> ((), PushEvent) -> Plant NoContent
 pushWebhook _ (_, ev) = do
   logInfo $ "Hook Push Event: " <> displayShow ev
-  _ <- forkIO $ do
-    config <- asks (view #config)
-    case findByPushEvent ev (config ^. #teams) (config ^. #problems) of
-      Just (team, problem) -> startScoring ev team problem
-      Nothing              -> logError "team or problem is not found."
+  config <- asks (view #config)
+  when (fromMaybe True $ config ^. #scoreboard ^. #scoring) $ do
+    _ <- forkIO $
+      case findByPushEvent ev (config ^. #teams) (config ^. #problems) of
+        Just (team, problem) -> startScoring ev team problem
+        Nothing              -> logError "team or problem is not found."
+    pure ()
   pure NoContent
 
 findByPushEvent :: PushEvent -> [Team] -> [Problem] -> Maybe (Team, Problem)
