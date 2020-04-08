@@ -82,7 +82,7 @@ protected whitelist = \case
   _                                                   -> Auth.throwAll err401
   where
     index = indexHtml :<|> indexHtml :<|> const indexHtml :<|> (\_ _ -> indexHtml)
-    login = err302 { errHeaders = [("Location", "/login")] }
+    login = err303 { errHeaders = [("Location", "/login")] }
 
 indexHtml :: Plant H.Html
 indexHtml = do

@@ -50,6 +50,7 @@ dependencies:
 - elmap
 - extensible >= 0.6
 - extensible-elmap
+- exceptions
 - fallible
 - github
 - github-webhooks

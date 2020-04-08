@@ -8,12 +8,13 @@
 module Main where
 
 import           Paths_git_plantation     (version)
-import           RIO
+import           RIO                      hiding (catch)
 import qualified RIO.ByteString           as B
 import qualified RIO.Text                 as Text
 import qualified RIO.Time                 as Time
 
 import           Configuration.Dotenv     (defaultConfig, loadFile)
+import           Control.Monad.Catch      (catch)
 import           Data.Extensible
 import           Data.Extensible.GetOpt
 import           Data.Version             (Version)
@@ -127,7 +128,8 @@ runServer opts config = do
 app :: Env -> Auth.CookieSettings -> Auth.JWTSettings -> GitHubKey -> Application
 app env cookie jwt key =
   serveWithContext api (cookie :. jwt :. key :. EmptyContext) $
-    hoistServerWithContext api context (runRIO env) (server whitelist)
+    hoistServerWithContext api context
+      (\x -> runRIO env x `catch` throwError) (server whitelist)
   where
     whitelist = mkAuthnWhitelist (env ^. #config)
 
