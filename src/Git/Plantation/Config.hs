@@ -26,6 +26,7 @@ type ScoreBoardConfig = Record
    , "start_time" >: Maybe Int64  -- unix time
    , "end_time"   >: Maybe Int64  -- unix time
    , "zone"       >: Maybe Text
+   , "scoring"    >: Maybe Bool
    ]
 
 readConfig :: MonadIO m => FilePath -> m Config
