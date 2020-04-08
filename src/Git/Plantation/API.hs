@@ -44,11 +44,11 @@ type Index
 type Unprotected
       = "static"   :> Raw
    :<|> "hook"     :> WebhookAPI
-   :<|> "login"    :> GetRedirected '[]
+   :<|> "login"    :> Get '[HTML] H.Html
    :<|> "callback" :> QueryParam "code" String :> GetRedirected JWTCookieHeaders
 
 type GetRedirected headers =
-  Verb 'GET 308 '[HTML] (Headers (Header "Location" String ': headers) NoContent)
+  Verb 'GET 303 '[HTML] (Headers (Header "Location" String ': headers) NoContent)
 
 type JWTCookieHeaders =
   '[ Header "Set-Cookie" Auth.SetCookie, Header "Set-Cookie" Auth.SetCookie ]
@@ -61,13 +61,9 @@ server whitelist
        = protected whitelist
     :<|> serveDirectoryFileServer "static"
     :<|> webhook
-    :<|> login
+    :<|> loginHtml
     :<|> callback
     where
-      login = asks (view #oauth) >>= \case
-        Nothing     -> Auth.throwAll err401
-        Just config -> pure $ redirectTo (Auth.authorizeUrl config)
-
       callback code = evalContT $ do
         code'  <- code ??? exit throw401
         config <- asks (view #oauth) !?? exit throw401
@@ -82,9 +78,11 @@ server whitelist
 protected :: [Text] -> Auth.AuthResult Account -> ServerT Protected Plant
 protected whitelist = \case
   Auth.Authenticated a | a ^. #login `elem` whitelist -> crud :<|> index
+  Auth.Indefinite                                     -> Auth.throwAll login
   _                                                   -> Auth.throwAll err401
   where
     index = indexHtml :<|> indexHtml :<|> const indexHtml :<|> (\_ _ -> indexHtml)
+    login = err302 { errHeaders = [("Location", "/login")] }
 
 indexHtml :: Plant H.Html
 indexHtml = do
@@ -98,6 +96,17 @@ indexHtml = do
       H.preEscapedLazyText (Json.encodeToLazyText config)
     H.script ! H.src "/static/main.js" $ H.text ""
     H.script ! H.src "/static/index.js" $ H.text ""
+
+loginHtml :: Plant H.Html
+loginHtml = do
+  config <- asks (view #oauth)
+  let url = fromString $ fromMaybe "" (Auth.authorizeUrl <$> config)
+  pure $ H.docTypeHtml $ do
+    H.head $ do
+      stylesheet "https://unpkg.com/@primer/css@13.2.0/dist/primer.css"
+      stylesheet "https://use.fontawesome.com/releases/v5.2.0/css/all.css"
+    H.div ! H.class_ "m-3" $
+      H.a ! H.href url $ "Login by GitHub"
 
 stylesheet :: H.AttributeValue -> H.Html
 stylesheet url =
