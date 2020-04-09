@@ -13,7 +13,8 @@ import           RIO
 import qualified Data.Aeson.Text             as Json
 import           Data.Extensible
 import           Data.Fallible
-import           Git.Plantation.API.CRUD     (CRUD, crud)
+import           Git.Plantation.API.CRUD     (GetAPI, PutAPI, getAPI,
+                                              updateScore)
 import           Git.Plantation.API.Webhook  (WebhookAPI, webhook)
 import qualified Git.Plantation.Auth.GitHub  as Auth
 import           Git.Plantation.Env          (Plant)
@@ -33,7 +34,7 @@ toAccount user = #login @= GitHub.untagName (GitHub.userLogin user) <: nil
 
 type API = (Auth '[Auth.Cookie] Account :> Protected) :<|> Unprotected
 
-type Protected = "api" :> CRUD :<|> Index
+type Protected = "api" :> GetAPI :<|> Index
 
 type Index
       = Get '[HTML] H.Html
@@ -46,6 +47,7 @@ type Unprotected
    :<|> "hook"     :> WebhookAPI
    :<|> "login"    :> Get '[HTML] H.Html
    :<|> "callback" :> QueryParam "code" String :> GetRedirected JWTCookieHeaders
+   :<|> "api"      :> PutAPI
 
 type GetRedirected headers =
   Verb 'GET 303 '[HTML] (Headers (Header "Location" String ': headers) NoContent)
@@ -63,6 +65,7 @@ server whitelist
     :<|> webhook
     :<|> loginHtml
     :<|> callback
+    :<|> updateScore
 
 callback
   :: Maybe String
@@ -81,7 +84,7 @@ callback code = evalContT $ do
 
 protected :: [Text] -> Auth.AuthResult Account -> ServerT Protected Plant
 protected whitelist = \case
-  Auth.Authenticated a | a ^. #login `elem` whitelist -> crud :<|> index
+  Auth.Authenticated a | a ^. #login `elem` whitelist -> getAPI :<|> index
   Auth.Indefinite                                     -> Auth.throwAll login
   _                                                   -> Auth.throwAll err401
   where

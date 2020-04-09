@@ -20,10 +20,6 @@ import qualified Network.Wreq             as W
 import           Servant
 import           UnliftIO.Concurrent      (forkIO)
 
-type CRUD
-      = GetAPI
-   :<|> "scores" :> Capture "owner" Text :> Capture "repo" Text :> Put '[JSON] NoContent
-
 type GetAPI
      = "teams"    :> Get '[JSON] [Team]
   :<|> "problems" :> Get '[JSON] [Problem]
@@ -31,11 +27,15 @@ type GetAPI
   :<|> "scores"   :> Capture "team" Text :> Get '[JSON] [Score]
   :<|> "scores"   :> Capture "team" Text :> Capture "player" Text :> Get '[JSON] [Score]
 
-crud :: ServerT CRUD Plant
-crud = getAPI :<|> updateScore
-  where
-    getAPI = getTeams :<|> getProblems
-        :<|> getScores :<|> getTeamScore :<|> getPlayerScore
+type PutAPI
+      = "scores" :> Capture "owner" Text :> Capture "repo" Text :> Put '[JSON] NoContent
+
+getAPI :: ServerT GetAPI Plant
+getAPI = getTeams
+   :<|> getProblems
+   :<|> getScores
+   :<|> getTeamScore
+   :<|> getPlayerScore
 
 getTeams :: Plant [Team]
 getTeams = do
