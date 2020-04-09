@@ -63,17 +63,21 @@ server whitelist
     :<|> webhook
     :<|> loginHtml
     :<|> callback
-    where
-      callback code = evalContT $ do
-        code'  <- code ??? exit throw401
-        config <- asks (view #oauth) !?? exit throw401
-        token  <- lift $ Auth.fetchToken config code'
-        user   <- lift (Auth.fetchUser token) !?= const (exit throw401)
-        applyCookies <- acceptLogin' config (toAccount user) !?? exit throw401
-        pure $ addHeader "/" (applyCookies NoContent)
-      acceptLogin' config session =
-        liftIO $ Auth.acceptLogin (config ^. #cookie) (config ^. #jwt) session
-      throw401 = Auth.throwAll err401
+
+callback
+  :: Maybe String
+  -> Plant (Headers (Header "Location" String ': JWTCookieHeaders) NoContent)
+callback code = evalContT $ do
+  code'  <- code ??? exit throw401
+  config <- asks (view #oauth) !?? exit throw401
+  token  <- lift $ Auth.fetchToken config code'
+  user   <- lift (Auth.fetchUser token) !?= const (exit throw401)
+  applyCookies <- acceptLogin' config (toAccount user) !?? exit throw401
+  pure $ addHeader "/" (applyCookies NoContent)
+  where
+    acceptLogin' config session =
+      liftIO $ Auth.acceptLogin (config ^. #cookie) (config ^. #jwt) session
+    throw401 = Auth.throwAll err401
 
 protected :: [Text] -> Auth.AuthResult Account -> ServerT Protected Plant
 protected whitelist = \case
