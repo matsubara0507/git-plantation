@@ -110,7 +110,6 @@ loginPage = evalContT $ do
   pure $ applyCookies (loginHtml url)
   where
     loginHtml loginUrl =
-
       H.docTypeHtml $ do
         H.head $ do
           stylesheet "https://unpkg.com/@primer/css@13.2.0/dist/primer.css"
