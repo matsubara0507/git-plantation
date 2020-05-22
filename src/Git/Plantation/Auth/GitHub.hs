@@ -11,9 +11,12 @@ import           Git.Plantation.Env
 import qualified GitHub
 import           Network.HTTP.Req
 
-authorizeUrl :: OAuthSettings -> String
-authorizeUrl config =
-  "https://github.com/login/oauth/authorize?client_id=" ++ config ^. #client_id
+authorizeUrl :: OAuthSettings -> String -> String
+authorizeUrl config stat = mconcat
+  [ "https://github.com/login/oauth/authorize"
+  , "?client_id=", config ^. #client_id
+  , "&state=", stat
+  ]
 
 fetchUser :: MonadIO m => ByteString -> m (Either GitHub.Error GitHub.User)
 fetchUser token =

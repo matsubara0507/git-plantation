@@ -45,6 +45,7 @@ dependencies:
 - aeson
 - blaze-html
 - containers
+- cryptonite
 - dotenv
 - drone
 - elmap
