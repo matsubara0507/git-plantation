@@ -142,15 +142,17 @@ type alias Config =
     { scoreboard : ScoreBoardConfig
     , problems : List Problem
     , teams : List Team
+    , owners : List User
     }
 
 
 jsonDecConfig : Json.Decode.Decoder Config
 jsonDecConfig =
-    Json.Decode.succeed (\pscoreboard pproblems pteams -> { scoreboard = pscoreboard, problems = pproblems, teams = pteams })
+    Json.Decode.succeed (\pscoreboard pproblems pteams powners -> { scoreboard = pscoreboard, problems = pproblems, teams = pteams, owners = powners })
         |> required "scoreboard" jsonDecScoreBoardConfig
         |> required "problems" (Json.Decode.list jsonDecProblem)
         |> required "teams" (Json.Decode.list jsonDecTeam)
+        |> required "owners" (Json.Decode.list jsonDecUser)
 
 
 jsonEncConfig : Config -> Value
@@ -159,6 +161,7 @@ jsonEncConfig val =
         [ ( "scoreboard", jsonEncScoreBoardConfig val.scoreboard )
         , ( "problems", Json.Encode.list jsonEncProblem val.problems )
         , ( "teams", Json.Encode.list jsonEncTeam val.teams )
+        , ( "owners", Json.Encode.list jsonEncUser val.owners )
         ]
 
 
@@ -167,16 +170,18 @@ type alias ScoreBoardConfig =
     , start_time : Maybe Int
     , end_time : Maybe Int
     , zone : Maybe String
+    , scoring : Maybe Bool
     }
 
 
 jsonDecScoreBoardConfig : Json.Decode.Decoder ScoreBoardConfig
 jsonDecScoreBoardConfig =
-    Json.Decode.succeed (\pinterval pstart_time pend_time pzone -> { interval = pinterval, start_time = pstart_time, end_time = pend_time, zone = pzone })
+    Json.Decode.succeed (\pinterval pstart_time pend_time pzone pscoring -> { interval = pinterval, start_time = pstart_time, end_time = pend_time, zone = pzone, scoring = pscoring })
         |> required "interval" Json.Decode.float
         |> fnullable "start_time" Json.Decode.int
         |> fnullable "end_time" Json.Decode.int
         |> fnullable "zone" Json.Decode.string
+        |> fnullable "scoring" Json.Decode.bool
 
 
 jsonEncScoreBoardConfig : ScoreBoardConfig -> Value
@@ -186,6 +191,7 @@ jsonEncScoreBoardConfig val =
         , ( "start_time", maybeEncode Json.Encode.int val.start_time )
         , ( "end_time", maybeEncode Json.Encode.int val.end_time )
         , ( "zone", maybeEncode Json.Encode.string val.zone )
+        , ( "scoring", maybeEncode Json.Encode.bool val.scoring )
         ]
 
 

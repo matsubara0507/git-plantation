@@ -42,6 +42,7 @@ main = execParser parser >>= \opts -> do
          <: #webhook <@=> pure (mkWebhookConf (appUrl <> "/hook") secret)
          <: #store   <@=> pure ""
          <: #logger  <@=> MixLogger.buildPlugin logConf
+         <: #oauth   <@=> pure Nothing
          <: nil
   Mix.run plugin $ Cmd.run (opts ^. #subcmd)
   where

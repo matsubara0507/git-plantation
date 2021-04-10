@@ -8,6 +8,7 @@ extra-deps:
 - servant-github-webhook-0.4.2.0
 - github-webhooks-0.12.0
 - drone-1.1.0
+- fallible-0.1.0
 - github: matsubara0507/github
   commit: 8224d498d289c40d3c6d0232ac571a82f8787972
 - github: matsubara0507/elmap.hs

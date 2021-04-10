@@ -8,11 +8,13 @@
 module Main where
 
 import           Paths_git_plantation     (version)
-import           RIO
+import           RIO                      hiding (catch)
 import qualified RIO.ByteString           as B
 import qualified RIO.Text                 as Text
+import qualified RIO.Time                 as Time
 
 import           Configuration.Dotenv     (defaultConfig, loadFile)
+import           Control.Monad.Catch      (catch)
 import           Data.Extensible
 import           Data.Extensible.GetOpt
 import           Data.Version             (Version)
@@ -27,6 +29,7 @@ import qualified Mix.Plugin.Logger        as MixLogger
 import qualified Mix.Plugin.Shell         as MixShell
 import qualified Network.Wai.Handler.Warp as Warp
 import           Servant
+import qualified Servant.Auth.Server      as Auth
 import qualified Servant.GitHub.Webhook   (GitHubKey, gitHubKey)
 import           System.Environment       (getEnv, lookupEnv)
 
@@ -81,9 +84,18 @@ runServer opts config = do
   sResetRepoCmd <- liftIO $ fromString  <$> getEnv "SLACK_RESET_REPO_CMD"
   sWebhook      <- liftIO $ fromString  <$> getEnv "SLACK_WEBHOOK"
   storeUrl      <- liftIO $ fromString  <$> getEnv "STORE_URL"
+  clientId      <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_ID"
+  clientSecret  <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_SECRET"
   dHttp         <- lookupEnv "DRONE_HTTP"
+  jwtSettings   <- Auth.defaultJWTSettings <$> Auth.generateKey
   let client    = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
       logConf   = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
+      oauthConf
+          = #client_id     @= clientId
+         <: #client_secret @= clientSecret
+         <: #cookie        @= cookieSettings
+         <: #jwt           @= jwtSettings
+         <: nil
       slackConf
           = #token          @= sToken
          <: #team_id        @= sTeam
@@ -101,17 +113,27 @@ runServer opts config = do
          <: #webhook <@=> pure mempty
          <: #store   <@=> pure storeUrl
          <: #logger  <@=> MixLogger.buildPlugin logConf
+         <: #oauth   <@=> pure (Just oauthConf)
          <: nil
   B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
   flip Mix.withPlugin plugin $ \env ->
-    Warp.run (opts ^. #port) $ app env $ gitHubKey $ fromString <$> getEnv "GH_SECRET"
+    let key = gitHubKey $ fromString <$> getEnv "GH_SECRET" in
+    Warp.run (opts ^. #port) $ app env cookieSettings jwtSettings key
+  where
+    cookieSettings = Auth.defaultCookieSettings
+      { Auth.cookieMaxAge = Just $ Time.secondsToDiffTime (3 * 60)
+      , Auth.cookieXsrfSetting = Nothing
+      }
 
-app :: Env -> GitHubKey ->Application
-app env key =
-  serveWithContext api (key :. EmptyContext) $
-    hoistServerWithContext api context (runRIO env) server
+app :: Env -> Auth.CookieSettings -> Auth.JWTSettings -> GitHubKey -> Application
+app env cookie jwt key =
+  serveWithContext api (cookie :. jwt :. key :. EmptyContext) $
+    hoistServerWithContext api context
+      (\x -> runRIO env x `catch` throwError) (server whitelist)
+  where
+    whitelist = mkAuthnWhitelist (env ^. #config)
 
-context :: Proxy '[ GitHubKey ]
+context :: Proxy '[ Auth.CookieSettings, Auth.JWTSettings, GitHubKey ]
 context = Proxy
 
 showVersion :: Version -> String

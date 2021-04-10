@@ -21,6 +21,9 @@
   - github を 0.25 に更新
   - drone を 1.1.0 に更新
 - 採点可能かどうかのフラグを設定に追加(#60)
+- GitHub OAuth 2.0 による認証機能を追加(#59)
+- make 時の stack test で generateElm だけが動作するように変更(#59)
+- elm build 時に optimize オプションを追加(#59)
 
 ## Unreleased changes
 

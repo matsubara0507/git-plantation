@@ -1,6 +1,8 @@
 scoreboard:
   interval: 60000
 
+owners: []
+
 problems:
 - id: 1
   name: tutorial

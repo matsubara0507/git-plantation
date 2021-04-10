@@ -79,6 +79,7 @@ runServer opts config = do
          <: #webhook <@=> pure mempty
          <: #store   <@=> pure ""
          <: #logger  <@=> MixLogger.buildPlugin logConf
+         <: #oauth   <@=> pure Nothing
          <: nil
   B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
   flip Mix.withPlugin plugin $ \env -> do

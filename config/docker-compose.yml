@@ -27,6 +27,8 @@ services:
       - SLACK_RESET_REPO_CMD=/reset-repo
       - SLACK_WEBHOOK=${SLACK_WEBHOOK}
       - STORE_URL=http://store
+      - AUTHN_CLIENT_ID=${AUTHN_CLIENT_ID}
+      - AUTHN_CLIENT_SECRET=${AUTHN_CLIENT_SECRET}
 
   store:
     image: matsubara0507/git-plantation:dev
