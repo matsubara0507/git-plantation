@@ -13,49 +13,31 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        ghc: ["8.6.5"]
-        cabal: ["3.0"]
-        cache-version: ["v1"]
+        ghc: ["8.10.4"]
 
     steps:
-    - uses: actions/checkout@v1.1.0
+    - uses: actions/checkout@v2
       with:
         submodules: recursive
-        fetch-depth: 1
 
     - name: Cache .stack
       id: cache-stack
-      uses: actions/cache@v1
+      uses: actions/cache@v2
       with:
         path: ~/.stack
-        key: ${{ runner.os }}-stack-${{ hashFiles('**/stack.yaml.lock') }}-${{ matrix.cache-version }}
+        key: "\
+          ${{ runner.os }}-stack\
+          -${{ hashFiles('**/stack.yaml.lock') }}\
+          -${{ hashFiles('**/package.yaml') }}\
+        "
         restore-keys: |
           ${{ runner.os }}-stack-
-
-    - name: Cache .stack/pantry
-      id: cache-pantry
-      uses: actions/cache@v1
-      with:
-        path: ~/.stack-temp/pantry
-        key: ${{ runner.os }}-pantry-${{ hashFiles('**/stack.yaml.lock') }}-${{ matrix.cache-version }}
-        restore-keys: |
-          ${{ runner.os }}-pantry-
-
-    - name: Move .stack/pantry to temp
-      uses: matsubara0507/actions/move-files@master
-      with:
-        source_dir: ~/.stack-temp/pantry
-        source_files: |
-          pantry
-        target_dir: ~/.stack
-
-    - uses: actions/setup-haskell@v1
+    - uses: haskell/actions/setup@v1.2.1
       name: Setup Haskell
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: ${{ matrix.cabal }}
-
-    - uses: mstksg/setup-stack@v1
+        enable-stack: true
+        stack-version: 'latest'
 
     - name: Install dependencies
       run: stack --system-ghc test --only-dependencies
