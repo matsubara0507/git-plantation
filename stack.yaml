@@ -1,16 +1,17 @@
-resolver: lts-15.5
+resolver: lts-17.9
 packages:
 - .
 extra-deps:
-- extensible-0.8
-- membership-0
-- binary-instances-1.0.0.1
-- servant-github-webhook-0.4.2.0
-- github-webhooks-0.12.0
+- binary-instances-1.0.1
+- extensible-0.8.2
 - drone-1.1.0
 - fallible-0.1.0
+- incremental-0.3.1
+- github-webhooks-0.15.0
+- membership-0
+- servant-github-webhook-0.4.2.0
 - github: matsubara0507/github
-  commit: 8224d498d289c40d3c6d0232ac571a82f8787972
+  commit: 0176698f1cce942c3979f3eb798205e7665e7f55
 - github: matsubara0507/elmap.hs
   commit: 9c9479d3ead6032a0309b5f80f42e94df85da375
   subdirs:
@@ -18,13 +19,14 @@ extra-deps:
   - servant-elmap
   - extensible-elmap
 - github: matsubara0507/mix.hs
-  commit: a0b2b9394c340186c9a8a63808f0db1752ada4ae
+  commit: 75714be080db16f6a4f9d0a22e86947ffcdadc57
   subdirs:
   - mix
   - mix-json-logger
   - mix-plugin-github
   - mix-plugin-drone
   - mix-plugin-shell
+
 docker:
-  repo: matsubara0507/stack-build
+  repo: ghcr.io/matsubara0507/stack-build:18.04
   enable: false
