@@ -56,7 +56,7 @@ createGitHubTeam :: GitHubTeamArg -> Plant ()
 createGitHubTeam args = do
   resp <- MixGitHub.fetch $ GitHub.createTeamForR
     (mkName Proxy $ args ^. #org)
-    (GitHub.CreateTeam (mkName Proxy $ args ^. #gh_team) Nothing mempty GitHub.PermissionPush)
+    (GitHub.CreateTeam (mkName Proxy $ args ^. #gh_team) Nothing mempty GitHub.PrivacyClosed GitHub.PermissionPush)
   case resp of
     Left err -> logDebug (displayShow err) >> throwIO (failure err)
     Right _  -> logInfo $ display success

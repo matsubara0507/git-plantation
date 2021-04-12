@@ -13,49 +13,31 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        ghc: ["8.6.5"]
-        cabal: ["3.0"]
-        cache-version: ["v1"]
+        ghc: ["8.10.4"]
 
     steps:
-    - uses: actions/checkout@v1.1.0
+    - uses: actions/checkout@v2
       with:
         submodules: recursive
-        fetch-depth: 1
 
     - name: Cache .stack
       id: cache-stack
-      uses: actions/cache@v1
+      uses: actions/cache@v2
       with:
         path: ~/.stack
-        key: ${{ runner.os }}-stack-${{ hashFiles('**/stack.yaml.lock') }}-${{ matrix.cache-version }}
+        key: "\
+          ${{ runner.os }}-stack\
+          -${{ hashFiles('**/stack.yaml.lock') }}\
+          -${{ hashFiles('**/package.yaml') }}\
+        "
         restore-keys: |
           ${{ runner.os }}-stack-
-
-    - name: Cache .stack/pantry
-      id: cache-pantry
-      uses: actions/cache@v1
-      with:
-        path: ~/.stack-temp/pantry
-        key: ${{ runner.os }}-pantry-${{ hashFiles('**/stack.yaml.lock') }}-${{ matrix.cache-version }}
-        restore-keys: |
-          ${{ runner.os }}-pantry-
-
-    - name: Move .stack/pantry to temp
-      uses: matsubara0507/actions/move-files@master
-      with:
-        source_dir: ~/.stack-temp/pantry
-        source_files: |
-          pantry
-        target_dir: ~/.stack
-
-    - uses: actions/setup-haskell@v1
+    - uses: haskell/actions/setup@v1.2.1
       name: Setup Haskell
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: ${{ matrix.cabal }}
-
-    - uses: mstksg/setup-stack@v1
+        enable-stack: true
+        stack-version: 'latest'
 
     - name: Install dependencies
       run: stack --system-ghc test --only-dependencies
@@ -63,24 +45,34 @@ jobs:
     - name: Build and Test
       run: stack --system-ghc test --local-bin-path=./bin
 
-    - name: Build Docker Image
-      run: docker build -t git-plantation . --build-arg local_bin_path=./bin
-
-    - name: Push Docker Image
-      if: github.ref == 'refs/heads/master'
+    # Build and Push Docker Image
+    - name: Prepare
+      id: prep
       run: |
-        echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u matsubara0507 --password-stdin
-        docker tag git-plantation docker.pkg.github.com/matsubara0507/git-plantation/exe
-        docker push docker.pkg.github.com/matsubara0507/git-plantation/exe:latest
+        DOCKER_IMAGE=ghcr.io/matsubara0507/git-plantation
+        TAGS="${DOCKER_IMAGE}:latest"
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          TAGS="$TAGS,${DOCKER_IMAGE}:${GITHUB_REF#refs/tags/}"
+        fi
+        echo ::set-output name=tags::${TAGS}
+    - name: Setup QEMU
+      uses: docker/setup-qemu-action@v1
+    - name: Setup Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@v1
 
-    - name: Push Docker Image (tag)
-      if: startsWith(github.ref, 'refs/tags/')
-      run: |
-        echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u matsubara0507 --password-stdin
-        docker tag git-plantation docker.pkg.github.com/matsubara0507/git-plantation/exe:${GITHUB_REF#refs/tags/}
-        docker push docker.pkg.github.com/matsubara0507/git-plantation/exe:${GITHUB_REF#refs/tags/}
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v1
+      with:
+        registry: ghcr.io
+        username: matsubara0507
+        password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Display .stack size
-      run: |
-        du -sh ~/.stack/*
-        du -sh .stack-work/*
+    - name: Build and push
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        builder: ${{ steps.buildx.outputs.name }}
+        tags: ${{ steps.prep.outputs.tags }}
+        push: ${{ github.event_name != 'pull_request' }}
+        build-args: local_bin_path=./bin

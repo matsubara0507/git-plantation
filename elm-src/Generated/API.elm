@@ -1,4 +1,4 @@
-module Generated.API exposing (Config, Link, Problem, Repo, Score, ScoreBoardConfig, Status, Team, User, getApiProblems, getApiScores, getApiScoresByTeam, getApiScoresByTeamByPlayer, getApiTeams, jsonDecConfig, jsonDecLink, jsonDecProblem, jsonDecRepo, jsonDecScore, jsonDecScoreBoardConfig, jsonDecStatus, jsonDecTeam, jsonDecUser, jsonEncConfig, jsonEncLink, jsonEncProblem, jsonEncRepo, jsonEncScore, jsonEncScoreBoardConfig, jsonEncStatus, jsonEncTeam, jsonEncUser)
+module Generated.API exposing (..)
 
 -- The following module comes from bartavelle/json-helpers
 
