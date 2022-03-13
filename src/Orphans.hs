@@ -23,9 +23,6 @@ instance Forall (KeyTargetAre KnownSymbol FromHttpApiData) xs => FromForm (Recor
     hgenerateFor (Proxy @ (KeyTargetAre KnownSymbol FromHttpApiData)) $ \m ->
       Field <$> parseUnique (stringKeyOf m) form
 
-instance FromHttpApiData a => FromHttpApiData (Identity a) where
-  parseUrlPiece = fmap pure . parseUrlPiece
-
 instance IsElmType Int64 where
   compileElmType _ = toElmType (Proxy @ Int)
 
