@@ -12,6 +12,7 @@ import           Data.Extensible.Elm.Mapping
 import qualified Data.Yaml                   as Y
 import           Elm.Mapping
 import           Git.Plantation.Data         (Problem, Team, User)
+import qualified Mix.Plugin.Config           as MixConfig
 import           Orphans                     ()
 
 type Config = Record
@@ -28,6 +29,9 @@ type ScoreBoardConfig = Record
    , "zone"       >: Maybe Text
    , "scoring"    >: Maybe Bool
    ]
+
+askConfig :: MixConfig.HasConfig Config env => RIO env Config
+askConfig = MixConfig.askConfig
 
 readConfig :: MonadIO m => FilePath -> m Config
 readConfig = Y.decodeFileThrow

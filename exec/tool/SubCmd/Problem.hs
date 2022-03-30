@@ -9,8 +9,7 @@ module SubCmd.Problem
 import           RIO
 
 import           Data.Extensible
-import           Git.Plantation.Cmd.Problem
-import           Git.Plantation.Cmd.Run
+import           Git.Plantation.Cmd
 
 newtype ProblemCmd = ProblemCmd (Variant CmdField)
 

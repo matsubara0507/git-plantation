@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds  #-}
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase       #-}
@@ -27,13 +28,13 @@ type Plant = RIO Env
 type Env = Record
   '[ "config"  >: Config
    , "github"  >: GitHub.Token
-   , "slack"   >: Maybe Slack.Config
+   , "slack"   >: Slack.Config
    , "work"    >: FilePath
    , "drone"   >: Mix.Config
    , "webhook" >: WebhookConfig
    , "store"   >: Text -- URL for store
    , "logger"  >: LogFunc
-   , "oauth"   >: Maybe OAuthSettings
+   , "oauth"   >: OAuthSettings
    ]
 
 type WebhookConfig = [(Text, Text)]
@@ -45,6 +46,15 @@ mkWebhookConf url secret =
   , ("secret", secret)
   ]
 
+class HasWebhookConfig env where
+  webhookConfigL :: Lens' env WebhookConfig
+
+instance Lookup xs "webhook" WebhookConfig => HasWebhookConfig (Record xs) where
+  webhookConfigL = lens (view #webhook) (\x y -> x & #webhook `set` y)
+
+askWebhookConfig :: HasWebhookConfig env => RIO env WebhookConfig
+askWebhookConfig = view webhookConfigL
+
 type OAuthSettings = Record
   '[ "client_id"     >: String
    , "client_secret" >: String
@@ -52,7 +62,7 @@ type OAuthSettings = Record
    , "jwt"           >: Auth.JWTSettings
    ]
 
-fromJustWithThrow :: Exception e => Maybe a -> e -> Plant a
+fromJustWithThrow :: Exception e => Maybe a -> e -> RIO env a
 fromJustWithThrow (Just x) _ = pure x
 fromJustWithThrow Nothing e  = throwIO e
 

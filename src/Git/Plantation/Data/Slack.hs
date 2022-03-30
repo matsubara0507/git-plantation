@@ -1,6 +1,8 @@
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeOperators    #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE OverloadedLabels     #-}
+{-# LANGUAGE TypeOperators        #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
 module Git.Plantation.Data.Slack where
 
@@ -42,6 +44,15 @@ type DisplayLogData = Record
    , "text"         >: Text
    , "command"      >: Text
    ]
+
+class HasSlackConfig env where
+  slackConfigL :: Lens' env Config
+
+instance Lookup xs "slack" Config => HasSlackConfig (Record xs) where
+  slackConfigL = lens (view #slack) (\x y -> x & #slack `set` y)
+
+askSlackConfig :: HasSlackConfig env => RIO env Config
+askSlackConfig = view slackConfigL
 
 mkMessage :: Text -> Message
 mkMessage txt = #text @= txt <: nil

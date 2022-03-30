@@ -18,14 +18,12 @@ import           Data.Extensible.GetOpt
 import           Data.Version             (Version)
 import qualified Data.Version             as Version
 import           Development.GitRev
-import           Git.Plantation
+import           Git.Plantation           (Config, readConfig)
 import           Git.Plantation.Store     (Store)
 import qualified Git.Plantation.Store     as Store
 import qualified Mix.Plugin               as Mix (withPlugin)
 import qualified Mix.Plugin.Drone         as MixDrone
-import qualified Mix.Plugin.GitHub        as MixGitHub
 import qualified Mix.Plugin.Logger        as MixLogger
-import qualified Mix.Plugin.Shell         as MixShell
 import qualified Network.Wai.Handler.Warp as Warp
 import           Servant
 import           System.Environment       (getEnv, lookupEnv)
@@ -72,21 +70,15 @@ runServer opts config = do
       logConf   = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
       plugin    = hsequence
           $ #config  <@=> pure config
-         <: #github  <@=> MixGitHub.buildPlugin ""
-         <: #slack   <@=> pure Nothing
-         <: #work    <@=> MixShell.buildPlugin "."
          <: #drone   <@=> MixDrone.buildPlugin client (dHttp == Just "true")
-         <: #webhook <@=> pure mempty
-         <: #store   <@=> pure ""
          <: #logger  <@=> MixLogger.buildPlugin logConf
-         <: #oauth   <@=> pure Nothing
          <: nil
   B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
   flip Mix.withPlugin plugin $ \env -> do
-    store <- atomically . newTVar =<< runRIO env Store.initial
+    store <- newTVarIO =<< runRIO env Store.initial
     Warp.run (opts ^. #port) $ app env store
 
-app :: Env -> TVar Store -> Application
+app :: Store.Env -> TVar Store -> Application
 app env store =
   serve Store.api $ hoistServer Store.api (runRIO env) (Store.server store)
 

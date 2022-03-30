@@ -21,6 +21,7 @@ import           RIO
 
 import           Data.Extensible
 import           Git.Plantation.Cmd.Arg
+import           Git.Plantation.Cmd.Env                 (CmdEnv)
 import           Git.Plantation.Cmd.Repo                (repoGithub,
                                                          splitRepoName)
 import           Git.Plantation.Data
@@ -56,7 +57,7 @@ type MemberWithGitHubTeamArg = Record
    , "gh_team" >: Text
    ]
 
-actForMember :: (MemberArg -> Plant ()) -> MemberCmdArg -> Plant ()
+actForMember :: CmdEnv env => (MemberArg -> RIO env ()) -> MemberCmdArg -> RIO env ()
 actForMember act args =
   findByIdWith (view #teams) (args ^. #team) >>= \case
     Nothing   -> Mix.logErrorR "not found by config" (toArgInfo $ args ^. #team)
@@ -66,7 +67,7 @@ actForMember act args =
       mapM_ act $ hsequence $ #user <@=> member <: #repo <@=> repos <: nil
 
 actForMemberWithOrg ::
-  (MemberWithOrgArg -> Plant ()) -> MemberCmdArg -> Plant ()
+  CmdEnv env => (MemberWithOrgArg -> RIO env ()) -> MemberCmdArg -> RIO env ()
 actForMemberWithOrg act args =
   findByIdWith (view #teams) (args ^. #team) >>= \case
     Nothing   -> Mix.logErrorR "not found by config" (toArgInfo $ args ^. #team)
@@ -76,7 +77,7 @@ actForMemberWithOrg act args =
       mapM_ act $ hsequence $ #user <@=> member <: #org <@=> ghOrg <: nil
 
 actForMemberWithGitHubTeam ::
-  (MemberWithGitHubTeamArg -> Plant ()) -> MemberCmdArg -> Plant ()
+  CmdEnv env => (MemberWithGitHubTeamArg -> RIO env ()) -> MemberCmdArg -> RIO env ()
 actForMemberWithGitHubTeam act args =
   findByIdWith (view #teams) (args ^. #team) >>= \case
     Nothing   -> Mix.logErrorR "not found by config" (toArgInfo $ args ^. #team)
@@ -86,32 +87,32 @@ actForMemberWithGitHubTeam act args =
       ghTeam <- findGitHubTeam (args ^. #gh_team) team
       mapM_ act $ hsequence $ #user <@=> member <: #org <@=> ghOrg <: #gh_team <@=> ghTeam <: nil
 
-findMember :: Maybe UserId -> Team -> Plant [User]
+findMember :: CmdEnv env => Maybe UserId -> Team -> RIO env [User]
 findMember Nothing team = pure $ team ^. #member
 findMember (Just idx) team =
   case findById idx (team ^. #member) of
     Nothing   -> Mix.logErrorR "not found by config" (toArgInfo idx) >> pure []
     Just user -> pure [user]
 
-findRepos :: [RepoId] -> Team -> Plant [Repo]
+findRepos :: CmdEnv env => [RepoId] -> Team -> RIO env [Repo]
 findRepos [] team = pure $ team ^. #repos
 findRepos ids team = fmap catMaybes . forM ids $ \idx ->
   case findById idx (team ^. #repos) of
     Nothing -> Mix.logErrorR "not found by config" (toArgInfo idx) >> pure Nothing
     Just r  -> pure (Just r)
 
-findGitHubOrg :: Team -> Plant [Text]
+findGitHubOrg :: CmdEnv env => Team -> RIO env [Text]
 findGitHubOrg team = case team ^. #org of
   Nothing  -> Mix.logErrorR "undefined GitHub org in config" nil >> pure []
   Just org -> pure [org]
 
-findGitHubTeam :: Maybe Text -> Team -> Plant [Text]
+findGitHubTeam :: CmdEnv env => Maybe Text -> Team -> RIO env [Text]
 findGitHubTeam Nothing _ = pure []
 findGitHubTeam (Just name) team
   | name `elem` team ^. #gh_teams = pure [name]
   | otherwise = Mix.logErrorR "not found by config" (#gh_team @= name <: nil) >> pure []
 
-inviteUserToRepo :: MemberArg -> Plant ()
+inviteUserToRepo :: CmdEnv env => MemberArg -> RIO env ()
 inviteUserToRepo args = do
   github <- repoGithub $ args ^. #repo
   let (owner, repo) = splitRepoName github
@@ -130,7 +131,7 @@ inviteUserToRepo args = do
       , " to ", githubPath, "."
       ]
 
-kickUserFromRepo :: MemberArg -> Plant ()
+kickUserFromRepo :: CmdEnv env => MemberArg -> RIO env ()
 kickUserFromRepo args = do
   github <- repoGithub $ args ^. #repo
   let (owner, repo) = splitRepoName github
@@ -149,7 +150,7 @@ kickUserFromRepo args = do
       , " from ", githubPath, "."
       ]
 
-inviteUserToGitHubOrg :: MemberWithOrgArg -> Plant ()
+inviteUserToGitHubOrg :: CmdEnv env => MemberWithOrgArg -> RIO env ()
 inviteUserToGitHubOrg args = do
   resp <- MixGitHub.fetch $ GitHub.addOrUpdateMembershipR
     (mkName Proxy $ args ^. #org)
@@ -166,7 +167,7 @@ inviteUserToGitHubOrg args = do
       , " to ", args ^. #org, "."
       ]
 
-kickUserFromGitHubOrg :: MemberWithOrgArg -> Plant ()
+kickUserFromGitHubOrg :: CmdEnv env => MemberWithOrgArg -> RIO env ()
 kickUserFromGitHubOrg args = do
   resp <- MixGitHub.fetch $ GitHub.removeMembershipR
     (mkName Proxy $ args ^. #org)
@@ -182,7 +183,7 @@ kickUserFromGitHubOrg args = do
       , " from ", args ^. #org, "."
       ]
 
-inviteUserToGitHubOrgTeam :: MemberWithGitHubTeamArg -> Plant ()
+inviteUserToGitHubOrgTeam :: CmdEnv env => MemberWithGitHubTeamArg -> RIO env ()
 inviteUserToGitHubOrgTeam args = do
   resp <- MixGitHub.fetch $ GitHub.teamInfoByNameR
     (mkName Proxy $ args ^. #org)
@@ -205,7 +206,7 @@ inviteUserToGitHubOrgTeam args = do
       , " to ", args ^. #org, ":", args ^. #gh_team, "."
       ]
 
-kickUserFromGitHubOrgTeam :: MemberWithGitHubTeamArg -> Plant ()
+kickUserFromGitHubOrgTeam :: CmdEnv env => MemberWithGitHubTeamArg -> RIO env ()
 kickUserFromGitHubOrgTeam args = do
   resp <- MixGitHub.fetch $ GitHub.teamInfoByNameR
     (mkName Proxy $ args ^. #org)

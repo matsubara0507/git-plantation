@@ -9,8 +9,7 @@ module SubCmd.Org
 import           RIO
 
 import           Data.Extensible
-import           Git.Plantation.Cmd.Org
-import           Git.Plantation.Cmd.Run
+import           Git.Plantation.Cmd
 
 newtype OrgCmd = OrgCmd (Variant CmdField)
 

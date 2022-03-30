@@ -103,8 +103,8 @@ server whitelist
 
 loginPage :: Plant (Headers JWTCookieHeaders H.Html)
 loginPage = evalContT $ do
-  config  <- asks (view #oauth) !?? exit throw401
-  session <- lift $ newSession
+  config  <- asks (view #oauth)
+  session <- lift newSession
   applyCookies <- acceptLogin' config session !?? exit throw401
   let url = fromString $ Auth.authorizeUrl config (toState session)
   pure $ applyCookies (loginHtml url)
@@ -130,12 +130,12 @@ callback auth code state =
       logDebug $ fromString ("[GET] /callback: " <> toState s)
       callback'
     _  -> do
-      logWarn $ "[GET] /callback: no session"
+      logWarn "[GET] /callback: no session"
       throw401
   where
     callback' = evalContT $ do
       code'  <- code ??? exit throw401
-      config <- asks (view #oauth) !?? exit throw401
+      config <- asks (view #oauth)
       token  <- lift $ Auth.fetchToken config code'
       user   <- lift (Auth.fetchUser token) !?= const (exit throw401)
       applyCookies <- acceptLogin' config (toAccount user) !?? exit throw401

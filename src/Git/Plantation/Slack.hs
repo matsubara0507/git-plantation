@@ -1,19 +1,31 @@
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeOperators    #-}
+{-# LANGUAGE DataKinds     #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Git.Plantation.Slack where
 
 import           RIO
 
-import           Git.Plantation.API.Slack (SlackAPI, slackAPI)
-import           Git.Plantation.Env       (Plant)
+import           Data.Extensible
+import           Git.Plantation.API.Slack  (SlackAPI, slackAPI)
+import           Git.Plantation.Config
+import qualified Git.Plantation.Data.Slack as Slack
+import           Git.Plantation.Env        hiding (Env)
+import qualified Mix.Plugin.GitHub         as GitHub
 import           Servant
+
+type Env = Record
+  '[ "config"  >: Config
+   , "github"  >: GitHub.Token
+   , "slack"   >: Slack.Config
+   , "work"    >: FilePath
+   , "webhook" >: WebhookConfig
+   , "logger"  >: LogFunc
+   ]
 
 type API = SlackAPI
 
 api :: Proxy API
 api = Proxy
 
-server :: ServerT API Plant
+server :: ServerT API (RIO Env)
 server = slackAPI

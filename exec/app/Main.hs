@@ -107,13 +107,13 @@ runServer opts config = do
       plugin    = hsequence
           $ #config  <@=> pure config
          <: #github  <@=> MixGitHub.buildPlugin token
-         <: #slack   <@=> pure (Just slackConf)
+         <: #slack   <@=> pure slackConf
          <: #work    <@=> MixShell.buildPlugin (opts ^. #work)
          <: #drone   <@=> MixDrone.buildPlugin client (dHttp == Just "true")
          <: #webhook <@=> pure mempty
          <: #store   <@=> pure storeUrl
          <: #logger  <@=> MixLogger.buildPlugin logConf
-         <: #oauth   <@=> pure (Just oauthConf)
+         <: #oauth   <@=> pure oauthConf
          <: nil
   B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
   flip Mix.withPlugin plugin $ \env ->

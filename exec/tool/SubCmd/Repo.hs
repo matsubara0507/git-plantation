@@ -10,8 +10,7 @@ module SubCmd.Repo
 import           RIO
 
 import           Data.Extensible
-import           Git.Plantation.Cmd.Repo
-import           Git.Plantation.Cmd.Run
+import           Git.Plantation.Cmd
 
 newtype RepoCmd = RepoCmd (Variant CmdFields)
 

@@ -3,6 +3,7 @@
 {-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE OverloadedLabels     #-}
 {-# LANGUAGE TypeOperators        #-}
+{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
 module Git.Plantation.Cmd.Repo
   ( RepoCmdArg
@@ -31,6 +32,7 @@ import qualified RIO.Vector                           as V
 import           Data.Coerce                          (coerce)
 import           Data.Extensible
 import           Git.Plantation.Cmd.Arg
+import           Git.Plantation.Cmd.Env               (CmdEnv)
 import           Git.Plantation.Data                  (Problem, Repo, Team,
                                                        User)
 import qualified Git.Plantation.Data.Team             as Team
@@ -67,7 +69,7 @@ type NewRepoFlags = Record
    , "skip_init_ci"              >: Bool
    ]
 
-actForRepo :: (RepoArg -> Plant ()) -> RepoCmdArg -> Plant ()
+actForRepo :: CmdEnv env => (RepoArg -> RIO env ()) -> RepoCmdArg -> RIO env ()
 actForRepo act args =
   findByIdWith (view #teams) (args ^. #team) >>= \case
     Nothing   -> Mix.logErrorR "not found by config" (toArgInfo $ args ^. #team)
@@ -75,20 +77,20 @@ actForRepo act args =
       repos <- findRepos (args ^. #repos) team
       mapM_ act $ hsequence $ #repo <@=> repos <: #team <@=> pure team <: nil
 
-findRepos :: [RepoId] -> Team -> Plant [Repo]
+findRepos :: CmdEnv env => [RepoId] -> Team -> RIO env [Repo]
 findRepos [] team = pure $ team ^. #repos
 findRepos ids team = fmap catMaybes . forM ids $ \idx ->
   case findById idx (team ^. #repos) of
     Nothing -> Mix.logErrorR "not found by config" (toArgInfo idx) >> pure Nothing
     Just r  -> pure (Just r)
 
-findProblemWithThrow :: ProblemId -> Plant Problem
+findProblemWithThrow :: CmdEnv env => ProblemId -> RIO env Problem
 findProblemWithThrow idx =
   findByIdWith (view #problems) idx >>= \case
-    Nothing  -> throwIO $ UndefinedProblem (coerce idx)
-    Just p   -> pure p
+    Nothing -> throwIO $ UndefinedProblem (coerce idx)
+    Just p  -> pure p
 
-createRepo :: NewRepoFlags -> RepoArg -> Plant ()
+createRepo :: (HasWebhookConfig env, CmdEnv env) => NewRepoFlags -> RepoArg -> RIO env ()
 createRepo flags args = do
   Mix.logInfoR "create team repository" args
   unless (flags ^. #skip_create_repo)          $ createRepoInGitHub args
@@ -97,7 +99,7 @@ createRepo flags args = do
   unless (flags ^. #skip_setup_webhook)        $ setupWebhook args
   unless (flags ^. #skip_init_ci)              $ initProblemCI args
 
-createRepoInGitHub :: RepoArg -> Plant ()
+createRepoInGitHub :: CmdEnv env => RepoArg -> RIO env ()
 createRepoInGitHub args = do
   (owner, repo) <- splitRepoName <$> repoGithub (args ^. #repo)
   logInfo $ "create repo in github: " <> displayShow (owner <> "/" <> repo)
@@ -114,7 +116,7 @@ createRepoInGitHub args = do
         GitHub.createRepoR
     mkErr err = CreateRepoError err (args ^. #team) (args ^. #repo)
 
-initRepoInGitHub :: RepoArg -> Plant ()
+initRepoInGitHub :: CmdEnv env => RepoArg -> RIO env ()
 initRepoInGitHub args = do
   token   <- MixGitHub.tokenText
   github  <- repoGithub (args ^. #repo)
@@ -135,7 +137,7 @@ initRepoInGitHub args = do
     Git.push $ "-f" : "-u" : "origin" : problem ^. #challenge_branches
   logInfo $ "Success: create repo as " <> displayShow github
 
-setupDefaultBranch :: RepoArg -> Plant ()
+setupDefaultBranch :: CmdEnv env => RepoArg -> RIO env ()
 setupDefaultBranch args = do
   (owner, repo) <- splitRepoName <$> repoGithub (args ^. #repo)
   problem <- findProblemWithThrow (ProblemId $ args ^. #repo ^. #problem)
@@ -153,10 +155,10 @@ setupDefaultBranch args = do
       Nothing Nothing Nothing Nothing Nothing Nothing
       Nothing Nothing Nothing Nothing Nothing Nothing
 
-setupWebhook :: RepoArg -> Plant ()
+setupWebhook :: (HasWebhookConfig env, CmdEnv env) => RepoArg -> RIO env ()
 setupWebhook args = do
   (owner, repo) <- splitRepoName <$> repoGithub (args ^. #repo)
-  webhookConfig <- asks (view #webhook)
+  webhookConfig <- askWebhookConfig
   logInfo $ "setup github webhook to repo: " <> displayShow (owner <> "/" <> repo)
   resp <- MixGitHub.fetch $
     GitHub.createRepoWebhookR (mkName Proxy owner) (mkName Proxy repo) (webhook webhookConfig)
@@ -172,7 +174,7 @@ setupWebhook args = do
       }
     mkErr err = SetupWebhookError err (args ^. #repo)
 
-initProblemCI :: RepoArg -> Plant ()
+initProblemCI :: CmdEnv env => RepoArg -> RIO env ()
 initProblemCI args = do
   token   <- MixGitHub.tokenText
   github  <- repoGithub (args ^. #repo)
@@ -191,16 +193,16 @@ initProblemCI args = do
     Git.push ["-f", "-u", "origin", args ^. #team ^. #name]
   logInfo $ "Success: create ci branch in " <> displayShow (problem ^. #repo)
 
-resetRepo :: RepoArg -> Plant ()
+resetRepo :: CmdEnv env => RepoArg -> RIO env ()
 resetRepo args = do
   problem <- findProblemWithThrow (ProblemId $ args ^. #repo ^. #problem)
   let (_, repo) = splitRepoName $ problem ^. #repo
-  local (over #work $ toTeamWork (args ^. #team) False) $ do
-    local (over #work $ toWorkWith $ Text.unpack repo) $ MixShell.exec (Shell.ls "." >> pure ())
+  local (over MixShell.workL $ toTeamWork (args ^. #team) False) $ do
+    local (over MixShell.workL $ toWorkWith $ Text.unpack repo) $ MixShell.exec (Shell.ls "." >> pure ())
     MixShell.exec $ Shell.rm_rf $ Shell.fromText repo
   initRepoInGitHub args
 
-pushForCI :: Team -> Problem -> Maybe User -> Plant ()
+pushForCI :: CmdEnv env => Team -> Problem -> Maybe User -> RIO env ()
 pushForCI team problem user = do
   token <- MixGitHub.tokenText
   let (owner, repo) = splitRepoName $ problem ^. #repo
@@ -215,14 +217,14 @@ pushForCI team problem user = do
   where
     userAccount = maybe "" (view #github) user
 
-deleteRepo :: RepoArg -> Plant ()
+deleteRepo :: CmdEnv env => RepoArg -> RIO env ()
 deleteRepo args = do
   Mix.logInfoR "delete team repository" args
   problem <- findProblemWithThrow (ProblemId $ args ^. #repo ^. #problem)
   deleteRepoInGithub (args ^. #repo)
   deleteProblemCI (args ^. #team) problem
 
-deleteRepoInGithub :: Repo -> Plant ()
+deleteRepoInGithub :: CmdEnv env => Repo -> RIO env ()
 deleteRepoInGithub info = do
   (owner, repo) <- splitRepoName <$> repoGithub info
   logInfo $ "delete repo in github: " <> displayShow (owner <> "/" <> repo)
@@ -232,7 +234,7 @@ deleteRepoInGithub info = do
     Left err -> logDebug (displayShow err) >> throwIO (DeleteRepoError err info)
     Right _  -> logInfo "Success: delete repository in GitHub"
 
-deleteProblemCI :: Team -> Problem -> Plant ()
+deleteProblemCI :: CmdEnv env => Team -> Problem -> RIO env ()
 deleteProblemCI team problem = do
   token <- MixGitHub.tokenText
   let (owner, repo) = splitRepoName $ problem ^. #repo
@@ -241,15 +243,15 @@ deleteProblemCI team problem = do
     Shell.errExit False $ Git.push  [ "--delete", "origin", team ^. #name]
   logInfo $ "Success: delete ci branch in " <> displayShow (problem ^. #repo)
 
-execGitForTeam :: Team -> Text -> Bool -> Text -> MixShell.Sh () -> Plant ()
+execGitForTeam :: CmdEnv env => Team -> Text -> Bool -> Text -> MixShell.Sh () -> RIO env ()
 execGitForTeam team repo isProblem url act =
-  local (over #work $ toTeamWork team isProblem) $ do
+  local (over MixShell.workL $ toTeamWork team isProblem) $ do
     MixShell.exec $ unlessM (Shell.test_d $ fromString repo') $ Git.clone [url, repo]
-    local (over #work $ toWorkWith repo') $ MixShell.exec act
+    local (over MixShell.workL $ toWorkWith repo') $ MixShell.exec act
   where
     repo' = Text.unpack repo
 
-addGitHubTeam :: RepoArg -> Plant ()
+addGitHubTeam :: CmdEnv env => RepoArg -> RIO env ()
 addGitHubTeam args = case (args ^. #team ^. #org, args ^. #repo ^. #only) of
   (Nothing, _)   -> logError "Undefined GitHub org in team"
   (_, Nothing)   -> logError "Undefined 'only' option in team repo."
@@ -259,7 +261,7 @@ addGitHubTeam args = case (args ^. #team ^. #org, args ^. #repo ^. #only) of
   where
     valid name = name `elem` args ^. #team ^. #gh_teams
 
-    addGitHubTeam' :: Text -> Text -> Repo -> Plant ()
+    addGitHubTeam' :: CmdEnv env => Text -> Text -> Repo -> RIO env ()
     addGitHubTeam' org name repo = do
       resp <- MixGitHub.fetch $ GitHub.teamInfoByNameR
         (mkName Proxy org)
@@ -286,7 +288,7 @@ addGitHubTeam args = case (args ^. #team ^. #org, args ^. #repo ^. #only) of
 splitRepoName :: Text -> (Text, Text)
 splitRepoName = fmap (Text.drop 1) . Text.span(/= '/')
 
-repoGithub :: Repo -> Plant Text
+repoGithub :: CmdEnv env => Repo -> RIO env Text
 repoGithub repo =
   Team.repoGithubPath repo `fromJustWithThrow` InvalidRepoConfig repo
 

@@ -11,8 +11,7 @@ module SubCmd.Member
 import           RIO
 
 import           Data.Extensible
-import           Git.Plantation.Cmd.Member
-import           Git.Plantation.Cmd.Run
+import           Git.Plantation.Cmd
 
 newtype MemberCmd = MemberCmd (Variant CmdFields)
 

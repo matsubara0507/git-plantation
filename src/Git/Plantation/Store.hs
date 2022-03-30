@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds  #-}
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE OverloadedLabels #-}
@@ -6,6 +7,7 @@
 
 module Git.Plantation.Store
   ( Store
+  , Env
   , Build
   , isCorrect
   , isPending
@@ -22,19 +24,25 @@ module Git.Plantation.Store
   ) where
 
 import           RIO
-import qualified RIO.List            as L
-import qualified RIO.Text            as T
+import qualified RIO.List              as L
+import qualified RIO.Text              as T
 
 import           Data.Extensible
-import qualified Data.IntMap.Strict  as IntMap
-import qualified Drone.Endpoints     as Drone
-import qualified Drone.Types         as Drone
-import           Git.Plantation.Cmd  (splitRepoName)
-import           Git.Plantation.Data (Problem)
-import           Git.Plantation.Env  (Plant)
-import qualified Mix.Plugin.Drone    as MixDrone
-import           Network.HTTP.Req    as Req
+import qualified Data.IntMap.Strict    as IntMap
+import qualified Drone.Endpoints       as Drone
+import qualified Drone.Types           as Drone
+import           Git.Plantation.Cmd    (splitRepoName)
+import           Git.Plantation.Config
+import           Git.Plantation.Data   (Problem)
+import qualified Mix.Plugin.Drone      as MixDrone
+import           Network.HTTP.Req      as Req
 import           Servant
+
+type Env = Record
+  '[ "config" >: Config
+   , "drone"  >: MixDrone.Config
+   , "logger" >: LogFunc
+   ]
 
 type Store = IntMap [Build]
 
@@ -58,7 +66,7 @@ toAnswer build =
     ""      -> Nothing
     account -> Just account
 
-initial :: Plant Store
+initial :: RIO Env Store
 initial = do
   problems <- asks (view #problems . view #config)
   builds   <- forM problems (\p -> (p ^. #id,) <$> fetchBuilds p)
@@ -93,7 +101,7 @@ ordStatus = ordStatus' `on` view #status
     ordStatus'  _ "pending" = LT
     ordStatus' _ _          = EQ
 
-filterWithTime :: [Build] -> Plant [Build]
+filterWithTime :: [Build] -> RIO Env [Build]
 filterWithTime builds = do
   config <- asks (view #scoreboard . view #config)
   pure $ case (config ^. #start_time, config ^. #end_time) of
@@ -102,7 +110,7 @@ filterWithTime builds = do
     (Nothing, Just et) -> filter (\b -> et <= b ^. #created) builds
     _                  -> builds
 
-fetchBuilds :: Problem -> Plant [Build]
+fetchBuilds :: Problem -> RIO Env [Build]
 fetchBuilds problem = do
   let (owner, repo) = splitRepoName $ problem ^. #repo
   builds <- tryAny (getAllBuilds owner repo) >>= \case
@@ -110,7 +118,7 @@ fetchBuilds problem = do
     Right builds -> pure builds
   filterWithTime $ shrink <$> builds
 
-getAllBuilds :: Text -> Text -> Plant [Drone.Build]
+getAllBuilds :: Text -> Text -> RIO Env [Drone.Build]
 getAllBuilds owner repo = mconcat <$> getAllBuilds' [] 1
   where
     getAllBuilds' xss n = do
@@ -126,7 +134,7 @@ type API
 api :: Proxy API
 api = Proxy
 
-server :: TVar Store -> ServerT API Plant
+server :: TVar Store -> ServerT API (RIO Env)
 server store = getStore :<|> putStore
   where
     getStore = do
@@ -141,7 +149,7 @@ server store = getStore :<|> putStore
         liftIO $ atomically (modifyTVar' store $ modifyWith problem builds)
       pure NoContent
 
-findProblemWith :: Int -> (Problem -> Plant ()) -> Plant ()
+findProblemWith :: Int -> (Problem -> RIO Env ()) -> RIO Env ()
 findProblemWith pid act = do
   problems <- asks (view #problems . view #config)
   case L.find (\p -> p ^. #id == pid) problems of

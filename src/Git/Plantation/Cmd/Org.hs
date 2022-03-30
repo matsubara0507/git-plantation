@@ -15,6 +15,7 @@ import           RIO
 
 import           Data.Extensible
 import           Git.Plantation.Cmd.Arg
+import           Git.Plantation.Cmd.Env               (CmdEnv)
 import           Git.Plantation.Data.Team
 import           Git.Plantation.Env
 import           GitHub.Data.Name                     (mkName)
@@ -33,7 +34,7 @@ type GitHubTeamArg = Record
    , "gh_team" >: Text
    ]
 
-actForGitHubTeam :: (GitHubTeamArg -> Plant ()) -> OrgCmdArg -> Plant ()
+actForGitHubTeam :: CmdEnv env => (GitHubTeamArg -> RIO env ()) -> OrgCmdArg -> RIO env ()
 actForGitHubTeam act args =
   findByIdWith (view #teams) (args ^. #team) >>= \case
     Nothing   -> Mix.logErrorR "not found by config" (toArgInfo $ args ^. #team)
@@ -41,7 +42,7 @@ actForGitHubTeam act args =
       (org, ghTeams) <- findGitHubTeams (args ^. #gh_teams) team
       mapM_ act $ hsequence $ #team <@=> [team] <: #org <@=> org <: #gh_team <@=> ghTeams <: nil
 
-findGitHubTeams :: [GitHubTeamName] -> Team -> Plant ([Text], [Text])
+findGitHubTeams :: CmdEnv env => [GitHubTeamName] -> Team -> RIO env ([Text], [Text])
 findGitHubTeams ids team = case (team ^. #org, ids) of
   (Nothing, _)   -> logError "Undefined GitHub org on team config." >> pure ([],[])
   (Just org, []) -> pure ([org], team ^. #gh_teams)
@@ -52,7 +53,7 @@ findGitHubTeams ids team = case (team ^. #org, ids) of
         Nothing -> Mix.logErrorR "not found by config" (toArgInfo idx) >> pure Nothing
         Just t  -> pure (Just t)
 
-createGitHubTeam :: GitHubTeamArg -> Plant ()
+createGitHubTeam :: CmdEnv env => GitHubTeamArg -> RIO env ()
 createGitHubTeam args = do
   resp <- MixGitHub.fetch $ GitHub.createTeamForR
     (mkName Proxy $ args ^. #org)

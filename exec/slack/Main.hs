@@ -18,10 +18,9 @@ import           Data.Extensible.GetOpt
 import           Data.Version             (Version)
 import qualified Data.Version             as Version
 import           Development.GitRev
-import           Git.Plantation
+import           Git.Plantation           (Config, readConfig)
 import qualified Git.Plantation.Slack     as Slack
 import qualified Mix.Plugin               as Mix (withPlugin)
-import qualified Mix.Plugin.Drone         as MixDrone
 import qualified Mix.Plugin.GitHub        as MixGitHub
 import qualified Mix.Plugin.Logger        as MixLogger
 import qualified Mix.Plugin.Shell         as MixShell
@@ -79,11 +78,7 @@ runServer opts config = do
   sChannels     <- liftIO $ readListEnv <$> getEnv "SLACK_CHANNEL_IDS"
   sResetRepoCmd <- liftIO $ fromString  <$> getEnv "SLACK_RESET_REPO_CMD"
   sWebhook      <- liftIO $ fromString  <$> getEnv "SLACK_WEBHOOK"
-  dHost         <- liftIO $ fromString  <$> getEnv "DRONE_HOST"
-  dToken        <- liftIO $ fromString  <$> getEnv "DRONE_TOKEN"
-  dPort         <- liftIO $ readMaybe   <$> getEnv "DRONE_PORT"
-  let dClient = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
-      logConf = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
+  let logConf = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
       slackConf
           = #token          @= sToken
          <: #team_id        @= sTeam
@@ -92,21 +87,18 @@ runServer opts config = do
          <: #reset_repo_cmd @= sResetRepoCmd
          <: #webhook        @= Just sWebhook
          <: nil
-      plugin  = hsequence
+      plugin = hsequence
           $ #config  <@=> pure config
          <: #github  <@=> MixGitHub.buildPlugin token
-         <: #slack   <@=> pure (Just slackConf)
+         <: #slack   <@=> pure slackConf
          <: #work    <@=> MixShell.buildPlugin (opts ^. #work)
-         <: #drone   <@=> MixDrone.buildPlugin dClient True
          <: #webhook <@=> pure mempty
-         <: #store   <@=> pure ""
          <: #logger  <@=> MixLogger.buildPlugin logConf
-         <: #oauth   <@=> pure Nothing
          <: nil
   B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
   flip Mix.withPlugin plugin $ Warp.run (opts ^. #port) . app
 
-app :: Env -> Application
+app :: Slack.Env -> Application
 app env =
   serve Slack.api $ hoistServer Slack.api (runRIO env) Slack.server
 

@@ -66,10 +66,10 @@ startScoring ev team problem = do
   where
     user = Team.lookupUser (whUserLogin $ evPushSender ev) team
 
-notifySlack :: Team -> Problem -> Maybe User ->Plant ()
+notifySlack :: Team -> Problem -> Maybe User -> Plant ()
 notifySlack team problem user' = do
-  conf <- (view #webhook =<<) <$> asks (view #slack)
-  case (conf, user') of
+  conf <- asks (view #slack)
+  case (conf ^. #webhook, user') of
     (Just url, Just user) -> Slack.sendWebhook url (mkMessage user)
     (Nothing, _)          -> logWarn "webhook url is not found when notify slack"
     (_, Nothing)          -> logWarn "sender is not found when notify slack"

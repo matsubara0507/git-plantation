@@ -16,9 +16,10 @@ import           RIO
 import           Data.Extensible
 import qualified Drone.Endpoints.Repo        as Drone
 import           Git.Plantation.Cmd.Arg
+import           Git.Plantation.Cmd.Env      (CmdEnv)
 import           Git.Plantation.Cmd.Repo     (splitRepoName)
+import qualified Git.Plantation.Config       as Config
 import           Git.Plantation.Data.Problem
-import           Git.Plantation.Env
 import qualified Mix.Plugin.Drone            as MixDrone
 import qualified Mix.Plugin.Logger.JSON      as Mix
 
@@ -30,19 +31,21 @@ type ProblemArg = Record
   '[ "problem" >: Problem
    ]
 
-actForProblem :: (ProblemArg -> Plant ()) -> ProblemCmdArg -> Plant ()
+actForProblem :: CmdEnv env => (ProblemArg -> RIO env ()) -> ProblemCmdArg -> RIO env ()
 actForProblem act args = do
   problems <- findProblems $ args ^. #problems
   mapM_ act $ hsequence $ #problem <@=> problems <: nil
 
-findProblems :: [ProblemId] -> Plant [Problem]
-findProblems []  = asks (view #problems . view #config)
+findProblems :: CmdEnv env => [ProblemId] -> RIO env [Problem]
+findProblems []  = do
+  config <- Config.askConfig
+  pure $ config ^. #problems
 findProblems ids = fmap catMaybes . forM ids $ \idx ->
   findByIdWith (view #problems) idx >>= \case
     Nothing -> Mix.logErrorR "not found by config" (toArgInfo idx) >> pure Nothing
     Just r  -> pure (Just r)
 
-showProblem :: ProblemArg -> Plant ()
+showProblem :: CmdEnv env => ProblemArg -> RIO env ()
 showProblem args = logInfo $ display $ mconcat
   [ "- ", tshow $ args ^. #problem ^. #id, ": "
   , args ^. #problem ^. #name
@@ -50,7 +53,7 @@ showProblem args = logInfo $ display $ mconcat
   , "https://github.com/", args ^. #problem ^. #repo
   ]
 
-activateCI :: ProblemArg -> Plant ()
+activateCI :: (MixDrone.HasDroneClient env, CmdEnv env) => ProblemArg -> RIO env ()
 activateCI args = do
   Mix.logDebugR "activate ci for problem repository" (args ^. #problem)
   let (owner, repo) = splitRepoName $ args ^. #problem ^. #repo
