@@ -111,70 +111,96 @@ packages:
     subdir: extensible-elmap
     url: https://github.com/matsubara0507/elmap.hs/archive/9c9479d3ead6032a0309b5f80f42e94df85da375.tar.gz
 - completed:
-    size: 11913
+    size: 12036
     subdir: mix
-    url: https://github.com/matsubara0507/mix.hs/archive/75714be080db16f6a4f9d0a22e86947ffcdadc57.tar.gz
+    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
     name: mix
     version: 0.1.1
-    sha256: c4aa501c544ab35a214e7b07f2f97fb19de644f48874c8d6838809bcf4d8edb9
+    sha256: 2c9640592d44d865663a1d8814e90efb48fadb7d2ee4fea1781784c7a55b2a89
     pantry-tree:
       size: 598
-      sha256: 689bed307dc233a6c50e01f00295a079dc40a4291700646f3ca423d714ba35fc
+      sha256: 934c2b8605c35e49d36c87c3c41dc0459e399919cf12161e16cc0d82340251b5
   original:
     subdir: mix
-    url: https://github.com/matsubara0507/mix.hs/archive/75714be080db16f6a4f9d0a22e86947ffcdadc57.tar.gz
+    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
 - completed:
-    size: 11913
+    size: 12036
     subdir: mix-json-logger
-    url: https://github.com/matsubara0507/mix.hs/archive/75714be080db16f6a4f9d0a22e86947ffcdadc57.tar.gz
+    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
     name: mix-json-logger
     version: 0.1.0
-    sha256: c4aa501c544ab35a214e7b07f2f97fb19de644f48874c8d6838809bcf4d8edb9
+    sha256: 2c9640592d44d865663a1d8814e90efb48fadb7d2ee4fea1781784c7a55b2a89
     pantry-tree:
       size: 334
-      sha256: 372be4778ce622e4ed87a5c77b4aa547a12da67c01570f2927f7a82ad9ec509d
+      sha256: 7dcec7237b58fc21fd53b19a88c37a680fdd16cc2994e7bb90ed38e83b3d8768
   original:
     subdir: mix-json-logger
-    url: https://github.com/matsubara0507/mix.hs/archive/75714be080db16f6a4f9d0a22e86947ffcdadc57.tar.gz
+    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
 - completed:
-    size: 11913
+    size: 12036
     subdir: mix-plugin-github
-    url: https://github.com/matsubara0507/mix.hs/archive/75714be080db16f6a4f9d0a22e86947ffcdadc57.tar.gz
+    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
     name: mix-plugin-github
     version: 0.3.0
-    sha256: c4aa501c544ab35a214e7b07f2f97fb19de644f48874c8d6838809bcf4d8edb9
+    sha256: 2c9640592d44d865663a1d8814e90efb48fadb7d2ee4fea1781784c7a55b2a89
     pantry-tree:
       size: 458
-      sha256: 1e6b6c09e62afbd5947ab33f976fb6163a12510477381554d6888adb7e1f39db
+      sha256: c12925af9288415df9626130d555a09b2b27e26a04ecf1530ce65cff704cfdc4
   original:
     subdir: mix-plugin-github
-    url: https://github.com/matsubara0507/mix.hs/archive/75714be080db16f6a4f9d0a22e86947ffcdadc57.tar.gz
+    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
 - completed:
-    size: 11913
+    size: 12036
     subdir: mix-plugin-drone
-    url: https://github.com/matsubara0507/mix.hs/archive/75714be080db16f6a4f9d0a22e86947ffcdadc57.tar.gz
+    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
     name: mix-plugin-drone
     version: 0.2.0
-    sha256: c4aa501c544ab35a214e7b07f2f97fb19de644f48874c8d6838809bcf4d8edb9
+    sha256: 2c9640592d44d865663a1d8814e90efb48fadb7d2ee4fea1781784c7a55b2a89
     pantry-tree:
       size: 384
-      sha256: 0d1863a2929dd5368e8cfa1481c22c88c76e7633b4114961dfad88879495d912
+      sha256: 64cccdf1be2d3e6fdd50631dcb7cd0391e9d9c41115f41dce008e4f4c641b510
   original:
     subdir: mix-plugin-drone
-    url: https://github.com/matsubara0507/mix.hs/archive/75714be080db16f6a4f9d0a22e86947ffcdadc57.tar.gz
+    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
 - completed:
-    size: 11913
+    size: 12036
+    subdir: mix-plugin-persistent-sqlite
+    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
+    name: mix-plugin-persistent-sqlite
+    version: 0.1.0
+    sha256: 2c9640592d44d865663a1d8814e90efb48fadb7d2ee4fea1781784c7a55b2a89
+    pantry-tree:
+      size: 357
+      sha256: 8ba3753486908e267620ff8c32c6799d703dfa80395f14a94e957a9728da6002
+  original:
+    subdir: mix-plugin-persistent-sqlite
+    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
+- completed:
+    size: 12036
     subdir: mix-plugin-shell
-    url: https://github.com/matsubara0507/mix.hs/archive/75714be080db16f6a4f9d0a22e86947ffcdadc57.tar.gz
+    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
     name: mix-plugin-shell
     version: 0.1.0
-    sha256: c4aa501c544ab35a214e7b07f2f97fb19de644f48874c8d6838809bcf4d8edb9
+    sha256: 2c9640592d44d865663a1d8814e90efb48fadb7d2ee4fea1781784c7a55b2a89
     pantry-tree:
       size: 383
-      sha256: 7bbce9d5ea01f6432cecf3151b7c93751d508c0b28444436365eebda58f599d8
+      sha256: 2c30acc53ef040b03bdacf6275dc225c07f01a05fa67b5872b0fcf05c8e8b72c
   original:
     subdir: mix-plugin-shell
-    url: https://github.com/matsubara0507/mix.hs/archive/75714be080db16f6a4f9d0a22e86947ffcdadc57.tar.gz
+    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
+- completed:
+    size: 12036
+    subdir: helper/rio-logger-ext
+    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
+    name: rio-logger-ext
+    version: 0.1.0
+    sha256: 2c9640592d44d865663a1d8814e90efb48fadb7d2ee4fea1781784c7a55b2a89
+    pantry-tree:
+      size: 275
+      sha256: 6610dacdf9c92484902401f6303863c28afa54e6e385d89584889226dc01a741
+  original:
+    subdir: helper/rio-logger-ext
+    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
 snapshots:
 - completed:
     size: 590102

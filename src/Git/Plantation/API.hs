@@ -20,7 +20,11 @@ import           Git.Plantation.API.CRUD     (GetAPI, PutAPI, getAPI,
                                               updateScore)
 import           Git.Plantation.API.Webhook  (WebhookAPI, webhook)
 import qualified Git.Plantation.Auth.GitHub  as Auth
+import           Git.Plantation.Data.Job     (Job)
+import qualified Git.Plantation.Data.Job     as Job
 import           Git.Plantation.Env          (Plant)
+import qualified Git.Plantation.Job.Server   as Job
+import qualified Git.Plantation.Job.Worker   as Worker
 import qualified GitHub
 import           Servant
 import           Servant.Auth.Server         (Auth)
@@ -82,6 +86,13 @@ type Unprotected
       = "static" :> Raw
    :<|> "hook"   :> WebhookAPI
    :<|> "api"    :> PutAPI
+   :<|> "runner" :> RunnerAPI
+
+-- ToDo
+type RunnerAPI
+      = "workers" :> Get '[JSON] [Worker.Info]
+   :<|> "jobs" :> Get '[JSON] [Job]
+   :<|> "jobs" :> Capture "name" Job.Name :> Post '[JSON] Job
 
 type GetRedirected headers =
   Verb 'GET 303 '[HTML] (Headers (Header "Location" String ': headers) NoContent)
@@ -100,6 +111,19 @@ server whitelist
     :<|> serveDirectoryFileServer "static"
     :<|> webhook
     :<|> updateScore
+    :<|> (gethWorkers :<|> getJobs :<|> kickJob)
+  where
+    gethWorkers = map shrink <$> Worker.getAllConnected
+    getJobs = Job.selectAll
+    kickJob name = do
+      result <- Job.kickJob [] name
+      case result of
+        Right job ->
+          pure job
+        Left (Job.JobIsNotFount _ ) ->
+          Auth.throwAll err404
+        Left Job.WorkerIsNotExist ->
+          Auth.throwAll err500
 
 loginPage :: Plant (Headers JWTCookieHeaders H.Html)
 loginPage = evalContT $ do

@@ -1,52 +1,64 @@
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiWayIf            #-}
 {-# LANGUAGE OverloadedLabels      #-}
 {-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
 
 module Main where
 
-import           Paths_git_plantation     (version)
-import           RIO                      hiding (catch)
-import qualified RIO.ByteString           as B
-import qualified RIO.Text                 as Text
-import qualified RIO.Time                 as Time
+import           Paths_git_plantation           (version)
+import           RIO                            hiding (catch)
+import qualified RIO.ByteString                 as B
+import qualified RIO.Text                       as Text
+import qualified RIO.Time                       as Time
 
-import           Configuration.Dotenv     (defaultConfig, loadFile)
-import           Control.Monad.Catch      (catch)
+import           Configuration.Dotenv           (defaultConfig, loadFile)
+import           Control.Monad.Catch            (catch)
 import           Data.Extensible
 import           Data.Extensible.GetOpt
-import           Data.Version             (Version)
-import qualified Data.Version             as Version
+import           Data.Version                   (Version)
+import qualified Data.Version                   as Version
 import           Development.GitRev
 import           Git.Plantation
-import           Git.Plantation.API       (api, server)
-import qualified Mix.Plugin               as Mix (withPlugin)
-import qualified Mix.Plugin.Drone         as MixDrone
-import qualified Mix.Plugin.GitHub        as MixGitHub
-import qualified Mix.Plugin.Logger        as MixLogger
-import qualified Mix.Plugin.Shell         as MixShell
-import qualified Network.Wai.Handler.Warp as Warp
+import           Git.Plantation.API             (api, server)
+import qualified Git.Plantation.Job.Server      as Job
+import qualified Git.Plantation.Job.Worker      as Job
+import qualified Mix
+import qualified Mix.Plugin                     as Mix (withPlugin)
+import qualified Mix.Plugin.Drone               as MixDrone
+import qualified Mix.Plugin.GitHub              as MixGitHub
+import qualified Mix.Plugin.Logger              as MixLogger
+import qualified Mix.Plugin.Persist.Sqlite      as MixDB
+import qualified Mix.Plugin.Shell               as MixShell
+import qualified Network.Wai.Handler.Warp       as Warp
+import           Network.Wai.Handler.WebSockets (websocketsOr)
+import qualified Network.WebSockets             as WS
 import           Servant
-import qualified Servant.Auth.Server      as Auth
-import qualified Servant.GitHub.Webhook   (GitHubKey, gitHubKey)
-import           System.Environment       (getEnv, lookupEnv)
+import qualified Servant.Auth.Server            as Auth
+import qualified Servant.GitHub.Webhook         (GitHubKey, gitHubKey)
+import           System.Environment             (getEnv, lookupEnv)
 
-import           Orphans                  ()
+import           Orphans                        ()
 
 main :: IO ()
 main = withGetOpt "[options] [config-file]" opts $ \r args -> do
   _ <- tryIO $ loadFile defaultConfig
-  case (r ^. #version, listToMaybe args) of
-    (True, _)      -> B.putStr $ fromString (showVersion version) <> "\n"
-    (_, Nothing)   -> error "please input config file path."
-    (_, Just path) -> runServer r =<< readConfig path
+  if
+    | r ^. #version -> B.putStr $ fromString (showVersion version) <> "\n"
+    | r ^. #migrate -> runMigration r
+    | otherwise ->
+        case listToMaybe args of
+          Nothing   -> error "please input config file path."
+          Just path -> runServer r =<< readConfig path
   where
     opts = #port    @= portOpt
         <: #work    @= workOpt
         <: #verbose @= verboseOpt
         <: #version @= versionOpt
+        <: #migrate @= migrateOpt
         <: nil
 
 type Options = Record
@@ -54,6 +66,7 @@ type Options = Record
    , "work"    >: FilePath
    , "verbose" >: Bool
    , "version" >: Bool
+   , "migrate" >: Bool
    ]
 
 portOpt :: OptDescr' Int
@@ -72,6 +85,19 @@ verboseOpt = optFlag ['v'] ["verbose"] "Enable verbose mode: verbosity level \"d
 versionOpt :: OptDescr' Bool
 versionOpt = optFlag [] ["version"] "Show version"
 
+migrateOpt :: OptDescr' Bool
+migrateOpt = optFlag [] ["migrate"] "Migrate SQLite tables"
+
+runMigration :: Options -> IO ()
+runMigration opts = do
+  sqlitePath <- liftIO $ fromString  <$> getEnv "SQLITE_PATH"
+  let logConf = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
+      plugin  = hsequence
+          $ #logger <@=> MixLogger.buildPlugin logConf
+         <: #sqlite <@=> MixDB.buildPluginWithoutPool sqlitePath
+         <: nil
+  Mix.run plugin (Job.migrate @ (Record '[ "logger" >: LogFunc, "sqlite" >: MixDB.Config ]))
+
 runServer :: Options -> Config -> IO ()
 runServer opts config = do
   token         <- liftIO $ fromString  <$> getEnv "GH_TOKEN"
@@ -86,6 +112,7 @@ runServer opts config = do
   storeUrl      <- liftIO $ fromString  <$> getEnv "STORE_URL"
   clientId      <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_ID"
   clientSecret  <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_SECRET"
+  sqlitePath    <- liftIO $ fromString  <$> getEnv "SQLITE_PATH"
   dHttp         <- lookupEnv "DRONE_HTTP"
   jwtSettings   <- Auth.defaultJWTSettings <$> Auth.generateKey
   let client    = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
@@ -114,11 +141,17 @@ runServer opts config = do
          <: #store   <@=> pure storeUrl
          <: #logger  <@=> MixLogger.buildPlugin logConf
          <: #oauth   <@=> pure oauthConf
+         <: #workers <@=> Job.newWorkers
+         <: #sqlite  <@=> MixDB.buildPlugin sqlitePath 2
          <: nil
   B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
   flip Mix.withPlugin plugin $ \env ->
     let key = gitHubKey $ fromString <$> getEnv "GH_SECRET" in
-    Warp.run (opts ^. #port) $ app env cookieSettings jwtSettings key
+    Warp.run (opts ^. #port) $
+      websocketsOr
+        WS.defaultConnectionOptions
+        (runRIO env . Job.serveRunner')
+        (app env cookieSettings jwtSettings key)
   where
     cookieSettings = Auth.defaultCookieSettings
       { Auth.cookieMaxAge = Just $ Time.secondsToDiffTime (3 * 60)

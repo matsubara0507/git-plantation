@@ -40,15 +40,18 @@ dependencies:
 - mix-json-logger
 - mix-plugin-github
 - mix-plugin-drone
+- mix-plugin-persistent-sqlite
 - mix-plugin-shell
 - mtl
 - aeson
+- binary
 - blaze-html
 - containers
 - cryptonite
 - dotenv
 - drone
 - elmap
+- esqueleto
 - extensible >= 0.6
 - extensible-elmap
 - exceptions
@@ -56,6 +59,9 @@ dependencies:
 - github
 - github-webhooks
 - http-media
+- persistent
+- persistent-template
+- random
 - req >= 2.0
 - servant-auth-server
 - servant-blaze
@@ -65,6 +71,7 @@ dependencies:
 - yaml >= 0.8.31
 - http-api-data
 - unliftio
+- websockets
 - wreq
 - shelly
 
@@ -78,7 +85,14 @@ executables:
     dependencies:
     - git-plantation
     - gitrev
+    - wai-websockets
     - warp
+  git-plantation-runner:
+    main:                Main.hs
+    source-dirs:         exec/runner
+    dependencies:
+    - git-plantation
+    - gitrev
   git-plantation-store:
     main:                Main.hs
     source-dirs:         exec/store
