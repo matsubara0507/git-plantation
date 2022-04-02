@@ -19,12 +19,15 @@ module Git.Plantation.Cmd.Member
 
 import           RIO
 
+import           Data.Coerce                            (coerce)
 import           Data.Extensible
 import           Git.Plantation.Cmd.Arg
 import           Git.Plantation.Cmd.Env                 (CmdEnv)
 import           Git.Plantation.Cmd.Repo                (repoGithub,
                                                          splitRepoName)
 import           Git.Plantation.Data
+import qualified Git.Plantation.Data.Team               as Team
+import qualified Git.Plantation.Data.User               as User
 import           Git.Plantation.Env
 import           GitHub.Data.Name                       (mkName)
 import qualified GitHub.Endpoints.Organizations.Members as GitHub
@@ -34,9 +37,9 @@ import qualified Mix.Plugin.GitHub                      as MixGitHub
 import qualified Mix.Plugin.Logger.JSON                 as Mix
 
 type MemberCmdArg = Record
-  '[ "team"    >: TeamId
+  '[ "team"    >: Team.Id
    , "repos"   >: [RepoId]
-   , "user"    >: Maybe UserId
+   , "user"    >: Maybe User.GitHubId
    , "org"     >: Bool
    , "gh_team" >: Maybe Text
    ]
@@ -53,7 +56,7 @@ type MemberWithOrgArg = Record
 
 type MemberWithGitHubTeamArg = Record
   '[ "user"    >: User
-   , "org"  >: Text
+   , "org"     >: Text
    , "gh_team" >: Text
    ]
 
@@ -87,7 +90,7 @@ actForMemberWithGitHubTeam act args =
       ghTeam <- findGitHubTeam (args ^. #gh_team) team
       mapM_ act $ hsequence $ #user <@=> member <: #org <@=> ghOrg <: #gh_team <@=> ghTeam <: nil
 
-findMember :: CmdEnv env => Maybe UserId -> Team -> RIO env [User]
+findMember :: CmdEnv env => Maybe User.GitHubId -> Team -> RIO env [User]
 findMember Nothing team = pure $ team ^. #member
 findMember (Just idx) team =
   case findById idx (team ^. #member) of
@@ -119,7 +122,7 @@ inviteUserToRepo args = do
   resp <- MixGitHub.fetch $ GitHub.addCollaboratorR
     (mkName Proxy owner)
     (mkName Proxy repo)
-    (mkName Proxy $ args ^. #user ^. #github)
+    (mkName Proxy $ coerce $ args ^. #user ^. #github)
   case resp of
     Left err -> logDebug (displayShow err) >> throwIO (failure err)
     Right _  -> logInfo $ display (success github)
@@ -127,7 +130,7 @@ inviteUserToRepo args = do
     failure err = InviteUserError err (args ^. #user) (TargetRepo $ args ^. #repo)
     success githubPath = mconcat
       [ "Success: invite "
-      , args ^. #user ^. #name, "(", args ^. #user ^. #github, ")"
+      , coerce $ args ^. #user ^. #name, "(", coerce $ args ^. #user ^. #github, ")"
       , " to ", githubPath, "."
       ]
 
@@ -138,7 +141,7 @@ kickUserFromRepo args = do
   resp <- MixGitHub.fetch $ GitHub.removeCollaboratorR
     (mkName Proxy owner)
     (mkName Proxy repo)
-    (mkName Proxy $ args ^. #user ^. #github)
+    (mkName Proxy $ coerce $ args ^. #user ^. #github)
   case resp of
     Left err -> logDebug (displayShow err) >> throwIO (failure err)
     Right _  -> logInfo $ display (success github)
@@ -146,7 +149,7 @@ kickUserFromRepo args = do
     failure err = KickUserError err (args ^. #user) (TargetRepo $ args ^. #repo)
     success githubPath = mconcat
       [ "Success: kick "
-      , args ^. #user ^. #name, "(", args ^. #user ^. #github, ")"
+      , coerce $ args ^. #user ^. #name, "(", coerce $ args ^. #user ^. #github, ")"
       , " from ", githubPath, "."
       ]
 
@@ -154,7 +157,7 @@ inviteUserToGitHubOrg :: CmdEnv env => MemberWithOrgArg -> RIO env ()
 inviteUserToGitHubOrg args = do
   resp <- MixGitHub.fetch $ GitHub.addOrUpdateMembershipR
     (mkName Proxy $ args ^. #org)
-    (mkName Proxy $ args ^. #user ^. #github)
+    (mkName Proxy $ coerce $ args ^. #user ^. #github)
     False
   case resp of
     Left err -> logDebug (displayShow err) >> throwIO (failure err)
@@ -163,7 +166,7 @@ inviteUserToGitHubOrg args = do
     failure err = InviteUserError err (args ^. #user) (TargetOrg $ args ^. #org)
     success = mconcat
       [ "Success: invite "
-      , args ^. #user ^. #name, "(", args ^. #user ^. #github, ")"
+      , coerce $ args ^. #user ^. #name, "(", coerce $ args ^. #user ^. #github, ")"
       , " to ", args ^. #org, "."
       ]
 
@@ -171,7 +174,7 @@ kickUserFromGitHubOrg :: CmdEnv env => MemberWithOrgArg -> RIO env ()
 kickUserFromGitHubOrg args = do
   resp <- MixGitHub.fetch $ GitHub.removeMembershipR
     (mkName Proxy $ args ^. #org)
-    (mkName Proxy $ args ^. #user ^. #github)
+    (mkName Proxy $ coerce $ args ^. #user ^. #github)
   case resp of
     Left err -> logDebug (displayShow err) >> throwIO (failure err)
     Right _  -> logInfo $ display success
@@ -179,7 +182,7 @@ kickUserFromGitHubOrg args = do
     failure err = KickUserError err (args ^. #user) (TargetOrg $ args ^. #org)
     success = mconcat
       [ "Success: kick "
-      , args ^. #user ^. #name, "(", args ^. #user ^. #github, ")"
+      , coerce $ args ^. #user ^. #name, "(", coerce $ args ^. #user ^. #github, ")"
       , " from ", args ^. #org, "."
       ]
 
@@ -193,7 +196,7 @@ inviteUserToGitHubOrgTeam args = do
     Right team -> pure team
   resp' <- MixGitHub.fetch $ GitHub.addTeamMembershipForR
     (GitHub.teamId team)
-    (mkName Proxy $ args ^. #user ^. #github)
+    (mkName Proxy $ coerce $ args ^. #user ^. #github)
     GitHub.RoleMember
   case resp' of
     Left err -> logDebug (displayShow err) >> throwIO (failure err)
@@ -202,7 +205,7 @@ inviteUserToGitHubOrgTeam args = do
     failure err = InviteUserError err (args ^. #user) (TargetTeam (args ^. #org) $ args ^. #gh_team)
     success = mconcat
       [ "Success: invite "
-      , args ^. #user ^. #name, "(", args ^. #user ^. #github, ")"
+      , coerce $ args ^. #user ^. #name, "(", coerce $ args ^. #user ^. #github, ")"
       , " to ", args ^. #org, ":", args ^. #gh_team, "."
       ]
 
@@ -216,7 +219,7 @@ kickUserFromGitHubOrgTeam args = do
     Right team -> pure team
   resp' <- MixGitHub.fetch $ GitHub.deleteTeamMembershipForR
     (GitHub.teamId team)
-    (mkName Proxy $ args ^. #user ^. #github)
+    (mkName Proxy $ coerce $ args ^. #user ^. #github)
   case resp' of
     Left err -> logDebug (displayShow err) >> throwIO (failure err)
     Right _  -> logInfo $ display success
@@ -224,6 +227,6 @@ kickUserFromGitHubOrgTeam args = do
     failure err = KickUserError err (args ^. #user) (TargetTeam (args ^. #org) $ args ^. #gh_team)
     success = mconcat
       [ "Success: kick "
-      , args ^. #user ^. #name, "(", args ^. #user ^. #github, ")"
+      , coerce $ args ^. #user ^. #name, "(", coerce $ args ^. #user ^. #github, ")"
       , " from ", args ^. #org, ":", args ^. #gh_team, "."
       ]

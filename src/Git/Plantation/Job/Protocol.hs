@@ -1,17 +1,20 @@
 module Git.Plantation.Job.Protocol where
 
 import           RIO
-import qualified RIO.ByteString.Lazy     as BL
+import qualified RIO.ByteString.Lazy         as BL
 
-import qualified Data.Aeson              as JSON
-import qualified Data.Binary             as Binary
-import qualified Git.Plantation.Data.Job as Job
-import qualified Network.WebSockets      as WS
+import qualified Data.Aeson                  as JSON
+import qualified Data.Binary                 as Binary
+import qualified Git.Plantation.Data.Job     as Job
+import qualified Git.Plantation.Data.Problem as Problem
+import qualified Git.Plantation.Data.Team    as Team
+import qualified Git.Plantation.Data.User    as User
+import qualified Network.WebSockets          as WS
 
 -- | protocol from Server to Client
 data Server
-  = JobConfigs [Job.Config]
-  | Enqueue Job.Id Job.Name
+  = JobConfig Job.Config
+  | Enqueue Job.Id Problem.Id Team.Id User.GitHubId
   | SUndefined
 
 instance WS.WebSocketsData Server where
@@ -22,21 +25,22 @@ instance WS.WebSocketsData Server where
     Just (1, rest) ->
       maybe
         SUndefined
-        JobConfigs
+        JobConfig
         (JSON.decode rest)
 
     Just (2, rest) ->
-      uncurry Enqueue (Binary.decode rest)
+      let (jid, pid, tid, uid) = Binary.decode rest
+      in Enqueue jid pid tid uid
 
     _ ->
       SUndefined
 
   toLazyByteString p = case p of
-    JobConfigs configs ->
+    JobConfig configs ->
       BL.cons 1 (JSON.encode configs)
 
-    Enqueue wid name ->
-      BL.cons 2 (Binary.encode (wid, name))
+    Enqueue jid pid tid uid ->
+      BL.cons 2 (Binary.encode (jid, pid, tid, uid))
 
     SUndefined ->
       ""

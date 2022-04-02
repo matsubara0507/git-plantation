@@ -1,34 +1,27 @@
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE LambdaCase         #-}
-{-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE OverloadedLabels   #-}
-{-# LANGUAGE TypeOperators      #-}
+{-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE LambdaCase       #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeOperators    #-}
 
 module Git.Plantation.API.CRUD where
 
 import           RIO
 import qualified RIO.List                 as L
-import qualified RIO.Text                 as Text
 
-import           Git.Plantation           (Problem, Team)
+import           Git.Plantation.API.Store (fetchJobsByStore)
+import           Git.Plantation.Data      (Problem, Team)
 import qualified Git.Plantation.Data.Team as Team
+import qualified Git.Plantation.Data.User as User
 import           Git.Plantation.Env       (Plant)
 import           Git.Plantation.Score     (Score, mkPlayerScore, mkScore)
-import           Git.Plantation.Store     (Store)
-import qualified Git.Plantation.Store     as Store
-import qualified Network.Wreq             as W
 import           Servant
-import           UnliftIO.Concurrent      (forkIO)
 
 type GetAPI
      = "teams"    :> Get '[JSON] [Team]
   :<|> "problems" :> Get '[JSON] [Problem]
   :<|> "scores"   :> Get '[JSON] [Score]
-  :<|> "scores"   :> Capture "team" Text :> Get '[JSON] [Score]
-  :<|> "scores"   :> Capture "team" Text :> Capture "player" Text :> Get '[JSON] [Score]
-
-type PutAPI
-      = "scores" :> Capture "owner" Text :> Capture "repo" Text :> Put '[JSON] NoContent
+  :<|> "scores"   :> Capture "team" Team.Id :> Get '[JSON] [Score]
+  :<|> "scores"   :> Capture "team" Team.Id :> Capture "player" User.GitHubId  :> Get '[JSON] [Score]
 
 getAPI :: ServerT GetAPI Plant
 getAPI = getTeams
@@ -50,58 +43,33 @@ getProblems = do
 getScores :: Plant [Score]
 getScores = do
   logInfo "[GET] /scores"
-  store <- tryAny fetchStore >>= \case
+  jobs <- tryAny fetchJobsByStore >>= \case
     Left err -> logError (displayShow err) >> pure mempty
-    Right s  -> pure $ Store.uniqByTeam <$> s
+    Right x  -> pure x
   config <- asks (view #config)
-  pure $ map (mkScore (config ^. #problems) store) (config ^. #teams)
+  pure $ map (flip (mkScore $ config ^. #problems) jobs) (config ^. #teams)
 
-getTeamScore :: Text -> Plant [Score]
+getTeamScore :: Team.Id -> Plant [Score]
 getTeamScore teamID = do
-  logInfo $ display ("[GET] /scores/" <> teamID)
-  store <- tryAny fetchStore >>= \case
+  logInfo $ "[GET] /scores/" <> display teamID
+  jobs <- tryAny fetchJobsByStore >>= \case
     Left err -> logError (displayShow err) >> pure mempty
-    Right s  -> pure $ Store.uniqByTeam <$> s
+    Right x  -> pure x
   config <- asks (view #config)
   teams <- case L.find (\team -> team ^. #id == teamID) (config ^. #teams) of
     Nothing   -> logError "team not found." >> pure mempty
     Just team -> pure [team]
-  pure $ map (mkScore (config ^. #problems) store) teams
+  pure $ map (flip (mkScore $ config ^. #problems) jobs) teams
 
-getPlayerScore :: Text -> Text -> Plant [Score]
+getPlayerScore :: Team.Id -> User.GitHubId -> Plant [Score]
 getPlayerScore teamID userID = do
-  logInfo $ display ("[GET] /scores/" <> teamID <> "/" <> userID)
-  store <- tryAny fetchStore >>= \case
+  logInfo $ "[GET] /scores/" <> display teamID <> "/" <> display userID
+  jobs <- tryAny fetchJobsByStore >>= \case
     Left err -> logError (displayShow err) >> pure mempty
-    Right s  -> pure s
+    Right x  -> pure x
   config <- asks (view #config)
   teams <- case L.find (\team -> team ^. #id == teamID) (config ^. #teams) of
     Nothing   -> logError "team not found." >> pure mempty
     Just team -> pure [team]
   pure . catMaybes $
-    liftA2 fmap (mkPlayerScore (config ^. #problems) store) (Team.lookupUser userID) <$> teams
-
-fetchStore :: Plant Store
-fetchStore = do
-  url  <- Text.unpack <$> asks (view #store)
-  resp <- W.asJSON =<< liftIO (W.get url)
-  pure $ resp ^. W.responseBody
-
-updateScore :: Text -> Text -> Plant NoContent
-updateScore owner repo = do
-  _ <- forkIO $ do
-    problems <- asks (view #problems . view #config)
-    let repo' = owner <> "/" <> repo
-    logInfo $ display ("[PUT] /score/" <> repo')
-    threadDelay 3_000_000 -- ToDo
-    case L.find (\p -> p ^. #repo == repo') problems of
-      Nothing -> logError $ display ("not found problem: " <> repo')
-      Just p  -> updateScore' $ p ^. #id
-  pure NoContent
-
-updateScore' :: Int -> Plant ()
-updateScore' pid = do
-  url <- Text.unpack <$> asks (view #store)
-  tryAny (liftIO $ W.customMethod "PATCH" $ url <> "/" <> show pid) >>= \case
-    Left err -> logError (displayShow err)
-    Right _  -> pure ()
+    liftA2 fmap (\t u -> mkPlayerScore (config ^. #problems) t u jobs) (Team.lookupUser userID) <$> teams

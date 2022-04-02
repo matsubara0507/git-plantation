@@ -18,11 +18,12 @@ import           Data.Extensible.GetOpt
 import           Data.Version              (Version)
 import qualified Data.Version              as Version
 import           Development.GitRev
+import           Git.Plantation.Data.Job   as Job
 import           Git.Plantation.Job.Client as Client
 import qualified Mix
 import qualified Mix.Plugin.Logger         as MixLogger
 
-import           Orphans                  ()
+import           Orphans                   ()
 
 
 main :: IO ()
@@ -54,7 +55,7 @@ runClient opts dest =
       plugin = hsequence
              $ #logger         <@=> MixLogger.buildPlugin logConf
             <: #processContext <@=> mkDefaultProcessContext
-            <: #configs        <@=> newTVarIO mempty
+            <: #config       　<@=> newTVarIO Job.emptyConfig
             <: #queue          <@=> newTQueueIO
             <: nil
   in Mix.run plugin $ Client.run dest

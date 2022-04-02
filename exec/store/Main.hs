@@ -22,11 +22,9 @@ import           Git.Plantation           (Config, readConfig)
 import           Git.Plantation.Store     (Store)
 import qualified Git.Plantation.Store     as Store
 import qualified Mix.Plugin               as Mix (withPlugin)
-import qualified Mix.Plugin.Drone         as MixDrone
 import qualified Mix.Plugin.Logger        as MixLogger
 import qualified Network.Wai.Handler.Warp as Warp
 import           Servant
-import           System.Environment       (getEnv, lookupEnv)
 
 import           Orphans                  ()
 
@@ -62,20 +60,14 @@ versionOpt = optFlag [] ["version"] "Show version"
 
 runServer :: Options -> Config -> IO ()
 runServer opts config = do
-  dHost         <- liftIO $ fromString  <$> getEnv "DRONE_HOST"
-  dToken        <- liftIO $ fromString  <$> getEnv "DRONE_TOKEN"
-  dPort         <- liftIO $ readMaybe   <$> getEnv "DRONE_PORT"
-  dHttp         <- lookupEnv "DRONE_HTTP"
-  let client    = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
-      logConf   = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
+  let logConf   = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
       plugin    = hsequence
           $ #config  <@=> pure config
-         <: #drone   <@=> MixDrone.buildPlugin client (dHttp == Just "true")
          <: #logger  <@=> MixLogger.buildPlugin logConf
          <: nil
   B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
   flip Mix.withPlugin plugin $ \env -> do
-    store <- newTVarIO =<< runRIO env Store.initial
+    store <- newTVarIO mempty
     Warp.run (opts ^. #port) $ app env store
 
 app :: Store.Env -> TVar Store -> Application

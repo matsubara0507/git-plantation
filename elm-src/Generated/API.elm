@@ -143,16 +143,18 @@ type alias Config =
     , problems : List Problem
     , teams : List Team
     , owners : List User
+    , image : String
     }
 
 
 jsonDecConfig : Json.Decode.Decoder Config
 jsonDecConfig =
-    Json.Decode.succeed (\pscoreboard pproblems pteams powners -> { scoreboard = pscoreboard, problems = pproblems, teams = pteams, owners = powners })
+    Json.Decode.succeed (\pscoreboard pproblems pteams powners pimage -> { scoreboard = pscoreboard, problems = pproblems, teams = pteams, owners = powners, image = pimage })
         |> required "scoreboard" jsonDecScoreBoardConfig
         |> required "problems" (Json.Decode.list jsonDecProblem)
         |> required "teams" (Json.Decode.list jsonDecTeam)
         |> required "owners" (Json.Decode.list jsonDecUser)
+        |> required "image" Json.Decode.string
 
 
 jsonEncConfig : Config -> Value
@@ -162,6 +164,7 @@ jsonEncConfig val =
         , ( "problems", Json.Encode.list jsonEncProblem val.problems )
         , ( "teams", Json.Encode.list jsonEncTeam val.teams )
         , ( "owners", Json.Encode.list jsonEncUser val.owners )
+        , ( "image", Json.Encode.string val.image )
         ]
 
 

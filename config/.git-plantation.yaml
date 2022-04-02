@@ -3,6 +3,8 @@ scoreboard:
 
 owners: []
 
+image: "ubuntu:bionic"
+
 problems:
 - id: 1
   name: tutorial

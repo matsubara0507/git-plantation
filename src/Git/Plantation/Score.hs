@@ -13,34 +13,36 @@ module Git.Plantation.Score
 
 import           RIO
 import qualified RIO.List                    as L
+import qualified RIO.Map                     as Map
 
 import           Data.Extensible
 import           Data.Extensible.Elm.Mapping
-import qualified Data.IntMap.Strict          as IntMap
 import           Elm.Mapping
-import           Git.Plantation.Data         (Problem, Repo, Team, User,
+import           Git.Plantation.Data         (Job, Problem, Repo, Team, User,
                                               repoGithubPath)
-import           Git.Plantation.Store        (Store)
-import qualified Git.Plantation.Store        as Store
-import qualified Git.Plantation.Store        as Build
+import qualified Git.Plantation.Data.Problem as Problem
+import qualified Git.Plantation.Data.Team    as Team
+import qualified Git.Plantation.Data.User    as User
+
+import           Orphans                     ()
 
 type Score = Record
-  '[ "team"  >: Text
+  '[ "team"  >: Team.Id
    , "point" >: Int
    , "stats" >: [Status]
    , "links" >: [Link]
    ]
 
 type Status = Record
-  '[ "problem_id"   >: Int
+  '[ "problem_id"   >: Problem.Id
    , "correct"      >: Bool
    , "pending"      >: Bool
    , "corrected_at" >: Maybe Int64
-   , "answerer"     >: Maybe Text  -- GitHub account
+   , "answerer"     >: Maybe User.GitHubId
    ]
 
 type Link = Record
-  '[ "problem_id" >: Int
+  '[ "problem_id" >: Problem.Id
    , "url"        >: Text
    ]
 
@@ -62,48 +64,55 @@ instance IsElmType Link where
 instance IsElmDefinition Link where
   compileElmDef = ETypeAlias . compileElmRecordAliasWith "Link"
 
-mkScore :: [Problem] -> Store -> Team -> Score
-mkScore problems store team
+mkScore :: [Problem] -> Team -> [Job] -> Score
+mkScore problems team jobs
     = #team  @= team ^. #id
    <: #point @= calcPoint stats problems
-   <: #stats @= IntMap.elems stats
+   <: #stats @= Map.elems stats
    <: #links @= links
    <: nil
   where
-    isTeamBuild b = b ^. #source == team ^. #id
-    builds = IntMap.filter (not . null) $ fmap (filter isTeamBuild) store
-    stats = IntMap.mapWithKey toStatus builds
+    stats = Map.mapWithKey toStatus $ mkGroupedTeamJobs problems team jobs
     links = map toLink $ team ^. #repos
 
-mkPlayerScore :: [Problem] -> Store -> Team -> User -> Score
-mkPlayerScore problems store team user
+mkPlayerScore :: [Problem] -> Team -> User -> [Job] -> Score
+mkPlayerScore problems team user jobs
     = #team  @= team ^. #id
    <: #point @= calcPoint stats problems
-   <: #stats @= IntMap.elems stats
+   <: #stats @= Map.elems stats
    <: #links @= links
    <: nil
   where
-    isPlayerBuild b = b ^. #source == team ^. #id && Build.toAnswer b == Just (user ^. #github)
-    builds = IntMap.filter (not . null) $ fmap (filter isPlayerBuild) store
-    stats = IntMap.mapWithKey toStatus builds
+    teamJobs = mkGroupedTeamJobs problems team jobs
+    playerJobs = filter (\job -> job ^. #author == user ^. #github) <$> teamJobs
+    stats = Map.mapWithKey toStatus playerJobs
     links = map toLink $ team ^. #repos
 
+mkGroupedTeamJobs :: [Problem] -> Team -> [Job] -> Map Problem.Id [Job]
+mkGroupedTeamJobs problems team jobs =
+  Map.fromListWith (++) $ fmap (\job -> (job ^. #problem, [job])) teamJobs
+  where
+    teamJobs = mkTeamJobs problems team jobs
 
-toStatus :: Int -> [Store.Build] -> Status
-toStatus idx builds
-    = #problem_id   @= idx
-   <: #correct      @= any Build.isCorrect builds
-   <: #pending      @= any Build.isPending builds
-   <: #corrected_at @= L.minimumMaybe (view #created <$> filter Build.isCorrect builds)
-   <: #answerer     @= listToMaybe (mapMaybe Build.toAnswer builds)
+mkTeamJobs :: [Problem] -> Team -> [Job] -> [Job]
+mkTeamJobs problems team =
+  filter (\job -> job ^. #team == team ^. #id && any (\p -> p ^. #id == job ^. #problem) problems)
+
+toStatus :: Problem.Id -> [Job] -> Status
+toStatus pid jobs
+    = #problem_id   @= pid
+   <: #correct      @= any (\job -> job ^. #success) jobs
+   <: #pending      @= any (\job -> job ^. #queuing || job ^. #running) jobs
+   <: #corrected_at @= L.minimumMaybe (view #created <$> filter (\job -> job ^. #success) jobs)
+   <: #answerer     @= listToMaybe (map (view #author) jobs)
    <: nil
 
-calcPoint :: IntMap Status -> [Problem] -> Int
+calcPoint :: Map Problem.Id Status -> [Problem] -> Int
 calcPoint stats = sum . map (toPoint stats)
 
-toPoint :: IntMap Status -> Problem -> Int
+toPoint :: Map Problem.Id Status -> Problem -> Int
 toPoint stats problem =
-  case IntMap.lookup (problem ^. #id) stats of
+  case Map.lookup (problem ^. #id) stats of
     Just s | s ^. #correct -> problem ^. #difficulty
     _                      -> 0
 

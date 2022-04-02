@@ -24,11 +24,11 @@ import qualified Data.Version                   as Version
 import           Development.GitRev
 import           Git.Plantation
 import           Git.Plantation.API             (api, server)
+import           Git.Plantation.API.Store       (initializeStore)
 import qualified Git.Plantation.Job.Server      as Job
 import qualified Git.Plantation.Job.Worker      as Job
 import qualified Mix
 import qualified Mix.Plugin                     as Mix (withPlugin)
-import qualified Mix.Plugin.Drone               as MixDrone
 import qualified Mix.Plugin.GitHub              as MixGitHub
 import qualified Mix.Plugin.Logger              as MixLogger
 import qualified Mix.Plugin.Persist.Sqlite      as MixDB
@@ -39,7 +39,7 @@ import qualified Network.WebSockets             as WS
 import           Servant
 import qualified Servant.Auth.Server            as Auth
 import qualified Servant.GitHub.Webhook         (GitHubKey, gitHubKey)
-import           System.Environment             (getEnv, lookupEnv)
+import           System.Environment             (getEnv)
 
 import           Orphans                        ()
 
@@ -101,9 +101,6 @@ runMigration opts = do
 runServer :: Options -> Config -> IO ()
 runServer opts config = do
   token         <- liftIO $ fromString  <$> getEnv "GH_TOKEN"
-  dHost         <- liftIO $ fromString  <$> getEnv "DRONE_HOST"
-  dToken        <- liftIO $ fromString  <$> getEnv "DRONE_TOKEN"
-  dPort         <- liftIO $ readMaybe   <$> getEnv "DRONE_PORT"
   sToken        <- liftIO $ fromString  <$> getEnv "SLACK_API_TOKEN"
   sTeam         <- liftIO $ fromString  <$> getEnv "SLACK_TEAM_ID"
   sChannels     <- liftIO $ readListEnv <$> getEnv "SLACK_CHANNEL_IDS"
@@ -113,10 +110,8 @@ runServer opts config = do
   clientId      <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_ID"
   clientSecret  <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_SECRET"
   sqlitePath    <- liftIO $ fromString  <$> getEnv "SQLITE_PATH"
-  dHttp         <- lookupEnv "DRONE_HTTP"
   jwtSettings   <- Auth.defaultJWTSettings <$> Auth.generateKey
-  let client    = #host @= dHost <: #port @= dPort <: #token @= dToken <: nil
-      logConf   = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
+  let logConf   = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
       oauthConf
           = #client_id     @= clientId
          <: #client_secret @= clientSecret
@@ -136,7 +131,6 @@ runServer opts config = do
          <: #github  <@=> MixGitHub.buildPlugin token
          <: #slack   <@=> pure slackConf
          <: #work    <@=> MixShell.buildPlugin (opts ^. #work)
-         <: #drone   <@=> MixDrone.buildPlugin client (dHttp == Just "true")
          <: #webhook <@=> pure mempty
          <: #store   <@=> pure storeUrl
          <: #logger  <@=> MixLogger.buildPlugin logConf
@@ -145,8 +139,9 @@ runServer opts config = do
          <: #sqlite  <@=> MixDB.buildPlugin sqlitePath 2
          <: nil
   B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
-  flip Mix.withPlugin plugin $ \env ->
-    let key = gitHubKey $ fromString <$> getEnv "GH_SECRET" in
+  flip Mix.withPlugin plugin $ \env -> do
+    let key = gitHubKey $ fromString <$> getEnv "GH_SECRET"
+    runRIO env initializeStore
     Warp.run (opts ^. #port) $
       websocketsOr
         WS.defaultConnectionOptions

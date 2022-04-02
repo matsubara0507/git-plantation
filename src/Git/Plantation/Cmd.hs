@@ -22,7 +22,6 @@ import           Git.Plantation.Cmd.Problem as X
 import           Git.Plantation.Cmd.Repo    as X
 import           Git.Plantation.Config      (Config)
 import           Git.Plantation.Env         (WebhookConfig)
-import qualified Mix.Plugin.Drone           as Mix
 import qualified Mix.Plugin.GitHub          as GitHub
 
 
@@ -30,7 +29,6 @@ type Env = Record
   '[ "config"  >: Config
    , "github"  >: GitHub.Token
    , "work"    >: FilePath
-   , "drone"   >: Mix.Config
    , "webhook" >: WebhookConfig
    , "logger"  >: LogFunc
    ]

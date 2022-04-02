@@ -39,7 +39,6 @@ dependencies:
 - mix
 - mix-json-logger
 - mix-plugin-github
-- mix-plugin-drone
 - mix-plugin-persistent-sqlite
 - mix-plugin-shell
 - mtl
@@ -49,7 +48,6 @@ dependencies:
 - containers
 - cryptonite
 - dotenv
-- drone
 - elmap
 - esqueleto
 - extensible >= 0.6
@@ -74,6 +72,7 @@ dependencies:
 - websockets
 - wreq
 - shelly
+- time
 
 library:
   source-dirs: src

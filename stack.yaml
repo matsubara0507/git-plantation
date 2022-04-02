@@ -4,7 +4,6 @@ packages:
 extra-deps:
 - binary-instances-1.0.1
 - extensible-0.8.2
-- drone-1.1.0
 - fallible-0.1.0
 - incremental-0.3.1
 - github-webhooks-0.15.0
@@ -24,7 +23,6 @@ extra-deps:
   - mix
   - mix-json-logger
   - mix-plugin-github
-  - mix-plugin-drone
   - mix-plugin-persistent-sqlite
   - mix-plugin-shell
   - helper/rio-logger-ext

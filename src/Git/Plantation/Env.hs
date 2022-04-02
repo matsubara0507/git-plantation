@@ -17,7 +17,6 @@ import           Git.Plantation.Data
 import qualified Git.Plantation.Data.Slack as Slack
 import           Git.Plantation.Job.Worker (Workers)
 import qualified GitHub.Data               as GitHub
-import qualified Mix.Plugin.Drone          as Mix
 import qualified Mix.Plugin.GitHub         as GitHub
 import           Mix.Plugin.Logger         ()
 import qualified Mix.Plugin.Logger.JSON    as Mix
@@ -32,7 +31,6 @@ type Env = Record
    , "github"  >: GitHub.Token
    , "slack"   >: Slack.Config
    , "work"    >: FilePath
-   , "drone"   >: Mix.Config
    , "webhook" >: WebhookConfig
    , "store"   >: Text -- URL for store
    , "logger"  >: LogFunc

@@ -17,6 +17,7 @@ import           Data.Extensible
 import           Git.Plantation.Cmd.Arg
 import           Git.Plantation.Cmd.Env               (CmdEnv)
 import           Git.Plantation.Data.Team
+import qualified Git.Plantation.Data.Team             as Team
 import           Git.Plantation.Env
 import           GitHub.Data.Name                     (mkName)
 import qualified GitHub.Endpoints.Organizations.Teams as GitHub
@@ -24,7 +25,7 @@ import qualified Mix.Plugin.GitHub                    as MixGitHub
 import qualified Mix.Plugin.Logger.JSON               as Mix
 
 type OrgCmdArg = Record
-  '[ "team"     >: TeamId
+  '[ "team"     >: Team.Id
    , "gh_teams" >: [GitHubTeamName]
    ]
 

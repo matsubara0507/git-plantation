@@ -3,6 +3,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE OverloadedLabels       #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Git.Plantation.Cmd.Arg.Team where
 
@@ -13,32 +14,31 @@ import           Data.Aeson                      (ToJSON)
 import           Data.Coerce                     (coerce)
 import           Data.Extensible
 import           Git.Plantation.Cmd.Arg.Internal
-import           Git.Plantation.Data.Team
+import qualified Git.Plantation.Data.Problem     as Problem
+import           Git.Plantation.Data.Repo        (Repo)
+import           Git.Plantation.Data.Team        (Team)
+import qualified Git.Plantation.Data.Team        as Team
+import           Git.Plantation.Data.User        (User)
+import qualified Git.Plantation.Data.User        as User
 
-newtype TeamId = TeamId Text
-  deriving (IsString, ToJSON) via Text
-
-instance IdArg TeamId Team where
+instance IdArg Team.Id Team where
   findById idx = L.find (\t -> t ^. #id == coerce idx)
   toArgInfo idx
       = #type @= "Team"
      <: #id   @= coerce idx
      <: nil
 
-newtype RepoId = RepoId Int -- same problem id
-  deriving (Read, ToJSON) via Int
+newtype RepoId = RepoId Problem.Id
+  deriving (Show, Read, Num, ToJSON) via Problem.Id
 
 instance IdArg RepoId Repo where
   findById idx = L.find (\r -> r ^. #problem == coerce idx)
   toArgInfo idx
       = #type @= "Repo"
-     <: #id   @= tshow (coerce idx :: Int)
+     <: #id   @= tshow idx
      <: nil
 
-newtype UserId = UserId Text -- github id
-  deriving (IsString, ToJSON) via Text
-
-instance IdArg UserId User where
+instance IdArg User.GitHubId User where
   findById idx = L.find (\u -> u ^. #github == coerce idx)
   toArgInfo idx
       = #type @= "User"

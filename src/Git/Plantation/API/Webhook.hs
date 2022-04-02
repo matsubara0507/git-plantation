@@ -8,11 +8,13 @@ module Git.Plantation.API.Webhook where
 import           RIO
 import qualified RIO.List                     as L
 
-import           Git.Plantation.API.CRUD      (updateScore')
+import           Data.Coerce                  (coerce)
 import           Git.Plantation.Cmd.Repo
 import           Git.Plantation.Data          (Problem, Team, User)
+import qualified Git.Plantation.Data.Problem  as Problem
 import qualified Git.Plantation.Data.Slack    as Slack
 import qualified Git.Plantation.Data.Team     as Team
+import qualified Git.Plantation.Data.User     as User
 import           Git.Plantation.Env           (Plant)
 import           GitHub.Data.Webhooks.Events
 import           GitHub.Data.Webhooks.Payload
@@ -61,10 +63,10 @@ startScoring :: PushEvent -> Team -> Problem -> Plant ()
 startScoring ev team problem = do
   notifySlack team problem user
   pushForCI team problem user
-  updateScore' (problem ^. #id)
+  -- updateScore' (problem ^. #id) -- ToDo
   pure ()
   where
-    user = Team.lookupUser (whUserLogin $ evPushSender ev) team
+    user = Team.lookupUser (coerce $ whUserLogin $ evPushSender ev) team
 
 notifySlack :: Team -> Problem -> Maybe User -> Plant ()
 notifySlack team problem user' = do
@@ -75,4 +77,4 @@ notifySlack team problem user' = do
     (_, Nothing)          -> logWarn "sender is not found when notify slack"
   where
     mkMessage user = Slack.mkMessage $ mconcat
-      [ team ^. #name, " の ", user ^. #name, " が ", problem ^. #name, " にプッシュしたみたい！" ]
+      [ coerce $ team ^. #name, " の ", coerce $ user ^. #name, " が ", coerce $ problem ^. #name, " にプッシュしたみたい！" ]

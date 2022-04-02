@@ -8,20 +8,22 @@
 module Git.Plantation.API.Slack where
 
 import           RIO
-import qualified RIO.List                  as L
-import qualified RIO.Text                  as Text
-import qualified RIO.Text.Lazy             as TL
+import qualified RIO.List                    as L
+import qualified RIO.Text                    as Text
+import qualified RIO.Text.Lazy               as TL
 
-import qualified Data.Aeson.Text           as Json
+import qualified Data.Aeson.Text             as Json
+import           Data.Coerce                 (coerce)
 import           Data.Extensible
-import qualified Git.Plantation.Cmd        as Cmd
-import           Git.Plantation.Config     (Config)
-import           Git.Plantation.Data       (Problem, Repo, Team)
-import qualified Git.Plantation.Data.Slack as Slack
-import qualified Git.Plantation.Data.Team  as Team
-import qualified Mix.Plugin.Config         as Mix
+import qualified Git.Plantation.Cmd          as Cmd
+import           Git.Plantation.Config       (Config)
+import           Git.Plantation.Data         (Problem, Repo, Team)
+import qualified Git.Plantation.Data.Problem as Problem
+import qualified Git.Plantation.Data.Slack   as Slack
+import qualified Git.Plantation.Data.Team    as Team
+import qualified Mix.Plugin.Config           as Mix
 import           Servant
-import           UnliftIO.Concurrent       (forkIO)
+import           UnliftIO.Concurrent         (forkIO)
 
 type SlackAPIEnv env = (Cmd.CmdEnv env, Mix.HasConfig Config env, Slack.HasSlackConfig env, HasLogFunc env)
 
@@ -64,7 +66,7 @@ resetRepo postData = do
 
     reset :: SlackAPIEnv env => (Team, Problem, Repo) -> RIO env Text
     reset (team, problem, repo) = do
-      let success = [team ^. #name, " の ", problem ^. #name, " をリセットしました！"]
+      let success = [coerce $ team ^. #name, " の ", coerce $ problem ^. #name, " をリセットしました！"]
       tryIO (Cmd.resetRepo $ #repo @= repo <: #team @= team <: nil) >>= \case
         Left err -> logError (display err) >> pure "うーん、なんか失敗したみたい..."
         Right _  -> pure $ mconcat success

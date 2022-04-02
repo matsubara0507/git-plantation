@@ -14,14 +14,17 @@ import qualified RIO.Text                    as T
 import qualified Crypto.Hash                 as Hash
 import qualified Crypto.Random               as Random
 import qualified Data.Aeson.Text             as Json
+import           Data.Coerce                 (coerce)
 import           Data.Extensible
 import           Data.Fallible
-import           Git.Plantation.API.CRUD     (GetAPI, PutAPI, getAPI,
-                                              updateScore)
+import           Git.Plantation.API.CRUD     (GetAPI, getAPI)
 import           Git.Plantation.API.Webhook  (WebhookAPI, webhook)
 import qualified Git.Plantation.Auth.GitHub  as Auth
 import           Git.Plantation.Data.Job     (Job)
 import qualified Git.Plantation.Data.Job     as Job
+import qualified Git.Plantation.Data.Problem as Problem
+import qualified Git.Plantation.Data.Team    as Team
+import qualified Git.Plantation.Data.User    as User
 import           Git.Plantation.Env          (Plant)
 import qualified Git.Plantation.Job.Server   as Job
 import qualified Git.Plantation.Job.Worker   as Worker
@@ -41,7 +44,7 @@ type LoginPageSession = Record
 
 newSession :: MonadIO m => m LoginPageSession
 newSession = do
-  gen <- liftIO $ Random.drgNew
+  gen <- liftIO Random.drgNew
   let (stat, gen') = randomGenerateBS gen
       (salt, _)    = randomGenerateBS gen'
   pure $ #state @= tshow (Hash.hash stat :: Hash.Digest Hash.SHA256)
@@ -54,10 +57,10 @@ newSession = do
 toState :: LoginPageSession -> String
 toState session = T.unpack $ session ^. #state
 
-type Account = Record '[ "login" >: Text ]
+type Account = Record '[ "login" >: User.GitHubId ]
 
 toAccount :: GitHub.User -> Account
-toAccount user = #login @= GitHub.untagName (GitHub.userLogin user) <: nil
+toAccount user = #login @= coerce (GitHub.untagName $ GitHub.userLogin user) <: nil
 
 type API
       = LoginPage
@@ -85,14 +88,13 @@ type Index
 type Unprotected
       = "static" :> Raw
    :<|> "hook"   :> WebhookAPI
-   :<|> "api"    :> PutAPI
    :<|> "runner" :> RunnerAPI
 
 -- ToDo
 type RunnerAPI
       = "workers" :> Get '[JSON] [Worker.Info]
    :<|> "jobs" :> Get '[JSON] [Job]
-   :<|> "jobs" :> Capture "name" Job.Name :> Post '[JSON] Job
+   :<|> "jobs" :> Capture "problem" Problem.Id :> Capture "team" Team.Id :> Capture "user" User.GitHubId :> Post '[JSON] Job
 
 type GetRedirected headers =
   Verb 'GET 303 '[HTML] (Headers (Header "Location" String ': headers) NoContent)
@@ -103,27 +105,30 @@ type JWTCookieHeaders =
 api :: Proxy API
 api = Proxy
 
-server :: [Text] -> ServerT API Plant
+server :: [User.GitHubId] -> ServerT API Plant
 server whitelist
        = loginPage
     :<|> callback
     :<|> protected whitelist
     :<|> serveDirectoryFileServer "static"
     :<|> webhook
-    :<|> updateScore
     :<|> (gethWorkers :<|> getJobs :<|> kickJob)
   where
     gethWorkers = map shrink <$> Worker.getAllConnected
     getJobs = Job.selectAll
-    kickJob name = do
-      result <- Job.kickJob [] name
+    kickJob pid tid uid = do
+      result <- Job.kickJob pid tid uid
       case result of
         Right job ->
           pure job
-        Left (Job.JobIsNotFount _ ) ->
-          Auth.throwAll err404
+        Left (Job.ProblemIsNotFount _) ->
+          throwM err404
+        Left (Job.TeamIsNotFount _) ->
+          throwM err404
+        Left (Job.UserIsNotFound _) ->
+          throwM err404
         Left Job.WorkerIsNotExist ->
-          Auth.throwAll err500
+          throwM err500
 
 loginPage :: Plant (Headers JWTCookieHeaders H.Html)
 loginPage = evalContT $ do
@@ -167,7 +172,7 @@ callback auth code state =
     acceptLogin' conf = liftIO . Auth.acceptLogin (conf ^. #cookie) (conf ^. #jwt)
     throw401 = Auth.throwAll err401
 
-protected :: [Text] -> Auth.AuthResult Account -> ServerT Protected Plant
+protected :: [User.GitHubId] -> Auth.AuthResult Account -> ServerT Protected Plant
 protected whitelist = \case
   Auth.Authenticated a | a ^. #login `elem` whitelist -> getAPI :<|> index
   Auth.Indefinite                                     -> Auth.throwAll login

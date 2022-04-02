@@ -2,6 +2,7 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE OverloadedLabels     #-}
+{-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeOperators        #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
@@ -35,7 +36,9 @@ import           Git.Plantation.Cmd.Arg
 import           Git.Plantation.Cmd.Env               (CmdEnv)
 import           Git.Plantation.Data                  (Problem, Repo, Team,
                                                        User)
+import qualified Git.Plantation.Data.Problem          as Problem
 import qualified Git.Plantation.Data.Team             as Team
+import qualified Git.Plantation.Data.User             as User
 import           Git.Plantation.Env
 import           GitHub.Data.Name                     (mkName)
 import           GitHub.Data.Repos                    (newRepo, newRepoPrivate)
@@ -53,7 +56,7 @@ import qualified Shelly                               as Shell
 
 type RepoCmdArg = Record
   '[ "repos" >: [RepoId]
-   , "team"  >: TeamId
+   , "team"  >: Team.Id
    ]
 
 type RepoArg = Record
@@ -84,7 +87,7 @@ findRepos ids team = fmap catMaybes . forM ids $ \idx ->
     Nothing -> Mix.logErrorR "not found by config" (toArgInfo idx) >> pure Nothing
     Just r  -> pure (Just r)
 
-findProblemWithThrow :: CmdEnv env => ProblemId -> RIO env Problem
+findProblemWithThrow :: CmdEnv env => Problem.Id -> RIO env Problem
 findProblemWithThrow idx =
   findByIdWith (view #problems) idx >>= \case
     Nothing -> throwIO $ UndefinedProblem (coerce idx)
@@ -120,7 +123,7 @@ initRepoInGitHub :: CmdEnv env => RepoArg -> RIO env ()
 initRepoInGitHub args = do
   token   <- MixGitHub.tokenText
   github  <- repoGithub (args ^. #repo)
-  problem <- findProblemWithThrow (ProblemId $ args ^. #repo ^. #problem)
+  problem <- findProblemWithThrow (args ^. #repo ^. #problem)
   let (owner, repo) = splitRepoName $ problem ^. #repo
       (_, teamRepo) = splitRepoName github
       teamUrl       = mconcat ["https://", token, "@github.com/", github, ".git"]
@@ -140,7 +143,7 @@ initRepoInGitHub args = do
 setupDefaultBranch :: CmdEnv env => RepoArg -> RIO env ()
 setupDefaultBranch args = do
   (owner, repo) <- splitRepoName <$> repoGithub (args ^. #repo)
-  problem <- findProblemWithThrow (ProblemId $ args ^. #repo ^. #problem)
+  problem <- findProblemWithThrow (args ^. #repo ^. #problem)
   resp <- MixGitHub.fetch $ GitHub.editRepoR
     (mkName Proxy owner)
     (mkName Proxy repo)
@@ -178,24 +181,24 @@ initProblemCI :: CmdEnv env => RepoArg -> RIO env ()
 initProblemCI args = do
   token   <- MixGitHub.tokenText
   github  <- repoGithub (args ^. #repo)
-  problem <- findProblemWithThrow (ProblemId $ args ^. #repo ^. #problem)
+  problem <- findProblemWithThrow (args ^. #repo ^. #problem)
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
   execGitForTeam (args ^. #team) repo True problemUrl $ do
     Git.checkout [problem ^. #ci_branch]
     Git.pull []
-    Shell.errExit False $ Git.branch ["-D", args ^. #team ^. #name]
-    Git.checkout ["-b", args ^. #team ^. #name]
+    Shell.errExit False $ Git.branch ["-D", coerce $ args ^. #team ^. #name]
+    Git.checkout ["-b", coerce $ args ^. #team ^. #name]
     Shell.writefile ciFileName github
     Git.add [ciFileName]
     Git.commit ["-m", "[CI SKIP] Add ci branch"]
-    Git.push ["-f", "-u", "origin", args ^. #team ^. #name]
+    Git.push ["-f", "-u", "origin", coerce $ args ^. #team ^. #name]
   logInfo $ "Success: create ci branch in " <> displayShow (problem ^. #repo)
 
 resetRepo :: CmdEnv env => RepoArg -> RIO env ()
 resetRepo args = do
-  problem <- findProblemWithThrow (ProblemId $ args ^. #repo ^. #problem)
+  problem <- findProblemWithThrow (args ^. #repo ^. #problem)
   let (_, repo) = splitRepoName $ problem ^. #repo
   local (over MixShell.workL $ toTeamWork (args ^. #team) False) $ do
     local (over MixShell.workL $ toWorkWith $ Text.unpack repo) $ MixShell.exec (Shell.ls "." >> pure ())
@@ -209,18 +212,18 @@ pushForCI team problem user = do
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
 
   execGitForTeam team repo True problemUrl $ do
-    Git.checkout [team ^. #name]
+    Git.checkout [coerce $ team ^. #name]
     Git.pull []
     Git.commit ["--allow-empty", "-m", "pushed by: @" <> userAccount]
-    Git.push ["origin", team ^. #name]
+    Git.push ["origin", coerce $ team ^. #name]
   logInfo "Success push"
   where
-    userAccount = maybe "" (view #github) user
+    userAccount = coerce $ maybe "" (view #github) user
 
 deleteRepo :: CmdEnv env => RepoArg -> RIO env ()
 deleteRepo args = do
   Mix.logInfoR "delete team repository" args
-  problem <- findProblemWithThrow (ProblemId $ args ^. #repo ^. #problem)
+  problem <- findProblemWithThrow (args ^. #repo ^. #problem)
   deleteRepoInGithub (args ^. #repo)
   deleteProblemCI (args ^. #team) problem
 
@@ -240,7 +243,7 @@ deleteProblemCI team problem = do
   let (owner, repo) = splitRepoName $ problem ^. #repo
       problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
   execGitForTeam team repo True problemUrl $
-    Shell.errExit False $ Git.push  [ "--delete", "origin", team ^. #name]
+    Shell.errExit False $ Git.push  [ "--delete", "origin", coerce $ team ^. #name]
   logInfo $ "Success: delete ci branch in " <> displayShow (problem ^. #repo)
 
 execGitForTeam :: CmdEnv env => Team -> Text -> Bool -> Text -> MixShell.Sh () -> RIO env ()
@@ -300,4 +303,4 @@ toWorkWith path = (<> "/" <> path)
 
 toTeamWork :: Team -> Bool -> FilePath -> FilePath
 toTeamWork team isProblem =
-  toWorkWith $ Text.unpack $ team ^. #name <> if isProblem then "/problem" else ""
+  toWorkWith $ Text.unpack $ coerce (team ^. #name) <> if isProblem then "/problem" else ""

@@ -11,7 +11,7 @@ import           Data.Extensible
 import           Data.Extensible.Elm.Mapping
 import qualified Data.Yaml                   as Y
 import           Elm.Mapping
-import           Git.Plantation.Data         (Problem, Team, User)
+import           Git.Plantation.Data         (GitHubId, Problem, Team, User)
 import qualified Mix.Plugin.Config           as MixConfig
 import           Orphans                     ()
 
@@ -20,6 +20,7 @@ type Config = Record
    , "problems"   >: [Problem]
    , "teams"      >: [Team]
    , "owners"     >: [User]
+   , "image"      >: Text -- ToDo
    ]
 
 type ScoreBoardConfig = Record
@@ -36,7 +37,7 @@ askConfig = MixConfig.askConfig
 readConfig :: MonadIO m => FilePath -> m Config
 readConfig = Y.decodeFileThrow
 
-mkAuthnWhitelist :: Config -> [Text]
+mkAuthnWhitelist :: Config -> [GitHubId]
 mkAuthnWhitelist config = map (view #github) (config ^. #owners <> players)
   where
     players = concatMap (view #member) $ config ^. #teams

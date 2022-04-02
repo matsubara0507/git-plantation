@@ -1,6 +1,5 @@
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeOperators    #-}
+{-# LANGUAGE DataKinds     #-}
+{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module SubCmd

@@ -1,6 +1,7 @@
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeOperators    #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE OverloadedLabels   #-}
+{-# LANGUAGE TypeOperators      #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Git.Plantation.Data.Team where
@@ -8,14 +9,28 @@ module Git.Plantation.Data.Team where
 import           RIO
 import qualified RIO.List                    as L
 
+import           Data.Aeson                  (FromJSON, ToJSON)
+import           Data.Binary                 (Binary)
+import           Data.Coerce                 (coerce)
 import           Data.Extensible
 import           Data.Extensible.Elm.Mapping
 import           Elm.Mapping
-import           Git.Plantation.Data.Problem
+import           Git.Plantation.Data.Problem (Problem)
+import qualified Git.Plantation.Data.Problem as Problem
+import           Git.Plantation.Data.Repo    (Repo)
+import qualified Git.Plantation.Data.Repo    as Repo
+import           Git.Plantation.Data.User    (GitHubId, User)
+import           Web.HttpApiData             (FromHttpApiData)
+
+newtype Id = Id Text
+  deriving newtype (Show, Eq, Ord, IsString, Binary, FromJSON, ToJSON, FromHttpApiData, Display, IsElmType)
+
+newtype Name = Name Text
+  deriving newtype (Show, Eq, Ord, IsString, Binary, FromJSON, ToJSON, FromHttpApiData, Display, IsElmType)
 
 type Team = Record
-  '[ "id"       >: Text
-   , "name"     >: Text
+  '[ "id"       >: Id
+   , "name"     >: Name
    , "repos"    >: [Repo]
    , "member"   >: [User]
    , "org"      >: Maybe Text
@@ -27,33 +42,6 @@ instance IsElmType Team where
 
 instance IsElmDefinition Team where
   compileElmDef = ETypeAlias . compileElmRecordAliasWith "Team"
-
-
-type User = Record
-  '[ "name"   >: Text
-   , "github" >: Text
-   ]
-
-instance IsElmType User where
-  compileElmType = compileElmRecordTypeWith "User"
-
-instance IsElmDefinition User where
-  compileElmDef = ETypeAlias . compileElmRecordAliasWith "User"
-
-type Repo = Record
-  '[ "name"    >: Text
-   , "owner"   >: Maybe Text
-   , "org"     >: Maybe Text
-   , "problem" >: Int
-   , "private" >: Bool
-   , "only"    >: Maybe Text -- GitHub Org Team
-   ]
-
-instance IsElmType Repo where
-  compileElmType = compileElmRecordTypeWith "Repo"
-
-instance IsElmDefinition Repo where
-  compileElmDef = ETypeAlias . compileElmRecordAliasWith "Repo"
 
 data MemberTarget
   = TargetRepo Repo
@@ -70,7 +58,7 @@ toMemberTargetRecord target = case target of
 lookupRepo :: Problem -> Team -> Maybe Repo
 lookupRepo problem = lookupRepoByProblemId (problem ^. #id)
 
-lookupRepoByProblemId :: Int -> Team -> Maybe Repo
+lookupRepoByProblemId :: Problem.Id -> Team -> Maybe Repo
 lookupRepoByProblemId pid team =
   L.find (\repo -> repo ^. #problem == pid) (team ^. #repos)
 
@@ -78,14 +66,14 @@ lookupRepoByGithub :: Text -> Team -> Maybe Repo
 lookupRepoByGithub github team =
   L.find (\repo -> repoGithubPath repo == Just github) (team ^. #repos)
 
-lookupUser :: Text -> Team -> Maybe User
+lookupUser :: GitHubId -> Team -> Maybe User
 lookupUser github team =
   L.find (\user -> github == user ^. #github) (team ^. #member)
 
 repoGithubPath :: Repo -> Maybe Text
 repoGithubPath repo = case (repo ^. #owner, repo ^. #org) of
-  (Just owner, _) -> Just $ owner <> "/" <> repo ^. #name
-  (_, Just org)   -> Just $ org <> "/" <> repo ^. #name
+  (Just owner, _) -> Just $ owner <> "/" <> coerce (repo ^. #name)
+  (_, Just org)   -> Just $ org <> "/" <> coerce (repo ^. #name)
   _               -> Nothing
 
 repoIsOrg :: Repo -> Bool

@@ -7,6 +7,7 @@ services:
       - 8080:8080
     volumes:
       - ./.git-plantation.yaml:/work/config.yaml
+      - ./temp.sqlite:/work/temp.sqlite
     depends_on:
       - store
     restart: always
@@ -14,10 +15,6 @@ services:
       - PORT=8080
       - WORK=.temp
       - CONFIG=config.yaml
-      - DRONE_HOST=drone
-      - DRONE_PORT=80
-      - DRONE_TOKEN=${DRONE_TOKEN}
-      - DRONE_HTTP=true
       - GH_TOKEN=${GH_TOKEN}
       - GH_SECRET=${GH_SECRET}
       - APP_SERVER=${APP_SERVER}
@@ -29,6 +26,7 @@ services:
       - STORE_URL=http://store
       - AUTHN_CLIENT_ID=${AUTHN_CLIENT_ID}
       - AUTHN_CLIENT_SECRET=${AUTHN_CLIENT_SECRET}
+      - SQLITE_PATH=./temp.sqlite
 
   store:
     image: matsubara0507/git-plantation:dev
@@ -36,66 +34,16 @@ services:
     volumes:
       - ./.git-plantation.yaml:/work/config.yaml
     restart: always
-    depends_on:
-      - drone
     environment:
       - PORT=80
       - CONFIG=config.yaml
-      - DRONE_HOST=drone
-      - DRONE_TOKEN=${DRONE_TOKEN}
-      - DRONE_PORT=80
-      - DRONE_HTTP=true
 
-  slack:
+  runner:
     image: matsubara0507/git-plantation:dev
-    command: run-slack-api.sh
-    ports:
-    - 8070:80
-    volumes:
-      - ./config.yaml:/work/config.yaml
-    restart: always
-    environment:
-      - PORT=80
-      - WORK=.temp
-      - CONFIG=config.yaml
-      - DRONE_HOST=drone
-      - DRONE_TOKEN=${DRONE_TOKEN}
-      - DRONE_PORT=80
-      - GH_TOKEN=${GH_TOKEN}
-      - SLACK_API_TOKEN=${SLACK_API_TOKEN}
-      - SLACK_TEAM_ID=${SLACK_TEAM_ID}
-      - SLACK_CHANNEL_IDS=${SLACK_CHANNEL_IDS}
-      - SLACK_RESET_REPO_CMD=/reset-repo
-      - SLACK_WEBHOOK=${SLACK_WEBHOOK}
-
-  drone:
-    image: drone/drone:1.4.0
-    ports:
-      - 8000:80
-      - 443:443
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - .:/data
-    restart: always
-    environment:
-      - DRONE_GITHUB_SERVER=https://github.com
-      - DRONE_GITHUB_CLIENT_ID=${DRONE_GITHUB_CLIENT}
-      - DRONE_GITHUB_CLIENT_SECRET=${DRONE_GITHUB_SECRET}
-      - DRONE_AGENTS_ENABLED=true
-      - DRONE_RPC_SECRET=${DRONE_SECRET}
-      - DRONE_SERVER_HOST=${DRONE_HOST}
-      - DRONE_SERVER_PROTO=https
-      - DRONE_TLS_AUTOCERT=true
-
-  agent:
-    image: drone/agent:1.4.0
-    restart: always
+    command: git-plantation-runner --verbose app:8080
+    deploy:
+      replicas: 3
     depends_on:
-      - drone
+      - app
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      - DRONE_RPC_SERVER=http://drone
-      - DRONE_RPC_SECRET=${DRONE_SECRET}
-      - DRONE_RUNNER_CAPACITY=2
-      - DRONE_RUNNER_NAME=${HOSTNAME}

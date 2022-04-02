@@ -19,13 +19,6 @@ packages:
   original:
     hackage: extensible-0.8.2
 - completed:
-    hackage: drone-1.1.0@sha256:ec948081678076e905b2a983c7f4d46b60d2ebeae608fe6f7e5c3917dd389d35,2603
-    pantry-tree:
-      size: 2422
-      sha256: b2a66629477c6449cabab44caa67dbac988fb1c251d70387d4d382f55c5d4d8b
-  original:
-    hackage: drone-1.1.0
-- completed:
     hackage: fallible-0.1.0@sha256:0e0032c34120a43bf1d446172162b546e36441c38f620afb24e9d447ed7ce6b6,1312
     pantry-tree:
       size: 369
@@ -148,19 +141,6 @@ packages:
       sha256: c12925af9288415df9626130d555a09b2b27e26a04ecf1530ce65cff704cfdc4
   original:
     subdir: mix-plugin-github
-    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
-- completed:
-    size: 12036
-    subdir: mix-plugin-drone
-    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
-    name: mix-plugin-drone
-    version: 0.2.0
-    sha256: 2c9640592d44d865663a1d8814e90efb48fadb7d2ee4fea1781784c7a55b2a89
-    pantry-tree:
-      size: 384
-      sha256: 64cccdf1be2d3e6fdd50631dcb7cd0391e9d9c41115f41dce008e4f4c641b510
-  original:
-    subdir: mix-plugin-drone
     url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
 - completed:
     size: 12036

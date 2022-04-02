@@ -15,13 +15,8 @@ newtype ProblemCmd = ProblemCmd (Variant CmdField)
 
 type CmdField =
   '[ "show"        >: ProblemCmdArg
-   , "activate_ci" >: ProblemCmdArg
    ]
 
 instance Run ("show" >: ProblemCmdArg) where
   run' _ args =
     actForProblem showProblem args `catchAny` (logError . displayShow)
-
-instance Run ("activate_ci" >: ProblemCmdArg) where
-  run' _ args =
-    actForProblem activateCI args `catchAny` (logError . displayShow)
