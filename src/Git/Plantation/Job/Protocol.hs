@@ -14,7 +14,7 @@ import qualified Network.WebSockets          as WS
 -- | protocol from Server to Client
 data Server
   = JobConfig Job.Config
-  | Enqueue Job.Id Problem.Id Team.Id User.GitHubId
+  | Enqueue Job.Id Problem.Id Team.Id (Maybe User.GitHubId)
   | SUndefined
 
 instance WS.WebSocketsData Server where

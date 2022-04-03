@@ -9,7 +9,7 @@ import           RIO
 import qualified RIO.List                     as L
 
 import           Data.Coerce                  (coerce)
-import           Git.Plantation.Cmd.Repo
+import qualified Git.Plantation.API.Job       as Job
 import           Git.Plantation.Data          (Problem, Team, User)
 import qualified Git.Plantation.Data.Problem  as Problem
 import qualified Git.Plantation.Data.Slack    as Slack
@@ -62,8 +62,8 @@ findByPushEvent ev teams problems = do
 startScoring :: PushEvent -> Team -> Problem -> Plant ()
 startScoring ev team problem = do
   notifySlack team problem user
-  pushForCI team problem user
-  -- updateScore' (problem ^. #id) -- ToDo
+  host <- ask (view #jobserver)
+  _ <- Job.kickJob host (problem ^. #id) (team ^. #id) (view #github <$> user)
   pure ()
   where
     user = Team.lookupUser (coerce $ whUserLogin $ evPushSender ev) team

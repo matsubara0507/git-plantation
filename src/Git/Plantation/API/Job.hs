@@ -7,6 +7,7 @@
 module Git.Plantation.API.Job where
 
 import           RIO
+import qualified RIO.List                    as List
 import qualified RIO.Map                     as Map
 import qualified RIO.Text                    as Text
 
@@ -25,13 +26,14 @@ import           Servant
 type API
       = "workers" :> Get '[JSON] [Worker.Info]
    :<|> "jobs" :> Get '[JSON] [Job] -- get by cache
+   :<|> "jobs" :> Capture "problem" Problem.Id :> Capture "team" Team.Id :> Post '[JSON] Job
    :<|> "jobs" :> Capture "problem" Problem.Id :> Capture "team" Team.Id :> Capture "user" User.GitHubId :> Post '[JSON] Job
 
 api :: Proxy API
 api = Proxy
 
 server :: Job.ServerEnv env => ServerT API (RIO env)
-server = gethWorkers :<|> getJobs :<|> postJob
+server = gethWorkers :<|> getJobs :<|> postJobWithoutUser :<|> postJobWithUser
   where
     gethWorkers = do
       logInfo "[GET] /workers"
@@ -40,6 +42,8 @@ server = gethWorkers :<|> getJobs :<|> postJob
       logInfo "[GET] /job"
       store <- askStore
       Map.elems <$> readTVarIO store
+    postJobWithoutUser pid tid = postJob pid tid Nothing
+    postJobWithUser pid tid = postJob pid tid . Just
     postJob pid tid uid = do
       result <- Job.kickJob pid tid uid
       case result of
@@ -59,9 +63,9 @@ fetchJobs host = do
   resp <- W.asJSON =<< liftIO (W.get $ host ++ "/jobs")
   pure $ resp ^. W.responseBody
 
-kickJob :: (MonadThrow m, MonadIO m) => String -> Problem.Id -> Team.Id -> User.GitHubId -> m Job
+kickJob :: (MonadThrow m, MonadIO m) => String -> Problem.Id -> Team.Id -> Maybe User.GitHubId -> m Job
 kickJob host pid tid uid = do
   resp <- W.asJSON =<< liftIO (W.post url ("" :: ByteString))
   pure $ resp ^. W.responseBody
   where
-    url = concat [host, "/", show pid, "/", Text.unpack (coerce tid), "/", Text.unpack (coerce uid)]
+    url = List.intercalate "/" $ [host, show pid, Text.unpack (coerce tid)] ++ maybeToList (Text.unpack . coerce <$> uid)

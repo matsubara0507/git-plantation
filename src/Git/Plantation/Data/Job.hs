@@ -41,14 +41,14 @@ type Job = Record
   '[ "id"      >: Id
    , "problem" >: Problem.Id
    , "team"    >: Team.Id
-   , "author"  >: User.GitHubId
+   , "author"  >: Maybe User.GitHubId
    , "queuing" >: Bool
    , "running" >: Bool
    , "success" >: Bool
    , "created" >: Int64
    ]
 
-new :: Problem.Id -> Team.Id -> User.GitHubId -> Id -> Job
+new :: Problem.Id -> Team.Id -> Maybe User.GitHubId -> Id -> Job
 new pid tid uid jid
     = #id      @= jid
    <: #problem @= pid
@@ -83,13 +83,15 @@ findTeam config job =
 
 findUser :: Team -> Job -> Maybe User
 findUser team job =
-  List.find (\u -> u ^. #github == job ^. #author) $ team ^. #member
+  case job ^. #author of
+    Nothing     -> Nothing
+    Just author -> List.find (\u -> u ^. #github == author) $ team ^. #member
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 JobData
   problem Int
   team    Text
-  author  Text
+  author  Text Maybe
   queuing Bool
   running Bool
   success Bool
@@ -119,7 +121,7 @@ utcTimeToInt64 (UTCTime (ModifiedJulianDay d) t)
 
 type SQLitable m env = (MixDB.HasSqliteConfig env, HasLogFunc env, MonadReader env m, MonadUnliftIO m)
 
-create :: SQLitable m env => Problem.Id -> Team.Id -> User.GitHubId -> m Job
+create :: SQLitable m env => Problem.Id -> Team.Id -> Maybe User.GitHubId -> m Job
 create pid tid uid = MixDB.run $ do
   currentTime <- getCurrentTime
   let dat = JobData

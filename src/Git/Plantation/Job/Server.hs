@@ -36,7 +36,7 @@ type ServerEnv env =
     , HasLogFunc env
     )
 
-kickJob :: ServerEnv env => Problem.Id -> Team.Id -> User.GitHubId -> RIO env (Either Error Job)
+kickJob :: ServerEnv env => Problem.Id -> Team.Id -> Maybe User.GitHubId -> RIO env (Either Error Job)
 kickJob pid tid uid = do
   config <- askConfig
   case (List.find (\p -> p ^. #id == pid) $ config ^. #problems, List.find (\t -> t ^. #id == tid) $ config ^. #teams) of
@@ -44,18 +44,15 @@ kickJob pid tid uid = do
       pure $ Left (ProblemIsNotFount pid)
     (_, Nothing) ->
       pure $ Left (TeamIsNotFount tid)
-    (Just _, Just team) ->
-      if List.any (\u -> u ^. #github == uid) $ team ^. #member then do
-        w <- Worker.getRandom
-        case w of
-          Nothing ->
-            pure $ Left WorkerIsNotExist
-          Just worker -> do
-            job <- Store.withStore $ Job.create pid tid uid
-            liftIO $ WS.sendBinaryData (worker ^. #conn) $ Protocol.Enqueue (job ^. #id) pid tid uid
-            pure $ Right job
-      else
-        pure $ Left (UserIsNotFound uid)
+    (Just _, Just _) -> do
+      w <- Worker.getRandom
+      case w of
+        Nothing ->
+          pure $ Left WorkerIsNotExist
+        Just worker -> do
+          job <- Store.withStore $ Job.create pid tid uid
+          liftIO $ WS.sendBinaryData (worker ^. #conn) $ Protocol.Enqueue (job ^. #id) pid tid uid
+          pure $ Right job
 
 serveRunner :: ServerEnv env => WS.Connection -> RIO env ()
 serveRunner conn = do

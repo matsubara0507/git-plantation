@@ -84,7 +84,7 @@ mkPlayerScore problems team user jobs
    <: nil
   where
     teamJobs = mkGroupedTeamJobs problems team jobs
-    playerJobs = filter (\job -> job ^. #author == user ^. #github) <$> teamJobs
+    playerJobs = filter (\job -> job ^. #author == Just (user ^. #github)) <$> teamJobs
     stats = Map.mapWithKey toStatus playerJobs
     links = map toLink $ team ^. #repos
 
@@ -104,7 +104,7 @@ toStatus pid jobs
    <: #correct      @= any (\job -> job ^. #success) jobs
    <: #pending      @= any (\job -> job ^. #queuing || job ^. #running) jobs
    <: #corrected_at @= L.minimumMaybe (view #created <$> filter (\job -> job ^. #success) jobs)
-   <: #answerer     @= listToMaybe (map (view #author) jobs)
+   <: #answerer     @= listToMaybe (mapMaybe (view #author) jobs)
    <: nil
 
 calcPoint :: Map Problem.Id Status -> [Problem] -> Int
