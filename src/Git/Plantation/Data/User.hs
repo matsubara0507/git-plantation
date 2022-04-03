@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveLift         #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TypeOperators      #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -12,14 +13,16 @@ import           Data.Binary                 (Binary)
 import           Data.Extensible
 import           Data.Extensible.Elm.Mapping
 import           Elm.Mapping
+import           Language.Haskell.TH.Syntax  (Lift)
 import           Web.HttpApiData             (FromHttpApiData)
 
 newtype Name = Name Text
   deriving newtype (Show, Eq, Ord, IsString, Binary, FromJSON, ToJSON, FromHttpApiData, Display, IsElmType)
+  deriving (Lift)
 
 newtype GitHubId = GitHubId Text
   deriving newtype (Show, Eq, Ord, IsString, Binary, FromJSON, ToJSON, FromHttpApiData, Display, IsElmType)
-
+  deriving (Lift)
 
 type User = Record
   '[ "name"   >: Name

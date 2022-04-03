@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveLift         #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedLabels   #-}
 {-# LANGUAGE TypeOperators      #-}
@@ -20,13 +21,16 @@ import qualified Git.Plantation.Data.Problem as Problem
 import           Git.Plantation.Data.Repo    (Repo)
 import qualified Git.Plantation.Data.Repo    as Repo
 import           Git.Plantation.Data.User    (GitHubId, User)
+import           Language.Haskell.TH.Syntax  (Lift)
 import           Web.HttpApiData             (FromHttpApiData)
 
 newtype Id = Id Text
   deriving newtype (Show, Eq, Ord, IsString, Binary, FromJSON, ToJSON, FromHttpApiData, Display, IsElmType)
+  deriving (Lift)
 
 newtype Name = Name Text
   deriving newtype (Show, Eq, Ord, IsString, Binary, FromJSON, ToJSON, FromHttpApiData, Display, IsElmType)
+  deriving (Lift)
 
 type Team = Record
   '[ "id"       >: Id

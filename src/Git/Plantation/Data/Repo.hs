@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveLift         #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TypeOperators      #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -13,10 +14,12 @@ import           Data.Extensible
 import           Data.Extensible.Elm.Mapping
 import           Elm.Mapping
 import qualified Git.Plantation.Data.Problem as Problem
+import           Language.Haskell.TH.Syntax  (Lift)
 import           Web.HttpApiData             (FromHttpApiData)
 
 newtype Name = Name Text
   deriving newtype (Show, Eq, Ord, IsString, Binary, FromJSON, ToJSON, FromHttpApiData, Display, IsElmType)
+  deriving (Lift)
 
 type Repo = Record
   '[ "name"    >: Name

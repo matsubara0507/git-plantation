@@ -5,14 +5,11 @@ module Spec.Git.Plantation.Score (spec) where
 
 import           RIO                  hiding (link2)
 
-
 import           Data.Extensible
-import qualified Data.IntMap.Strict   as IntMap
 import qualified Fixture
 import           Git.Plantation.Score (mkScore)
-import           Git.Plantation.Store (Store)
-import qualified Git.Plantation.Store as Store
 import           Test.Tasty.Hspec
+import           Git.Plantation.Data.Job (Job)
 
 spec :: Spec
 spec = do
@@ -29,7 +26,7 @@ spec = do
                 <: #correct      @= False
                 <: #pending      @= True
                 <: #corrected_at @= Nothing
-                <: #answerer     @= Nothing
+                <: #answerer     @= Just "matsubara0507"
                 <: nil
           link1  = #problem_id @= 1
                 <: #url        @= "https://github.com/sample-hige/git-challenge-tutorial"
@@ -45,29 +42,26 @@ spec = do
                 <: #stats @= [stat1, stat2]
                 <: #links @= [link1, link2, link3]
                 <: nil
-      mkScore (Fixture.config ^. #problems) store team `shouldBe` expect
+      mkScore (Fixture.config ^. #problems) team [job1, job2] `shouldBe` expect
 
-store :: Store
-store = IntMap.fromList
-    [ (1, [ build1 ])
-    , (2, [ build2 ])
-    , (3, [])
-    ]
-
-build1 :: Store.Build
-build1
-    = #source      @= "alpha"
-   <: #status      @= "success"
-   <: #source_repo @= ""
-   <: #created     @= 1560000000
-   <: #message     @= "pushed by: @matsubara0507"
+job1, job2 :: Job
+job1 
+    = #id      @= 1
+   <: #problem @= 1
+   <: #team    @= "alpha"
+   <: #author  @= "matsubara0507"
+   <: #queuing @= False
+   <: #running @= False
+   <: #success @= True
+   <: #created @= 1560000000
    <: nil
-
-build2 :: Store.Build
-build2
-    = #source      @= "alpha"
-   <: #status      @= "pending"
-   <: #source_repo @= ""
-   <: #created     @= 1560000100
-   <: #message     @= "pushed by: @"
+job2
+    = #id      @= 2
+   <: #problem @= 2
+   <: #team    @= "alpha"
+   <: #author  @= "matsubara0507"
+   <: #queuing @= False
+   <: #running @= True
+   <: #success @= False
+   <: #created @= 1560000000
    <: nil
