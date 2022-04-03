@@ -23,7 +23,7 @@ import           Data.Binary                     (Binary)
 import           Data.Coerce                     (coerce)
 import           Data.Extensible
 import           Database.Esqueleto.Experimental hiding (set, (^.))
-import qualified Database.Esqueleto.Experimental as DB
+import qualified Database.Persist                as Persist
 import           Database.Persist.TH
 import           Git.Plantation.Data.Problem     (Problem)
 import qualified Git.Plantation.Data.Problem     as Problem
@@ -136,21 +136,19 @@ create pid tid uid = MixDB.run $ do
   where
     job = new pid tid uid 0
 
-updateToRunning, updateToSuccess, updateToFailure :: SQLitable m env => Id -> m ()
+updateToRunning, updateToSuccess, updateToFailure :: SQLitable m env => Id -> m Job
 updateToRunning jid = MixDB.run $
-  update $ \job -> do
-    DB.set job [ JobDataQueuing =. val False, JobDataRunning =. val True ]
-    where_ $ job DB.^. JobDataId ==. val (coerce jid)
+  fromData (coerce jid) <$> updateGet (toSqlKey $ coerce jid) [ JobDataQueuing Persist.=. False, JobDataRunning Persist.=. True ]
 updateToSuccess jid = MixDB.run $
-  update $ \job -> do
-    DB.set job [ JobDataRunning =. val False, JobDataSuccess =. val True ]
-    where_ $ job DB.^. JobDataId ==. val (coerce jid)
+  fromData (coerce jid) <$> updateGet (toSqlKey $ coerce jid) [ JobDataRunning Persist.=. False, JobDataSuccess Persist.=. True ]
 updateToFailure jid = MixDB.run $
-  update $ \job -> do
-    DB.set job [ JobDataRunning =. val False, JobDataSuccess =. val False ]
-    where_ $ job DB.^. JobDataId ==. val (coerce jid)
+  fromData (coerce jid) <$> updateGet (toSqlKey $ coerce jid) [ JobDataRunning Persist.=. False, JobDataSuccess Persist.=. False ]
 
 selectAll :: SQLitable m env => m [Job]
 selectAll = MixDB.run $ do
   jobs <- select $ from $ table @JobData
   pure $ map (\dat -> fromData (fromSqlKey $ entityKey dat) $ entityVal dat) jobs
+
+findById :: SQLitable m env => Id -> m (Maybe Job)
+findById jid =
+  MixDB.run $ fmap (fromData $ coerce jid) <$> get (toSqlKey $ coerce jid)

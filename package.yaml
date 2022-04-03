@@ -84,21 +84,21 @@ executables:
     dependencies:
     - git-plantation
     - gitrev
+    - warp
+  git-plantation-job-server:
+    main:                Main.hs
+    source-dirs:         exec/jobserver
+    dependencies:
+    - git-plantation
+    - gitrev
     - wai-websockets
     - warp
-  git-plantation-runner:
+  git-plantation-job-runner:
     main:                Main.hs
-    source-dirs:         exec/runner
+    source-dirs:         exec/jobrunner
     dependencies:
     - git-plantation
     - gitrev
-  git-plantation-store:
-    main:                Main.hs
-    source-dirs:         exec/store
-    dependencies:
-    - git-plantation
-    - gitrev
-    - warp
   git-plantation-slack:
     main:                Main.hs
     source-dirs:         exec/slack

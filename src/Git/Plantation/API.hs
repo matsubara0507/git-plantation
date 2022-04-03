@@ -20,14 +20,8 @@ import           Data.Fallible
 import           Git.Plantation.API.CRUD     (GetAPI, getAPI)
 import           Git.Plantation.API.Webhook  (WebhookAPI, webhook)
 import qualified Git.Plantation.Auth.GitHub  as Auth
-import           Git.Plantation.Data.Job     (Job)
-import qualified Git.Plantation.Data.Job     as Job
-import qualified Git.Plantation.Data.Problem as Problem
-import qualified Git.Plantation.Data.Team    as Team
 import qualified Git.Plantation.Data.User    as User
 import           Git.Plantation.Env          (Plant)
-import qualified Git.Plantation.Job.Server   as Job
-import qualified Git.Plantation.Job.Worker   as Worker
 import qualified GitHub
 import           Servant
 import           Servant.Auth.Server         (Auth)
@@ -88,13 +82,6 @@ type Index
 type Unprotected
       = "static" :> Raw
    :<|> "hook"   :> WebhookAPI
-   :<|> "runner" :> RunnerAPI
-
--- ToDo
-type RunnerAPI
-      = "workers" :> Get '[JSON] [Worker.Info]
-   :<|> "jobs" :> Get '[JSON] [Job]
-   :<|> "jobs" :> Capture "problem" Problem.Id :> Capture "team" Team.Id :> Capture "user" User.GitHubId :> Post '[JSON] Job
 
 type GetRedirected headers =
   Verb 'GET 303 '[HTML] (Headers (Header "Location" String ': headers) NoContent)
@@ -112,23 +99,6 @@ server whitelist
     :<|> protected whitelist
     :<|> serveDirectoryFileServer "static"
     :<|> webhook
-    :<|> (gethWorkers :<|> getJobs :<|> kickJob)
-  where
-    gethWorkers = map shrink <$> Worker.getAllConnected
-    getJobs = Job.selectAll
-    kickJob pid tid uid = do
-      result <- Job.kickJob pid tid uid
-      case result of
-        Right job ->
-          pure job
-        Left (Job.ProblemIsNotFount _) ->
-          throwM err404
-        Left (Job.TeamIsNotFount _) ->
-          throwM err404
-        Left (Job.UserIsNotFound _) ->
-          throwM err404
-        Left Job.WorkerIsNotExist ->
-          throwM err500
 
 loginPage :: Plant (Headers JWTCookieHeaders H.Html)
 loginPage = evalContT $ do

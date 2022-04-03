@@ -15,28 +15,24 @@ import           Data.Extensible
 import           Git.Plantation.Config
 import           Git.Plantation.Data
 import qualified Git.Plantation.Data.Slack as Slack
-import           Git.Plantation.Job.Worker (Workers)
 import qualified GitHub.Data               as GitHub
 import qualified Mix.Plugin.GitHub         as GitHub
 import           Mix.Plugin.Logger         ()
 import qualified Mix.Plugin.Logger.JSON    as Mix
-import qualified Mix.Plugin.Persist.Sqlite as MixDB
 import qualified RIO.Text.Lazy             as TL
 import qualified Servant.Auth.Server       as Auth
 
 type Plant = RIO Env
 
 type Env = Record
-  '[ "config"  >: Config
-   , "github"  >: GitHub.Token
-   , "slack"   >: Slack.Config
-   , "work"    >: FilePath
-   , "webhook" >: WebhookConfig
-   , "store"   >: Text -- URL for store
-   , "logger"  >: LogFunc
-   , "oauth"   >: OAuthSettings
-   , "workers" >: Workers
-   , "sqlite"  >: MixDB.Config
+  '[ "config"    >: Config
+   , "github"    >: GitHub.Token
+   , "slack"     >: Slack.Config
+   , "work"      >: FilePath
+   , "webhook"   >: WebhookConfig
+   , "jobserver" >: String -- URL for jobserver
+   , "logger"    >: LogFunc
+   , "oauth"     >: OAuthSettings
    ]
 
 type WebhookConfig = [(Text, Text)]

@@ -7,9 +7,8 @@ services:
       - 8080:8080
     volumes:
       - ./.git-plantation.yaml:/work/config.yaml
-      - ./temp.sqlite:/work/temp.sqlite
     depends_on:
-      - store
+      - jobserver
     restart: always
     environment:
       - PORT=8080
@@ -23,27 +22,28 @@ services:
       - SLACK_CHANNEL_IDS=${SLACK_CHANNEL_IDS}
       - SLACK_RESET_REPO_CMD=/reset-repo
       - SLACK_WEBHOOK=${SLACK_WEBHOOK}
-      - STORE_URL=http://store
+      - JOBSERVER_HOST=http://jobserver
       - AUTHN_CLIENT_ID=${AUTHN_CLIENT_ID}
       - AUTHN_CLIENT_SECRET=${AUTHN_CLIENT_SECRET}
-      - SQLITE_PATH=./temp.sqlite
 
-  store:
+  jobserver:
     image: matsubara0507/git-plantation:dev
-    command: run-store.sh
+    command: git-plantation-job-server --verbose -p 80 config.yaml
+    ports:
+      - 8090:80
+    restart: always
     volumes:
       - ./.git-plantation.yaml:/work/config.yaml
-    restart: always
+      - ./temp.sqlite:/work/temp.sqlite
     environment:
-      - PORT=80
-      - CONFIG=config.yaml
+      - SQLITE_PATH=./temp.sqlite
 
-  runner:
+  jobrunner:
     image: matsubara0507/git-plantation:dev
-    command: git-plantation-runner --verbose app:8080
+    command: git-plantation-job-runner --verbose jobserver:80
     deploy:
       replicas: 3
     depends_on:
-      - app
+      - jobserver
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

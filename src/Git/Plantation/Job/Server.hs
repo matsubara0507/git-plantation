@@ -15,6 +15,7 @@ import qualified Git.Plantation.Data.Problem as Problem
 import qualified Git.Plantation.Data.Team    as Team
 import qualified Git.Plantation.Data.User    as User
 import qualified Git.Plantation.Job.Protocol as Protocol
+import qualified Git.Plantation.Job.Store    as Store
 import qualified Git.Plantation.Job.Worker   as Worker
 import qualified Mix.Plugin.Config           as MixConfig
 import qualified Mix.Plugin.Persist.Sqlite   as MixDB
@@ -27,7 +28,13 @@ data Error
     | WorkerIsNotExist
     deriving (Show, Eq)
 
-type ServerEnv env = (Worker.HasWorkers env, MixDB.HasSqliteConfig env, MixConfig.HasConfig Config env, HasLogFunc env)
+type ServerEnv env =
+    ( Worker.HasWorkers env
+    , Store.HasStore env
+    , MixDB.HasSqliteConfig env
+    , MixConfig.HasConfig Config env
+    , HasLogFunc env
+    )
 
 kickJob :: ServerEnv env => Problem.Id -> Team.Id -> User.GitHubId -> RIO env (Either Error Job)
 kickJob pid tid uid = do
@@ -44,7 +51,7 @@ kickJob pid tid uid = do
           Nothing ->
             pure $ Left WorkerIsNotExist
           Just worker -> do
-            job <- Job.create pid tid uid
+            job <- Store.withStore $ Job.create pid tid uid
             liftIO $ WS.sendBinaryData (worker ^. #conn) $ Protocol.Enqueue (job ^. #id) pid tid uid
             pure $ Right job
       else
@@ -63,12 +70,15 @@ serveRunner conn = do
     receive worker = do
       p <- liftIO $ WS.receiveData (worker ^. #conn)
       case p of
-        Protocol.JobRunning jid ->
-          Job.updateToRunning jid
-        Protocol.JobSuccess jid ->
-          Job.updateToSuccess jid
-        Protocol.JobFailure jid ->
-          Job.updateToFailure jid
+        Protocol.JobRunning jid -> do
+          _ <- Store.withStore $ Job.updateToRunning jid
+          pure ()
+        Protocol.JobSuccess jid -> do
+          _ <- Store.withStore $ Job.updateToSuccess jid
+          pure ()
+        Protocol.JobFailure jid -> do
+          _ <- Store.withStore $ Job.updateToFailure jid
+          pure ()
         _ ->
           pure ()
 

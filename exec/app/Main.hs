@@ -6,59 +6,51 @@
 {-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Main where
 
-import           Paths_git_plantation           (version)
-import           RIO                            hiding (catch)
-import qualified RIO.ByteString                 as B
-import qualified RIO.Text                       as Text
-import qualified RIO.Time                       as Time
+import           Paths_git_plantation     (version)
+import           RIO                      hiding (catch)
+import qualified RIO.ByteString           as B
+import qualified RIO.Text                 as Text
+import qualified RIO.Time                 as Time
 
-import           Configuration.Dotenv           (defaultConfig, loadFile)
-import           Control.Monad.Catch            (catch)
+import           Configuration.Dotenv     (defaultConfig, loadFile)
+import           Control.Monad.Catch      (catch)
 import           Data.Extensible
 import           Data.Extensible.GetOpt
-import           Data.Version                   (Version)
-import qualified Data.Version                   as Version
+import           Data.Version             (Version)
+import qualified Data.Version             as Version
 import           Development.GitRev
 import           Git.Plantation
-import           Git.Plantation.API             (api, server)
-import           Git.Plantation.API.Store       (initializeStore)
-import qualified Git.Plantation.Job.Server      as Job
-import qualified Git.Plantation.Job.Worker      as Job
-import qualified Mix
-import qualified Mix.Plugin                     as Mix (withPlugin)
-import qualified Mix.Plugin.GitHub              as MixGitHub
-import qualified Mix.Plugin.Logger              as MixLogger
-import qualified Mix.Plugin.Persist.Sqlite      as MixDB
-import qualified Mix.Plugin.Shell               as MixShell
-import qualified Network.Wai.Handler.Warp       as Warp
-import           Network.Wai.Handler.WebSockets (websocketsOr)
-import qualified Network.WebSockets             as WS
+import           Git.Plantation.API       (api, server)
+import qualified Mix.Plugin               as Mix (withPlugin)
+import qualified Mix.Plugin.GitHub        as MixGitHub
+import qualified Mix.Plugin.Logger        as MixLogger
+import qualified Mix.Plugin.Shell         as MixShell
+import qualified Network.Wai.Handler.Warp as Warp
 import           Servant
-import qualified Servant.Auth.Server            as Auth
-import qualified Servant.GitHub.Webhook         (GitHubKey, gitHubKey)
-import           System.Environment             (getEnv)
+import qualified Servant.Auth.Server      as Auth
+import qualified Servant.GitHub.Webhook   (GitHubKey, gitHubKey)
+import           System.Environment       (getEnv)
 
-import           Orphans                        ()
+import           Orphans                  ()
 
 main :: IO ()
 main = withGetOpt "[options] [config-file]" opts $ \r args -> do
   _ <- tryIO $ loadFile defaultConfig
-  if
-    | r ^. #version -> B.putStr $ fromString (showVersion version) <> "\n"
-    | r ^. #migrate -> runMigration r
-    | otherwise ->
-        case listToMaybe args of
-          Nothing   -> error "please input config file path."
-          Just path -> runServer r =<< readConfig path
+  if r ^. #version then
+    B.putStr $ fromString (showVersion version) <> "\n"
+  else
+    case listToMaybe args of
+      Nothing   -> error "please input config file path."
+      Just path -> runServer r =<< readConfig path
   where
     opts = #port    @= portOpt
         <: #work    @= workOpt
         <: #verbose @= verboseOpt
         <: #version @= versionOpt
-        <: #migrate @= migrateOpt
         <: nil
 
 type Options = Record
@@ -66,7 +58,6 @@ type Options = Record
    , "work"    >: FilePath
    , "verbose" >: Bool
    , "version" >: Bool
-   , "migrate" >: Bool
    ]
 
 portOpt :: OptDescr' Int
@@ -85,19 +76,6 @@ verboseOpt = optFlag ['v'] ["verbose"] "Enable verbose mode: verbosity level \"d
 versionOpt :: OptDescr' Bool
 versionOpt = optFlag [] ["version"] "Show version"
 
-migrateOpt :: OptDescr' Bool
-migrateOpt = optFlag [] ["migrate"] "Migrate SQLite tables"
-
-runMigration :: Options -> IO ()
-runMigration opts = do
-  sqlitePath <- liftIO $ fromString  <$> getEnv "SQLITE_PATH"
-  let logConf = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
-      plugin  = hsequence
-          $ #logger <@=> MixLogger.buildPlugin logConf
-         <: #sqlite <@=> MixDB.buildPluginWithoutPool sqlitePath
-         <: nil
-  Mix.run plugin (Job.migrate @ (Record '[ "logger" >: LogFunc, "sqlite" >: MixDB.Config ]))
-
 runServer :: Options -> Config -> IO ()
 runServer opts config = do
   token         <- liftIO $ fromString  <$> getEnv "GH_TOKEN"
@@ -106,10 +84,9 @@ runServer opts config = do
   sChannels     <- liftIO $ readListEnv <$> getEnv "SLACK_CHANNEL_IDS"
   sResetRepoCmd <- liftIO $ fromString  <$> getEnv "SLACK_RESET_REPO_CMD"
   sWebhook      <- liftIO $ fromString  <$> getEnv "SLACK_WEBHOOK"
-  storeUrl      <- liftIO $ fromString  <$> getEnv "STORE_URL"
   clientId      <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_ID"
   clientSecret  <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_SECRET"
-  sqlitePath    <- liftIO $ fromString  <$> getEnv "SQLITE_PATH"
+  jobserverHost <- liftIO $ getEnv "JOBSERVER_HOST"
   jwtSettings   <- Auth.defaultJWTSettings <$> Auth.generateKey
   let logConf   = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
       oauthConf
@@ -127,26 +104,19 @@ runServer opts config = do
          <: #webhook        @= Just sWebhook
          <: nil
       plugin    = hsequence
-          $ #config  <@=> pure config
-         <: #github  <@=> MixGitHub.buildPlugin token
-         <: #slack   <@=> pure slackConf
-         <: #work    <@=> MixShell.buildPlugin (opts ^. #work)
-         <: #webhook <@=> pure mempty
-         <: #store   <@=> pure storeUrl
-         <: #logger  <@=> MixLogger.buildPlugin logConf
-         <: #oauth   <@=> pure oauthConf
-         <: #workers <@=> Job.newWorkers
-         <: #sqlite  <@=> MixDB.buildPlugin sqlitePath 2
+          $ #config    <@=> pure config
+         <: #github    <@=> MixGitHub.buildPlugin token
+         <: #slack     <@=> pure slackConf
+         <: #work      <@=> MixShell.buildPlugin (opts ^. #work)
+         <: #webhook   <@=> pure mempty
+         <: #jobserver <@=> pure jobserverHost
+         <: #logger    <@=> MixLogger.buildPlugin logConf
+         <: #oauth     <@=> pure oauthConf
          <: nil
   B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
   flip Mix.withPlugin plugin $ \env -> do
     let key = gitHubKey $ fromString <$> getEnv "GH_SECRET"
-    runRIO env initializeStore
-    Warp.run (opts ^. #port) $
-      websocketsOr
-        WS.defaultConnectionOptions
-        (runRIO env . Job.serveRunner')
-        (app env cookieSettings jwtSettings key)
+    Warp.run (opts ^. #port) (app env cookieSettings jwtSettings key)
   where
     cookieSettings = Auth.defaultCookieSettings
       { Auth.cookieMaxAge = Just $ Time.secondsToDiffTime (3 * 60)

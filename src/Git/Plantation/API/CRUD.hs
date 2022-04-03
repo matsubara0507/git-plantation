@@ -8,7 +8,7 @@ module Git.Plantation.API.CRUD where
 import           RIO
 import qualified RIO.List                 as L
 
-import           Git.Plantation.API.Store (fetchJobsByStore)
+import qualified Git.Plantation.API.Job   as Job
 import           Git.Plantation.Data      (Problem, Team)
 import qualified Git.Plantation.Data.Team as Team
 import qualified Git.Plantation.Data.User as User
@@ -43,7 +43,8 @@ getProblems = do
 getScores :: Plant [Score]
 getScores = do
   logInfo "[GET] /scores"
-  jobs <- tryAny fetchJobsByStore >>= \case
+  host <- asks (view #jobserver)
+  jobs <- tryAny (Job.fetchJobs host) >>= \case
     Left err -> logError (displayShow err) >> pure mempty
     Right x  -> pure x
   config <- asks (view #config)
@@ -52,7 +53,8 @@ getScores = do
 getTeamScore :: Team.Id -> Plant [Score]
 getTeamScore teamID = do
   logInfo $ "[GET] /scores/" <> display teamID
-  jobs <- tryAny fetchJobsByStore >>= \case
+  host <- asks (view #jobserver)
+  jobs <- tryAny (Job.fetchJobs host) >>= \case
     Left err -> logError (displayShow err) >> pure mempty
     Right x  -> pure x
   config <- asks (view #config)
@@ -64,7 +66,8 @@ getTeamScore teamID = do
 getPlayerScore :: Team.Id -> User.GitHubId -> Plant [Score]
 getPlayerScore teamID userID = do
   logInfo $ "[GET] /scores/" <> display teamID <> "/" <> display userID
-  jobs <- tryAny fetchJobsByStore >>= \case
+  host <- asks (view #jobserver)
+  jobs <- tryAny (Job.fetchJobs host) >>= \case
     Left err -> logError (displayShow err) >> pure mempty
     Right x  -> pure x
   config <- asks (view #config)
