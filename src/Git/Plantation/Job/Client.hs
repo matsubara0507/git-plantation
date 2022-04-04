@@ -10,6 +10,7 @@
 module Git.Plantation.Job.Client where
 
 import           RIO
+import qualified RIO.ByteString              as B
 import qualified RIO.ByteString.Lazy         as BL
 import           RIO.Process
 
@@ -78,15 +79,17 @@ runJob conn = do
       liftIO $ WS.sendBinaryData conn (Protocol.JobRunning $ job ^. #id)
       logDebug $ "Run: " <> display (problem ^. #name) <> "/" <> display (team ^. #name)
       (code, out, err) <- Docker.run config problem team
-      unless (BL.null out) $ do
-        logDebug $ "=== STDOUT ===\n" <> displayBytesUtf8 (BL.toStrict out)
-      unless (BL.null err) $ do
-        logDebug $ "=== STDERR ===\n" <> displayBytesUtf8 (BL.toStrict err)
+      let out' = BL.toStrict out
+          err' = BL.toStrict err
+      unless (B.null out') $ do
+        logDebug $ "=== STDOUT ===\n" <> displayBytesUtf8 out'
+      unless (B.null err') $ do
+        logDebug $ "=== STDERR ===\n" <> displayBytesUtf8 err'
       case code of
         ExitSuccess ->
-          liftIO $ WS.sendBinaryData conn (Protocol.JobSuccess $ job ^. #id)
+          liftIO $ WS.sendBinaryData conn (Protocol.JobSuccess (job ^. #id) out' err')
         ExitFailure _ ->
-          liftIO $ WS.sendBinaryData conn (Protocol.JobFailure $ job ^. #id)
+          liftIO $ WS.sendBinaryData conn (Protocol.JobFailure (job ^. #id) out' err')
     _ ->
-      liftIO $ WS.sendBinaryData conn (Protocol.JobFailure $ job ^. #id)
+      liftIO $ WS.sendBinaryData conn (Protocol.JobFailure (job ^. #id) "" "")
 

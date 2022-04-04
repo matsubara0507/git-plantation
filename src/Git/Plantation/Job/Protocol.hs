@@ -48,8 +48,8 @@ instance WS.WebSocketsData Server where
 -- | protocol from Client to Server
 data Client
   = JobRunning Job.Id
-  | JobSuccess Job.Id
-  | JobFailure Job.Id
+  | JobSuccess Job.Id ByteString ByteString
+  | JobFailure Job.Id ByteString ByteString
   | CUndefined
 
 instance WS.WebSocketsData Client where
@@ -61,23 +61,25 @@ instance WS.WebSocketsData Client where
       JobRunning (Binary.decode rest)
 
     Just (2, rest) ->
-      JobSuccess (Binary.decode rest)
+      let (jid, out, err) = Binary.decode rest
+      in JobSuccess jid out err
 
     Just (3, rest) ->
-      JobFailure (Binary.decode rest)
+      let (jid, out, err) = Binary.decode rest
+      in JobFailure jid out err
 
     _ ->
       CUndefined
 
   toLazyByteString p = case p of
-    JobRunning wid ->
-      BL.cons 1 (Binary.encode wid)
+    JobRunning jid ->
+      BL.cons 1 $ Binary.encode jid
 
-    JobSuccess wid ->
-      BL.cons 2 (Binary.encode wid)
+    JobSuccess jid out err ->
+      BL.cons 2 $ Binary.encode (jid, out, err)
 
-    JobFailure wid ->
-      BL.cons 3 (Binary.encode wid)
+    JobFailure jid out err ->
+      BL.cons 3 $ Binary.encode (jid, out, err)
 
     CUndefined ->
       ""

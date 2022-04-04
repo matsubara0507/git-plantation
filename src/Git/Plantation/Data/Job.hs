@@ -45,6 +45,8 @@ type Job = Record
    , "queuing" >: Bool
    , "running" >: Bool
    , "success" >: Bool
+   , "stdout"  >: Text
+   , "stderr"  >: Text
    , "created" >: Int64
    ]
 
@@ -57,6 +59,8 @@ new pid tid uid jid
    <: #queuing @= True
    <: #running @= False
    <: #success @= False
+   <: #stdout  @= ""
+   <: #stderr  @= ""
    <: #created @= 0
    <: nil
 
@@ -95,6 +99,8 @@ JobData
   queuing Bool
   running Bool
   success Bool
+  stdout  Text
+  stderr  Text
   created UTCTime default=CURRENT_TIME
   updated UTCTime default=CURRENT_TIME
   deriving Show
@@ -109,6 +115,8 @@ fromData jid JobData{..}
    <: #queuing @= jobDataQueuing
    <: #running @= jobDataRunning
    <: #success @= jobDataSuccess
+   <: #stdout  @= jobDataStdout
+   <: #stderr  @= jobDataStderr
    <: #created @= utcTimeToInt64 jobDataCreated
    <: nil
 
@@ -131,6 +139,8 @@ create pid tid uid = MixDB.run $ do
         (job ^. #queuing)
         (job ^. #running)
         (job ^. #success)
+        (job ^. #stdout)
+        (job ^. #stderr)
         currentTime
         currentTime
   jid <- insert dat
@@ -138,13 +148,28 @@ create pid tid uid = MixDB.run $ do
   where
     job = new pid tid uid 0
 
-updateToRunning, updateToSuccess, updateToFailure :: SQLitable m env => Id -> m Job
-updateToRunning jid = MixDB.run $
-  fromData (coerce jid) <$> updateGet (toSqlKey $ coerce jid) [ JobDataQueuing Persist.=. False, JobDataRunning Persist.=. True ]
-updateToSuccess jid = MixDB.run $
-  fromData (coerce jid) <$> updateGet (toSqlKey $ coerce jid) [ JobDataRunning Persist.=. False, JobDataSuccess Persist.=. True ]
-updateToFailure jid = MixDB.run $
-  fromData (coerce jid) <$> updateGet (toSqlKey $ coerce jid) [ JobDataRunning Persist.=. False, JobDataSuccess Persist.=. False ]
+updateToRunning :: SQLitable m env => Id -> m Job
+updateToRunning jid =
+  MixDB.run $ fromData (coerce jid) <$> updateGet (toSqlKey $ coerce jid)
+    [ JobDataQueuing Persist.=. False
+    , JobDataRunning Persist.=. True
+    ]
+
+updateToSuccess, updateToFailure :: SQLitable m env => Id -> Text -> Text -> m Job
+updateToSuccess jid out err =
+  MixDB.run $ fromData (coerce jid) <$> updateGet (toSqlKey $ coerce jid)
+    [ JobDataRunning Persist.=. False
+    , JobDataSuccess Persist.=. True
+    , JobDataStdout Persist.=. out
+    , JobDataStderr Persist.=. err
+    ]
+updateToFailure jid out err =
+  MixDB.run $ fromData (coerce jid) <$> updateGet (toSqlKey $ coerce jid)
+    [ JobDataRunning Persist.=. False
+    , JobDataSuccess Persist.=. False
+    , JobDataStdout Persist.=. out
+    , JobDataStderr Persist.=. err
+    ]
 
 selectAll :: SQLitable m env => m [Job]
 selectAll = MixDB.run $ do

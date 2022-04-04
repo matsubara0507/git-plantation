@@ -6,6 +6,7 @@ module Git.Plantation.Job.Server where
 
 import           RIO
 import qualified RIO.List                    as List
+import qualified RIO.Text                    as Text
 
 import           Data.Extensible
 import           Git.Plantation.Config       (Config, askConfig)
@@ -70,11 +71,15 @@ serveRunner conn = do
         Protocol.JobRunning jid -> do
           _ <- Store.withStore $ Job.updateToRunning jid
           pure ()
-        Protocol.JobSuccess jid -> do
-          _ <- Store.withStore $ Job.updateToSuccess jid
+        Protocol.JobSuccess jid out err -> do
+          let out' = Text.decodeUtf8With Text.lenientDecode out
+              err' = Text.decodeUtf8With Text.lenientDecode err
+          _ <- Store.withStore $ Job.updateToSuccess jid out' err'
           pure ()
-        Protocol.JobFailure jid -> do
-          _ <- Store.withStore $ Job.updateToFailure jid
+        Protocol.JobFailure jid out err -> do
+          let out' = Text.decodeUtf8With Text.lenientDecode out
+              err' = Text.decodeUtf8With Text.lenientDecode err
+          _ <- Store.withStore $ Job.updateToFailure jid out' err'
           pure ()
         _ ->
           pure ()
