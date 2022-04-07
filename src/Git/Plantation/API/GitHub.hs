@@ -3,7 +3,7 @@
 {-# LANGUAGE TupleSections    #-}
 {-# LANGUAGE TypeOperators    #-}
 
-module Git.Plantation.API.Webhook
+module Git.Plantation.API.GitHub
   ( WebhookAPI
   , webhook
   ) where

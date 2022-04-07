@@ -18,7 +18,7 @@ import           Data.Coerce                 (coerce)
 import           Data.Extensible
 import           Data.Fallible
 import           Git.Plantation.API.CRUD     (GetAPI, getAPI)
-import           Git.Plantation.API.Webhook  (WebhookAPI, webhook)
+import qualified Git.Plantation.API.GitHub   as GitHub
 import qualified Git.Plantation.Auth.GitHub  as Auth
 import qualified Git.Plantation.Data.User    as User
 import           Git.Plantation.Env          (Plant)
@@ -81,7 +81,7 @@ type Index
 
 type Unprotected
       = "static" :> Raw
-   :<|> "hook"   :> WebhookAPI
+   :<|> "hook"   :> GitHub.WebhookAPI
 
 type GetRedirected headers =
   Verb 'GET 303 '[HTML] (Headers (Header "Location" String ': headers) NoContent)
@@ -103,7 +103,7 @@ server config
     :<|> callback
     :<|> protected config
     :<|> serveDirectoryFileServer "static"
-    :<|> webhook
+    :<|> GitHub.webhook
 
 loginPage :: Plant (Headers JWTCookieHeaders H.Html)
 loginPage = evalContT $ do
