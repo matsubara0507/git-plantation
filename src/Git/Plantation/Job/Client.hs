@@ -78,13 +78,9 @@ runJob conn = do
     (Just problem, Just team) -> do
       liftIO $ WS.sendBinaryData conn (Protocol.JobRunning $ job ^. #id)
       logDebug $ "Run: " <> display (problem ^. #name) <> "/" <> display (team ^. #name)
-      (code, out, err) <- Docker.run config problem team
+      (code, out, err) <- Docker.testScript config problem team
       let out' = BL.toStrict out
           err' = BL.toStrict err
-      unless (B.null out') $ do
-        logDebug $ "=== STDOUT ===\n" <> displayBytesUtf8 out'
-      unless (B.null err') $ do
-        logDebug $ "=== STDERR ===\n" <> displayBytesUtf8 err'
       case code of
         ExitSuccess ->
           liftIO $ WS.sendBinaryData conn (Protocol.JobSuccess (job ^. #id) out' err')
