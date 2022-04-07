@@ -18,13 +18,13 @@ import qualified Git.Plantation.Data.Team    as Team
 run ::
   (HasProcessContext env, HasLogFunc env, MonadReader env m, MonadIO m, HasCallStack)
   => Job.Config
-  -> Text
+  -> [Text]
   -> m (ExitCode, LByteString, LByteString)
 run config cmd = do
   logDebug $ fromString ("docker " ++ unwords args)
   proc "docker" args readProcess
   where
-    args = ["run", "--rm", Text.unpack $ config ^. #image, "/bin/bash", "-c", Text.unpack cmd]
+    args = ["run", "--rm", "-e", "REPOSITORY", "-e", "PROBLEM", Text.unpack $ config ^. #image] ++ map Text.unpack cmd
 
 echo ::
   (HasProcessContext env, HasLogFunc env, MonadReader env m, MonadIO m, HasCallStack)
@@ -32,7 +32,7 @@ echo ::
   -> Problem
   -> Team
   -> m (ExitCode, LByteString, LByteString)
-echo config problem team = run config cmd
+echo config problem team = run config ["/bin/bash", "-c", cmd]
   where
     cmd = "echo " <> coerce (team ^. #name) <> "/" <> coerce (problem ^. #name)
 
@@ -46,4 +46,4 @@ testScript config problem team =
     Nothing   ->
       pure (ExitFailure 1, "", "team repository is not found in config.")
     Just repo ->
-      withModifyEnvVars (Map.insert "REPOSITORY" repo . Map.insert "PROBLEM" (coerce $ problem ^. #name)) $ run config ""
+      withModifyEnvVars (Map.insert "REPOSITORY" repo . Map.insert "PROBLEM" (coerce $ problem ^. #name)) $ run config []
