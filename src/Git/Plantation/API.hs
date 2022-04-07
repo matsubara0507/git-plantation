@@ -92,11 +92,16 @@ type JWTCookieHeaders =
 api :: Proxy API
 api = Proxy
 
-server :: [User.GitHubId] -> ServerT API Plant
-server whitelist
+type LoginConfig = Record
+  '[ "whitelist"   >: [User.GitHubId]
+   , "allow_guest" >: Bool
+   ]
+
+server :: LoginConfig -> ServerT API Plant
+server config
        = loginPage
     :<|> callback
-    :<|> protected whitelist
+    :<|> protected config
     :<|> serveDirectoryFileServer "static"
     :<|> webhook
 
@@ -142,11 +147,16 @@ callback auth code state =
     acceptLogin' conf = liftIO . Auth.acceptLogin (conf ^. #cookie) (conf ^. #jwt)
     throw401 = Auth.throwAll err401
 
-protected :: [User.GitHubId] -> Auth.AuthResult Account -> ServerT Protected Plant
-protected whitelist = \case
-  Auth.Authenticated a | a ^. #login `elem` whitelist -> getAPI :<|> index
-  Auth.Indefinite                                     -> Auth.throwAll login
-  _                                                   -> Auth.throwAll err401
+protected :: LoginConfig -> Auth.AuthResult Account -> ServerT Protected Plant
+protected config = \case
+  Auth.Authenticated a | a ^. #login `elem` config ^. #whitelist ->
+      getAPI :<|> index
+  Auth.Indefinite | config ^. #allow_guest ->
+      getAPI :<|> index
+  Auth.Indefinite ->
+      Auth.throwAll login
+  _ ->
+      Auth.throwAll err401
   where
     index = indexHtml :<|> indexHtml :<|> const indexHtml :<|> (\_ _ -> indexHtml)
     login = err303 { errHeaders = [("Location", "/login")] }

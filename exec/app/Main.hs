@@ -24,7 +24,7 @@ import           Data.Version             (Version)
 import qualified Data.Version             as Version
 import           Development.GitRev
 import           Git.Plantation
-import           Git.Plantation.API       (api, server)
+import           Git.Plantation.API       (LoginConfig, api, server)
 import qualified Mix.Plugin               as Mix (withPlugin)
 import qualified Mix.Plugin.GitHub        as MixGitHub
 import qualified Mix.Plugin.Logger        as MixLogger
@@ -49,6 +49,7 @@ main = withGetOpt "[options] [config-file]" opts $ \r args -> do
   where
     opts = #port    @= portOpt
         <: #work    @= workOpt
+        <: #guest   @= guestOpt
         <: #verbose @= verboseOpt
         <: #version @= versionOpt
         <: nil
@@ -56,6 +57,7 @@ main = withGetOpt "[options] [config-file]" opts $ \r args -> do
 type Options = Record
   '[ "port"    >: Int
    , "work"    >: FilePath
+   , "guest"   >: Bool
    , "verbose" >: Bool
    , "version" >: Bool
    ]
@@ -69,6 +71,9 @@ workOpt :: OptDescr' FilePath
 workOpt = optionReqArg
   (pure . fromMaybe ".temp" . listToMaybe)
   [] ["work"] "DIR" "Set workdir to DIR instead of ./.temp"
+
+guestOpt :: OptDescr' Bool
+guestOpt = optFlag [] ["guest"] "Allow guest mode"
 
 verboseOpt :: OptDescr' Bool
 verboseOpt = optFlag ['v'] ["verbose"] "Enable verbose mode: verbosity level \"debug\""
@@ -116,20 +121,22 @@ runServer opts config = do
   B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
   flip Mix.withPlugin plugin $ \env -> do
     let key = gitHubKey $ fromString <$> getEnv "GH_SECRET"
-    Warp.run (opts ^. #port) (app env cookieSettings jwtSettings key)
+        loginConf
+            = #whitelist   @= mkAuthnWhitelist (env ^. #config)
+           <: #allow_guest @= opts ^. #guest
+           <: nil
+    Warp.run (opts ^. #port) (app loginConf env cookieSettings jwtSettings key)
   where
     cookieSettings = Auth.defaultCookieSettings
       { Auth.cookieMaxAge = Just $ Time.secondsToDiffTime (3 * 60)
       , Auth.cookieXsrfSetting = Nothing
       }
 
-app :: Env -> Auth.CookieSettings -> Auth.JWTSettings -> GitHubKey -> Application
-app env cookie jwt key =
+app :: LoginConfig -> Env -> Auth.CookieSettings -> Auth.JWTSettings -> GitHubKey -> Application
+app loginConfig env cookie jwt key =
   serveWithContext api (cookie :. jwt :. key :. EmptyContext) $
     hoistServerWithContext api context
-      (\x -> runRIO env x `catch` throwError) (server whitelist)
-  where
-    whitelist = mkAuthnWhitelist (env ^. #config)
+      (\x -> runRIO env x `catch` throwError) (server loginConfig)
 
 context :: Proxy '[ Auth.CookieSettings, Auth.JWTSettings, GitHubKey ]
 context = Proxy
