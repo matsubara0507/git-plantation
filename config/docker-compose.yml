@@ -2,45 +2,41 @@ version: '2'
 
 services:
   app:
-    image: matsubara0507/git-plantation:dev
+    image: ghcr.io/matsubara0507/git-plantation:dev
+    command: git-plantation-app --verbose -p 8080 --work=.temp config.yaml
+    restart: always
     ports:
       - 8080:8080
     volumes:
       - ./.git-plantation.yaml:/work/config.yaml
     depends_on:
       - jobserver
-    restart: always
     environment:
-      - PORT=8080
-      - WORK=.temp
-      - CONFIG=config.yaml
       - GH_TOKEN=${GH_TOKEN}
       - GH_SECRET=${GH_SECRET}
-      - APP_SERVER=${APP_SERVER}
-      - SLACK_API_TOKEN=${SLACK_API_TOKEN}
-      - SLACK_TEAM_ID=${SLACK_TEAM_ID}
-      - SLACK_CHANNEL_IDS=${SLACK_CHANNEL_IDS}
-      - SLACK_RESET_REPO_CMD=/reset-repo
       - SLACK_WEBHOOK=${SLACK_WEBHOOK}
       - JOBSERVER_HOST=http://jobserver
       - AUTHN_CLIENT_ID=${AUTHN_CLIENT_ID}
       - AUTHN_CLIENT_SECRET=${AUTHN_CLIENT_SECRET}
 
   jobserver:
-    image: matsubara0507/git-plantation:dev
+    image: ghcr.io/matsubara0507/git-plantation:dev
     command: git-plantation-job-server --verbose -p 80 config.yaml
+    restart: always
     ports:
       - 8090:80
-    restart: always
     volumes:
       - ./.git-plantation.yaml:/work/config.yaml
       - ./temp.sqlite:/work/temp.sqlite
     environment:
       - SQLITE_PATH=./temp.sqlite
+      - SLACK_API_TOKEN=${SLACK_API_TOKEN}
+      - SLACK_NOTIFY_CHANNEL=${SLACK_NOTIFY_CHANNEL}
 
   jobrunner:
-    image: matsubara0507/git-plantation:dev
+    image: ghcr.io/matsubara0507/git-plantation:dev
     command: git-plantation-job-runner --verbose jobserver:80
+    restart: always
     deploy:
       replicas: 3
     depends_on:
