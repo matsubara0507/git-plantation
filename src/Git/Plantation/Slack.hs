@@ -16,7 +16,7 @@ import           Servant
 type Env = Record
   '[ "config"  >: Config
    , "github"  >: GitHub.Token
-   , "slack"   >: Slack.Config
+   , "slash"   >: Slack.SlashCmdConfig
    , "work"    >: FilePath
    , "webhook" >: WebhookConfig
    , "logger"  >: LogFunc

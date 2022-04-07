@@ -80,17 +80,16 @@ runServer opts config = do
   sWebhook      <- liftIO $ fromString  <$> getEnv "SLACK_WEBHOOK"
   let logConf = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
       slackConf
-          = #token          @= sToken
+          = #verify_token   @= sToken
          <: #team_id        @= sTeam
          <: #channel_ids    @= sChannels
-         <: #user_ids       @= []
          <: #reset_repo_cmd @= sResetRepoCmd
          <: #webhook        @= Just sWebhook
          <: nil
       plugin = hsequence
           $ #config  <@=> pure config
          <: #github  <@=> MixGitHub.buildPlugin token
-         <: #slack   <@=> pure slackConf
+         <: #slash   <@=> pure slackConf
          <: #work    <@=> MixShell.buildPlugin (opts ^. #work)
          <: #webhook <@=> pure mempty
          <: #logger  <@=> MixLogger.buildPlugin logConf

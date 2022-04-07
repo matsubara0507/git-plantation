@@ -3,7 +3,10 @@
 {-# LANGUAGE TupleSections    #-}
 {-# LANGUAGE TypeOperators    #-}
 
-module Git.Plantation.API.Webhook where
+module Git.Plantation.API.Webhook
+  ( WebhookAPI
+  , webhook
+  ) where
 
 import           RIO
 import qualified RIO.List                     as L
@@ -70,11 +73,10 @@ startScoring ev team problem = do
 
 notifySlack :: Team -> Problem -> Maybe User -> Plant ()
 notifySlack team problem user' = do
-  conf <- asks (view #slack)
-  case (conf ^. #webhook, user') of
-    (Just url, Just user) -> Slack.sendWebhook url (mkMessage user)
-    (Nothing, _)          -> logWarn "webhook url is not found when notify slack"
-    (_, Nothing)          -> logWarn "sender is not found when notify slack"
+  url <- asks (view #slack)
+  case user' of
+    Just user -> Slack.sendWebhook url (mkMessage user)
+    Nothing   -> logWarn "sender is not found when notify slack"
   where
     mkMessage user = Slack.mkMessage $ mconcat
       [ coerce $ team ^. #name, " の ", coerce $ user ^. #name, " が ", coerce $ problem ^. #name, " にプッシュしたみたい！" ]

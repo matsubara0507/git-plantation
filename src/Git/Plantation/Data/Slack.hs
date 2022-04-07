@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE MultiWayIf           #-}
 {-# LANGUAGE OverloadedLabels     #-}
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -13,14 +14,23 @@ import qualified Data.Aeson      as J
 import           Data.Extensible
 import qualified Network.Wreq    as W
 
-type Config = Record
-  '[ "token"          >: Text
+
+type SlashCmdConfig = Record
+  '[ "verify_token"   >: Text
    , "team_id"        >: Text
    , "channel_ids"    >: [Text]
-   , "user_ids"       >: [Text]
    , "reset_repo_cmd" >: Text
    , "webhook"        >: Maybe Text
    ]
+
+class HasSlackSlashCmdConfig env where
+  slackSlashCmdConfigL :: Lens' env SlashCmdConfig
+
+instance Lookup xs "slash" SlashCmdConfig => HasSlackSlashCmdConfig (Record xs) where
+  slackSlashCmdConfigL = lens (view #slash) (\x y -> x & #slash `set` y)
+
+askSlashCmdConfig :: HasSlackSlashCmdConfig env => RIO env SlashCmdConfig
+askSlashCmdConfig = view slackSlashCmdConfigL
 
 type SlashCmdData = Record
   '[ "token"        >: Text
@@ -35,8 +45,6 @@ type SlashCmdData = Record
    , "response_url" >: Text
    ]
 
-type Message = Record '[ "text" >: Text ]
-
 type DisplayLogData = Record
   '[ "team_domain"  >: Text
    , "channel_name" >: Text
@@ -45,14 +53,17 @@ type DisplayLogData = Record
    , "command"      >: Text
    ]
 
-class HasSlackConfig env where
-  slackConfigL :: Lens' env Config
+verifySlashCmd :: HasSlackSlashCmdConfig env => SlashCmdData -> RIO env (Either Text ())
+verifySlashCmd dat = do
+  config <- askSlashCmdConfig
+  pure $ if
+    | dat ^. #token /= config ^. #verify_token            -> Left "Invalid token..."
+    | dat ^. #team_id /= config ^. #team_id               -> Left "Invalid team..."
+    | dat ^. #channel_id `notElem` config ^. #channel_ids -> Left "Invalid channel..."
+    | dat ^. #command /= config ^. #reset_repo_cmd        -> Left "Invalid command..."
+    | otherwise                                           -> pure ()
 
-instance Lookup xs "slack" Config => HasSlackConfig (Record xs) where
-  slackConfigL = lens (view #slack) (\x y -> x & #slack `set` y)
-
-askSlackConfig :: HasSlackConfig env => RIO env Config
-askSlackConfig = view slackConfigL
+type Message = Record '[ "text" >: Text ]
 
 mkMessage :: Text -> Message
 mkMessage txt = #text @= txt <: nil
@@ -66,3 +77,40 @@ respondMessage postData message = do
 sendWebhook :: MonadIO m => Text -> Message -> m ()
 sendWebhook url msg =
   liftIO (W.post (Text.unpack url) $ J.toJSON msg) >> pure ()
+
+type NotifyConfig = Record
+  '[ "api_token"  >: ByteString
+   , "channel_id" >: Text
+   ]
+
+class HasSlackNotifyConfig env where
+  slackNotifyConfigL :: Lens' env NotifyConfig
+
+instance Lookup xs "notify" NotifyConfig => HasSlackNotifyConfig (Record xs) where
+  slackNotifyConfigL = lens (view #notify) (\x y -> x & #notify `set` y)
+
+askNotifyConfig :: HasSlackNotifyConfig env => RIO env NotifyConfig
+askNotifyConfig = view slackNotifyConfigL
+
+type SnipetMessage = Record
+  '[ "content"         >: Text
+   , "filename"        >: Text
+   , "filetype"        >: Text
+   , "initial_comment" >: Text
+   ]
+
+uploadFile :: (HasLogFunc env, HasSlackNotifyConfig env) => SnipetMessage -> RIO env ()
+uploadFile msg = do
+  config <- askNotifyConfig
+  let opts = W.defaults
+           & W.header "Content-Type" .~ ["application/x-www-form-urlencoded"]
+           & W.header "Authorization" .~ ["Bearer " <> config ^. #api_token]
+      dat =
+        [ "content" W.:= msg ^. #content
+        , "filename" W.:= msg ^. #filename
+        , "filetype" W.:= msg ^. #filetype
+        , "initial_comment" W.:= msg ^. #initial_comment
+        , "channels" W.:= config ^. #channel_id
+        ]
+  _ <- liftIO (W.postWith opts "https://slack.com/api/files.upload" dat)
+  pure ()

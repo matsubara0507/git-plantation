@@ -84,34 +84,22 @@ versionOpt = optFlag [] ["version"] "Show version"
 runServer :: Options -> Config -> IO ()
 runServer opts config = do
   token         <- liftIO $ fromString  <$> getEnv "GH_TOKEN"
-  sToken        <- liftIO $ fromString  <$> getEnv "SLACK_API_TOKEN"
-  sTeam         <- liftIO $ fromString  <$> getEnv "SLACK_TEAM_ID"
-  sChannels     <- liftIO $ readListEnv <$> getEnv "SLACK_CHANNEL_IDS"
-  sResetRepoCmd <- liftIO $ fromString  <$> getEnv "SLACK_RESET_REPO_CMD"
-  sWebhook      <- liftIO $ fromString  <$> getEnv "SLACK_WEBHOOK"
+  slackWebhook  <- liftIO $ fromString  <$> getEnv "SLACK_WEBHOOK"
   clientId      <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_ID"
   clientSecret  <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_SECRET"
   jobserverHost <- liftIO $ getEnv "JOBSERVER_HOST"
   jwtSettings   <- Auth.defaultJWTSettings <$> Auth.generateKey
-  let logConf   = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
+  let logConf = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
       oauthConf
           = #client_id     @= clientId
          <: #client_secret @= clientSecret
          <: #cookie        @= cookieSettings
          <: #jwt           @= jwtSettings
          <: nil
-      slackConf
-          = #token          @= sToken
-         <: #team_id        @= sTeam
-         <: #channel_ids    @= sChannels
-         <: #user_ids       @= []
-         <: #reset_repo_cmd @= sResetRepoCmd
-         <: #webhook        @= Just sWebhook
-         <: nil
-      plugin    = hsequence
+      plugin = hsequence
           $ #config    <@=> pure config
          <: #github    <@=> MixGitHub.buildPlugin token
-         <: #slack     <@=> pure slackConf
+         <: #slack     <@=> pure slackWebhook
          <: #work      <@=> MixShell.buildPlugin (opts ^. #work)
          <: #webhook   <@=> pure mempty
          <: #jobserver <@=> pure jobserverHost

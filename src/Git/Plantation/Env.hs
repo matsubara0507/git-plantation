@@ -9,25 +9,24 @@ module Git.Plantation.Env where
 
 import           RIO
 
-import           Data.Aeson                (ToJSON)
-import qualified Data.Aeson.Text           as Json
+import           Data.Aeson             (ToJSON)
+import qualified Data.Aeson.Text        as Json
 import           Data.Extensible
 import           Git.Plantation.Config
 import           Git.Plantation.Data
-import qualified Git.Plantation.Data.Slack as Slack
-import qualified GitHub.Data               as GitHub
-import qualified Mix.Plugin.GitHub         as GitHub
-import           Mix.Plugin.Logger         ()
-import qualified Mix.Plugin.Logger.JSON    as Mix
-import qualified RIO.Text.Lazy             as TL
-import qualified Servant.Auth.Server       as Auth
+import qualified GitHub.Data            as GitHub
+import qualified Mix.Plugin.GitHub      as GitHub
+import           Mix.Plugin.Logger      ()
+import qualified Mix.Plugin.Logger.JSON as Mix
+import qualified RIO.Text.Lazy          as TL
+import qualified Servant.Auth.Server    as Auth
 
 type Plant = RIO Env
 
 type Env = Record
   '[ "config"    >: Config
    , "github"    >: GitHub.Token
-   , "slack"     >: Slack.Config
+   , "slack"     >: Text -- slack webhook url
    , "work"      >: FilePath
    , "webhook"   >: WebhookConfig
    , "jobserver" >: String -- URL for jobserver

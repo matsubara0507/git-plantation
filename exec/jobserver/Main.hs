@@ -22,6 +22,7 @@ import           Development.GitRev
 import           Git.Plantation                 (Config, readConfig)
 import qualified Git.Plantation.API.Job         as Job
 import qualified Git.Plantation.Data.Job        as Job
+import qualified Git.Plantation.Data.Slack      as Slack
 import qualified Git.Plantation.Job.Server      as Job
 import qualified Git.Plantation.Job.Store       as Job
 import qualified Git.Plantation.Job.Worker      as Job
@@ -91,18 +92,23 @@ type Env = Record
    , "workers" >: Job.Workers
    , "store"   >: Job.Store
    , "sqlite"  >: MixDB.Config
+   , "notify"  >: Slack.NotifyConfig
    ]
 
 runServer :: Options -> Config -> IO ()
 runServer opts config = do
-  sqlitePath <- liftIO $ fromString  <$> getEnv "SQLITE_PATH"
-  let logConf = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
-      plugin    = hsequence
+  slackToken   <- liftIO $ fromString <$> getEnv "SLACK_API_TOKEN"
+  slackChannel <- liftIO $ fromString <$> getEnv "SLACK_NOTIFY_CHANNEL"
+  sqlitePath   <- liftIO $ fromString <$> getEnv "SQLITE_PATH"
+  let logConf     = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
+      slackConfig = #api_token @= slackToken <: #channel_id @= slackChannel <: nil
+      plugin      = hsequence
           $ #config  <@=> pure config
          <: #logger  <@=> MixLogger.buildPlugin logConf
          <: #workers <@=> Job.newWorkers
          <: #store   <@=> Job.newStore
          <: #sqlite  <@=> MixDB.buildPlugin sqlitePath 2
+         <: #notify  <@=> pure slackConfig
          <: nil
   B.putStr $ "Listening on port " <> (fromString . show) (opts ^. #port) <> "\n"
   flip Mix.withPlugin plugin $ \env -> do

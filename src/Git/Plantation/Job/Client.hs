@@ -10,7 +10,6 @@
 module Git.Plantation.Job.Client where
 
 import           RIO
-import qualified RIO.ByteString              as B
 import qualified RIO.ByteString.Lazy         as BL
 import           RIO.Process
 

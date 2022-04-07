@@ -25,7 +25,7 @@ import qualified Mix.Plugin.Config           as Mix
 import           Servant
 import           UnliftIO.Concurrent         (forkIO)
 
-type SlackAPIEnv env = (Cmd.CmdEnv env, Mix.HasConfig Config env, Slack.HasSlackConfig env, HasLogFunc env)
+type SlackAPIEnv env = (Cmd.CmdEnv env, Mix.HasConfig Config env, Slack.HasSlackSlashCmdConfig env, HasLogFunc env)
 
 type SlackAPI
      = "reset-repo" :> ReqBody '[FormUrlEncoded] Slack.SlashCmdData :> Post '[JSON] NoContent
@@ -40,11 +40,9 @@ resetRepo postData = do
     [ "[POST] /slack/reset-repo "
     , TL.unpack $ Json.encodeToLazyText (shrink postData :: Slack.DisplayLogData)
     ]
-  _ <- forkIO $ do
-    slackConfig <- Slack.askSlackConfig
-    case verify slackConfig (view #reset_repo_cmd) postData of
-      Left err -> logError $ display err
-      Right _  -> (logError . display) `handleIO` resetRepo' (postData ^. #text)
+  _ <- forkIO $ Slack.verifySlashCmd postData >>= \case
+    Left err -> logError $ display err
+    Right _  -> (logError . display) `handleIO` resetRepo' (postData ^. #text)
   pure NoContent
   where
     returnMessage :: MonadIO m => Text -> m Slack.Message
@@ -59,7 +57,7 @@ resetRepo postData = do
         Nothing   -> returnMessage "うーん、リポジトリが見つからなーい..."
         Just info -> returnMessage =<< reset info
       logDebug $ display ("reset-cmd: response: " <> message ^. #text)
-      slackConfig <- Slack.askSlackConfig
+      slackConfig <- Slack.askSlashCmdConfig
       case slackConfig ^. #webhook of
         Just url -> Slack.sendWebhook url message
         Nothing  -> Slack.respondMessage postData message
@@ -70,14 +68,6 @@ resetRepo postData = do
       tryIO (Cmd.resetRepo $ #repo @= repo <: #team @= team <: nil) >>= \case
         Left err -> logError (display err) >> pure "うーん、なんか失敗したみたい..."
         Right _  -> pure $ mconcat success
-
-verify :: Slack.Config -> (Slack.Config -> Text) -> Slack.SlashCmdData -> Either Text ()
-verify config cmd postData
-  | config ^. #token /= postData ^. #token                   = Left "Invalid token..."
-  | postData ^. #team_id /= config ^. #team_id               = Left "Invalid team..."
-  | postData ^. #channel_id `notElem` config ^. #channel_ids = Left "Invalid channel..."
-  | cmd config /= postData ^. #command                       = Left "Invalid command..."
-  | otherwise                                                = pure ()
 
 findInfos :: Config -> Text -> Maybe (Team, Problem, Repo)
 findInfos config txt = do
