@@ -6,6 +6,7 @@ module Git.Plantation.Job.Server
   ( ServerEnv
   , Error (..)
   , kickJob
+  , enqueueJob
   , serveRunner
   , serveRunner'
   , migrate
@@ -34,10 +35,11 @@ import qualified Mix.Plugin.Persist.Sqlite   as MixDB
 import qualified Network.WebSockets          as WS
 
 data Error
-    = ProblemIsNotFount Problem.Id
-    | TeamIsNotFount Team.Id
+    = ProblemIsNotFound Problem.Id
+    | TeamIsNotFound Team.Id
     | UserIsNotFound User.GitHubId
     | WorkerIsNotExist
+    | JobIsNotFound Job.Id
     deriving (Show, Eq)
 
 type ServerEnv env =
@@ -54,18 +56,32 @@ kickJob pid tid uid = do
   config <- askConfig
   case (findProblem config pid, findTeam config tid) of
     (Nothing, _) ->
-      pure $ Left (ProblemIsNotFount pid)
+      pure $ Left (ProblemIsNotFound pid)
     (_, Nothing) ->
-      pure $ Left (TeamIsNotFount tid)
+      pure $ Left (TeamIsNotFound tid)
     (Just _, Just _) -> do
       w <- Worker.getRandom
       case w of
         Nothing ->
           pure $ Left WorkerIsNotExist
         Just worker -> do
-          job <- Store.withStore $ Job.create pid tid uid
+          job <- Job.create pid tid uid
           liftIO $ WS.sendBinaryData (worker ^. #conn) $ Protocol.Enqueue (job ^. #id) pid tid uid
           pure $ Right job
+
+enqueueJob :: ServerEnv env => Job.Id -> RIO env (Either Error Job)
+enqueueJob jid = do
+  w <- Worker.getRandom
+  j <- Job.findById jid
+  case (w, j) of
+    (Nothing, _) ->
+      pure $ Left WorkerIsNotExist
+    (_, Nothing) ->
+      pure $ Left (JobIsNotFound jid)
+    (Just worker, Just job) -> do
+      let dat = Protocol.Enqueue jid (job ^. #problem) (job ^. #team) (job ^. #author)
+      liftIO $ WS.sendBinaryData (worker ^. #conn) dat
+      pure $ Right job
 
 serveRunner :: ServerEnv env => WS.Connection -> RIO env ()
 serveRunner conn = do

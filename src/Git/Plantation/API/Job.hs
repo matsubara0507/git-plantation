@@ -1,7 +1,9 @@
 {-# LANGUAGE BlockArguments        #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedLabels      #-}
 {-# LANGUAGE TypeOperators         #-}
 
 module Git.Plantation.API.Job where
@@ -14,6 +16,7 @@ import qualified RIO.Text                    as Text
 import           Data.Coerce                 (coerce)
 import           Data.Extensible
 import           Git.Plantation.Data.Job     (Job)
+import qualified Git.Plantation.Data.Job     as Job
 import qualified Git.Plantation.Data.Problem as Problem
 import qualified Git.Plantation.Data.Team    as Team
 import qualified Git.Plantation.Data.User    as User
@@ -26,14 +29,22 @@ import           Servant
 type API
       = "workers" :> Get '[JSON] [Worker.Info]
    :<|> "jobs" :> Get '[JSON] [Job] -- get by cache
-   :<|> "jobs" :> Capture "problem" Problem.Id :> Capture "team" Team.Id :> Post '[JSON] Job
-   :<|> "jobs" :> Capture "problem" Problem.Id :> Capture "team" Team.Id :> Capture "user" User.GitHubId :> Post '[JSON] Job
+   :<|> "jobs" :> "queuing" :> Get '[JSON] [Job]
+   :<|> "jobs" :> "running" :> Get '[JSON] [Job]
+   :<|> "jobs" :> "team" :> Capture "team" Team.Id :> Get '[JSON] [Job]
+   :<|> "jobs" :> "problem" :> Capture "problem" Problem.Id :> Get '[JSON] [Job]
+   :<|> "jobs" :> "requeue" :> Capture "job" Job.Id :> Post '[JSON] Job
+   :<|> "jobs" :> "kick" :> Capture "problem" Problem.Id :> Capture "team" Team.Id :> Post '[JSON] Job
+   :<|> "jobs" :> "kick" :> Capture "problem" Problem.Id :> Capture "team" Team.Id :> Capture "user" User.GitHubId :> Post '[JSON] Job
 
 api :: Proxy API
 api = Proxy
 
 server :: Job.ServerEnv env => ServerT API (RIO env)
-server = gethWorkers :<|> getJobs :<|> postJobWithoutUser :<|> postJobWithUser
+server = gethWorkers
+    :<|> getJobs :<|> getQueuingJobs :<|> getRunningJobs :<|> getTeamJobs :<|> getProblemJobs
+    :<|> requeueJob
+    :<|> postJobWithoutUser :<|> postJobWithUser
   where
     gethWorkers = do
       logInfo "[GET] /workers"
@@ -42,21 +53,38 @@ server = gethWorkers :<|> getJobs :<|> postJobWithoutUser :<|> postJobWithUser
       logInfo "[GET] /job"
       store <- askStore
       Map.elems <$> readTVarIO store
+    getQueuingJobs = do
+      store <- askStore
+      filter (view #queuing) . Map.elems <$> readTVarIO store
+    getRunningJobs = do
+      store <- askStore
+      filter (view #running) . Map.elems <$> readTVarIO store
+    getTeamJobs tid = do
+      store <- askStore
+      filter (\job -> job ^. #team == tid) . Map.elems <$> readTVarIO store
+    getProblemJobs pid = do
+      store <- askStore
+      filter (\job -> job ^. #problem == pid) . Map.elems <$> readTVarIO store
+    requeueJob jid = do
+      unwrapError =<< Job.enqueueJob jid
     postJobWithoutUser pid tid = postJob pid tid Nothing
     postJobWithUser pid tid = postJob pid tid . Just
-    postJob pid tid uid = do
-      result <- Job.kickJob pid tid uid
-      case result of
-        Right job ->
-          pure job
-        Left (Job.ProblemIsNotFount _) ->
-          throwM err404
-        Left (Job.TeamIsNotFount _) ->
-          throwM err404
-        Left (Job.UserIsNotFound _) ->
-          throwM err404
-        Left Job.WorkerIsNotExist ->
-          throwM err500
+    postJob pid tid uid =  unwrapError =<< Job.kickJob pid tid uid
+
+unwrapError :: Either Job.Error Job -> RIO env Job
+unwrapError = \case
+  Right job ->
+    pure job
+  Left (Job.ProblemIsNotFound _) ->
+    throwM err404
+  Left (Job.TeamIsNotFound _) ->
+    throwM err404
+  Left (Job.UserIsNotFound _) ->
+    throwM err404
+  Left Job.WorkerIsNotExist ->
+    throwM err500
+  Left (Job.JobIsNotFound _) ->
+    throwM err404
 
 fetchJobs :: (MonadThrow m, MonadIO m) => String -> m [Job]
 fetchJobs host = do

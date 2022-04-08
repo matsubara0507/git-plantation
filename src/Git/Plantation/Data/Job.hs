@@ -32,10 +32,10 @@ import qualified Git.Plantation.Data.Team        as Team
 import           Git.Plantation.Data.User        (User)
 import qualified Git.Plantation.Data.User        as User
 import qualified Mix.Plugin.Persist.Sqlite       as MixDB
-
+import           Web.HttpApiData                 (FromHttpApiData)
 
 newtype Id = Id Int64
-  deriving newtype (Show, Eq, Ord, Num, Binary, FromJSON, ToJSON, Display)
+  deriving newtype (Show, Eq, Ord, Num, Binary, FromJSON, ToJSON, FromHttpApiData, Display)
 
 type Job = Record
   '[ "id"      >: Id
