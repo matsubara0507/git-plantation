@@ -84,12 +84,25 @@ versionOpt = optFlag [] ["version"] "Show version"
 runServer :: Options -> Config -> IO ()
 runServer opts config = do
   token         <- liftIO $ fromString  <$> getEnv "GH_TOKEN"
+  sSignSecret   <- liftIO $ fromString  <$> getEnv "SLACK_SIGNING_SECRET"
+  sVerifyToken  <- liftIO $ fromString  <$> getEnv "SLACK_VERIFY_TOKEN"
+  slashTeam     <- liftIO $ fromString  <$> getEnv "SLACK_SLASH_TEAM_ID"
+  slashChannels <- liftIO $ readListEnv <$> getEnv "SLACK_SLASH_CHANNEL_IDS"
+  sResetRepoCmd <- liftIO $ fromString  <$> getEnv "SLACK_SLASH_RESET_REPO_CMD"
   slackWebhook  <- liftIO $ fromString  <$> getEnv "SLACK_WEBHOOK"
   clientId      <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_ID"
   clientSecret  <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_SECRET"
   jobserverHost <- liftIO $ getEnv "JOBSERVER_HOST"
   jwtSettings   <- Auth.defaultJWTSettings <$> Auth.generateKey
   let logConf = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
+      slashConf
+          = #signing_secret @= sSignSecret
+         <: #verify_token   @= sVerifyToken
+         <: #team_id        @= slashTeam
+         <: #channel_ids    @= slashChannels
+         <: #reset_repo_cmd @= sResetRepoCmd
+         <: #webhook        @= Just slackWebhook
+         <: nil
       oauthConf
           = #client_id     @= clientId
          <: #client_secret @= clientSecret
@@ -100,6 +113,7 @@ runServer opts config = do
           $ #config    <@=> pure config
          <: #github    <@=> MixGitHub.buildPlugin token
          <: #slack     <@=> pure slackWebhook
+         <: #slash     <@=> pure slashConf
          <: #work      <@=> MixShell.buildPlugin (opts ^. #work)
          <: #webhook   <@=> pure mempty
          <: #jobserver <@=> pure jobserverHost

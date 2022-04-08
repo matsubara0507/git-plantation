@@ -1,22 +1,50 @@
-{-# LANGUAGE DataKinds            #-}
-{-# LANGUAGE MultiWayIf           #-}
-{-# LANGUAGE OverloadedLabels     #-}
-{-# LANGUAGE TypeOperators        #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiWayIf            #-}
+{-# LANGUAGE OverloadedLabels      #-}
+{-# LANGUAGE TupleSections         #-}
+{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE UndecidableInstances  #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
-module Git.Plantation.Data.Slack where
+module Git.Plantation.Data.Slack
+  ( module Slack
+  , SlashCmdConfig
+  , HasSlackSlashCmdConfig
+  , askSlashCmdConfig
+  , SlashCmdData
+  , DisplayLogData
+  , verifySlashCmd
+  , SlashCmd
+  , Message
+  , mkMessage
+  , respondMessage
+  , sendWebhook
+  , NotifyConfig
+  , HasSlackNotifyConfig
+  , askNotifyConfig
+  , SnipetMessage
+  , uploadFile
+  ) where
 
 import           RIO
-import qualified RIO.Text        as Text
+import qualified RIO.Text                               as Text
 
-import qualified Data.Aeson      as J
+import           Control.Arrow                          ((+++))
+import qualified Data.Aeson                             as J
 import           Data.Extensible
-import qualified Network.Wreq    as W
+import           Git.Plantation.Data.Slack.Verification as Slack
+import qualified Network.HTTP.Media                     as M
+import qualified Network.Wreq                           as W
+import           Servant.API.ContentTypes               (Accept (..),
+                                                         MimeUnrender (..))
+import           Web.FormUrlEncoded                     (urlDecodeAsForm)
 
+import           Orphans                                ()
 
 type SlashCmdConfig = Record
-  '[ "verify_token"   >: Text
+  '[ "signing_secret" >: Slack.SigningSecret
+   , "verify_token"   >: Text
    , "team_id"        >: Text
    , "channel_ids"    >: [Text]
    , "reset_repo_cmd" >: Text
@@ -62,6 +90,14 @@ verifySlashCmd dat = do
     | dat ^. #channel_id `notElem` config ^. #channel_ids -> Left "Invalid channel..."
     | dat ^. #command /= config ^. #reset_repo_cmd        -> Left "Invalid command..."
     | otherwise                                           -> pure ()
+
+data SlashCmd
+
+instance Accept SlashCmd where
+  contentType _ = "application" M.// "x-www-form-urlencoded"
+
+instance MimeUnrender SlashCmd (LByteString, SlashCmdData) where
+  mimeUnrender _ bs = Text.unpack +++ (bs,) $ urlDecodeAsForm bs
 
 type Message = Record '[ "text" >: Text ]
 

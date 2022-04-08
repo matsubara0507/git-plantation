@@ -1,13 +1,19 @@
-{-# LANGUAGE ConstraintKinds  #-}
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE LambdaCase       #-}
-{-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TupleSections    #-}
-{-# LANGUAGE TypeOperators    #-}
+{-# LANGUAGE ConstraintKinds       #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedLabels      #-}
+{-# LANGUAGE TupleSections         #-}
+{-# LANGUAGE TypeOperators         #-}
 
-module Git.Plantation.API.Slack where
+module Git.Plantation.API.Slack
+  ( SlackAPIEnv
+  , SlashCmdAPI
+  , slashCmdApi
+  ) where
 
 import           RIO
+import qualified RIO.ByteString.Lazy         as BL
 import qualified RIO.List                    as L
 import qualified RIO.Text                    as Text
 import qualified RIO.Text.Lazy               as TL
@@ -19,6 +25,7 @@ import qualified Git.Plantation.Cmd          as Cmd
 import           Git.Plantation.Config       (Config)
 import           Git.Plantation.Data         (Problem, Repo, Team)
 import qualified Git.Plantation.Data.Problem as Problem
+import           Git.Plantation.Data.Slack   (askSlashCmdConfig)
 import qualified Git.Plantation.Data.Slack   as Slack
 import qualified Git.Plantation.Data.Team    as Team
 import qualified Mix.Plugin.Config           as Mix
@@ -27,12 +34,31 @@ import           UnliftIO.Concurrent         (forkIO)
 
 type SlackAPIEnv env = (Cmd.CmdEnv env, Mix.HasConfig Config env, Slack.HasSlackSlashCmdConfig env, HasLogFunc env)
 
-type SlackAPI
-     = "reset-repo" :> ReqBody '[FormUrlEncoded] Slack.SlashCmdData :> Post '[JSON] NoContent
+type SlashCmdAPI
+    = ReqBody '[Slack.SlashCmd] (LByteString, Slack.SlashCmdData)
+      :> Header "X-Slack-Request-Timestamp" Slack.RequestTimestamp
+      :> Header "X-Slack-Signature" Slack.SignatureHeader
+      :> Post '[JSON] NoContent
 
-slackAPI :: SlackAPIEnv env => ServerT SlackAPI (RIO env)
-slackAPI
-      = resetRepo
+slashCmdApi :: SlackAPIEnv env => ServerT SlashCmdAPI (RIO env)
+slashCmdApi = verifiedRequest resetRepo
+
+verifiedRequest
+  :: SlackAPIEnv env
+  => (Slack.SlashCmdData -> RIO env a)
+  -> (LByteString, Slack.SlashCmdData)
+  -> Maybe Slack.RequestTimestamp
+  -> Maybe Slack.SignatureHeader
+  -> RIO env a
+verifiedRequest next (body, postData) (Just ts) (Just sign) = do
+  secret <- view #signing_secret <$> askSlashCmdConfig
+  let digest = Slack.encodeSignature secret ts (BL.toStrict body)
+  if Just digest == Slack.convertSignatureHeader sign then
+    next postData
+  else
+    throwM err401
+verifiedRequest _ _ _ _ =
+  throwM err401
 
 resetRepo :: SlackAPIEnv env => Slack.SlashCmdData -> RIO env NoContent
 resetRepo postData = do

@@ -19,6 +19,7 @@ import           Data.Extensible
 import           Data.Fallible
 import           Git.Plantation.API.CRUD     (GetAPI, getAPI)
 import qualified Git.Plantation.API.GitHub   as GitHub
+import qualified Git.Plantation.API.Slack    as Slack
 import qualified Git.Plantation.Auth.GitHub  as Auth
 import qualified Git.Plantation.Data.User    as User
 import           Git.Plantation.Env          (Plant)
@@ -82,6 +83,7 @@ type Index
 type Unprotected
       = "static" :> Raw
    :<|> "hook"   :> GitHub.WebhookAPI
+   :<|> "slash"  :> Slack.SlashCmdAPI
 
 type GetRedirected headers =
   Verb 'GET 303 '[HTML] (Headers (Header "Location" String ': headers) NoContent)
@@ -104,6 +106,7 @@ server config
     :<|> protected config
     :<|> serveDirectoryFileServer "static"
     :<|> GitHub.webhook
+    :<|> Slack.slashCmdApi
 
 loginPage :: Plant (Headers JWTCookieHeaders H.Html)
 loginPage = evalContT $ do

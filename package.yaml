@@ -74,6 +74,8 @@ dependencies:
 - shelly
 - time
 - template-haskell
+- memory
+- servant
 
 library:
   source-dirs: src
@@ -100,13 +102,6 @@ executables:
     dependencies:
     - git-plantation
     - gitrev
-  git-plantation-slack:
-    main:                Main.hs
-    source-dirs:         exec/slack
-    dependencies:
-    - git-plantation
-    - gitrev
-    - warp
   git-plantation-tool:
     main:                Main.hs
     source-dirs:         exec/tool
