@@ -5,19 +5,23 @@
 
 packages:
 - completed:
-    hackage: binary-instances-1.0.1@sha256:974740042381555f9e3614d9fe37136daba155e1f92bc048894698590bcd82f7,2683
+    hackage: binary-instances-1.0.2@sha256:287a09f72d02d9733c6cec7e7d585d151777cfc27cc10e91b5eb1a4350582db9,2753
     pantry-tree:
-      size: 1035
-      sha256: 0a9a584dafcdf5ba0d1fb3586d8061d3002161a5c76ee864025a3878f3139104
+      size: 1036
+      sha256: 4c163bb98f333b1963f26fdfbc8332c2a1a6e1e2fd05692476d321264c9e23d8
   original:
-    hackage: binary-instances-1.0.1
+    hackage: binary-instances-1.0.2
 - completed:
-    hackage: extensible-0.8.2@sha256:f3e7497709199034222e10ba45d3730e21155fb89159ccf1fb0b55f1d7d02697,2963
+    size: 374222
+    url: https://github.com/fumieval/extensible/archive/4a1edb50c90d377085fcc3bad4c9f6e9d296b00e.tar.gz
+    name: extensible
+    version: '0.9'
+    sha256: 8005a29db91b0a67018162b69c913ddf722bdc527f5565caef2644f6ffcd0c95
     pantry-tree:
-      size: 2041
-      sha256: 29d9d1cfb1c5348141f859e74739d212d3c5af9ff0ec359e3f66f872d4be8bc6
+      size: 2982
+      sha256: 77c619f82592a969dbb6a7f5e303063678feeb965b085b9c926e6887621521af
   original:
-    hackage: extensible-0.8.2
+    url: https://github.com/fumieval/extensible/archive/4a1edb50c90d377085fcc3bad4c9f6e9d296b00e.tar.gz
 - completed:
     hackage: fallible-0.1.0@sha256:0e0032c34120a43bf1d446172162b546e36441c38f620afb24e9d447ed7ce6b6,1312
     pantry-tree:
@@ -33,76 +37,73 @@ packages:
   original:
     hackage: incremental-0.3.1
 - completed:
-    hackage: github-webhooks-0.15.0@sha256:4e3459a2c294e033e1959306750c562b9c2a563a77c3a6b0522fc73b221f5387,4064
-    pantry-tree:
-      size: 3677
-      sha256: 4ba1a516ccf329abf184ff801b6af456d5aba045c13de4a171ce85af5084d151
-  original:
-    hackage: github-webhooks-0.15.0
-- completed:
-    hackage: membership-0@sha256:3a11d8fd53cb1a76bb9273e6c929bbf9d649f109714bf487abb3143be04ddc81,995
+    hackage: membership-0.0.1@sha256:6c4d4ab6e3fb3253c6c670e8a63f74454dc91be50b9f292d0b1355792190aee5,999
     pantry-tree:
       size: 408
-      sha256: 3b593e0d14e848e318e745555776ebb25210e5e3dec4fde5d3c08ab51ceddc62
+      sha256: b918a1a207108313b2bf453b0d9aa65122d9845c4b360c8ade46d3429ff1107a
   original:
-    hackage: membership-0
+    hackage: membership-0.0.1
 - completed:
-    hackage: servant-github-webhook-0.4.2.0@sha256:fbc981cb5479058ef864c1955190944f7d417d563884560fc3b1911447730ffa,2739
+    size: 10360
+    url: https://github.com/tsani/servant-github-webhook/archive/f8cb8bc10d3e9d275fa995b0d01ba2d1eeaa700b.tar.gz
+    name: servant-github-webhook
+    version: 0.4.2.0
+    sha256: 61ccafa1759b4df214265ada0555ecdf95b0b02473cdf12f86b3f0c128048445
     pantry-tree:
-      size: 576
-      sha256: 1e27db682388a10c56a58b14b347b5157e6a215164c8102928332e9a62db2b41
+      size: 730
+      sha256: dc8e86b7e441351496ede201fcc6dc3fcfb96862d2be7559ecf72ed9f11a3c99
   original:
-    hackage: servant-github-webhook-0.4.2.0
+    url: https://github.com/tsani/servant-github-webhook/archive/f8cb8bc10d3e9d275fa995b0d01ba2d1eeaa700b.tar.gz
 - completed:
-    size: 88437
-    url: https://github.com/matsubara0507/github/archive/0176698f1cce942c3979f3eb798205e7665e7f55.tar.gz
+    size: 92004
+    url: https://github.com/matsubara0507/github/archive/eaa26ad782cc9d3b19419ba7e2ebf871474eb5a8.tar.gz
     name: github
-    version: '0.26'
-    sha256: d9f01f29699a3e619549ce1579e9b790b7163ad93f131a4fbd42b37e98e47189
+    version: 0.27.1
+    sha256: 4a70d152aa4680bc3fe90645213e3c2599a3430eedcbff4307fa0f7b77df5516
     pantry-tree:
-      size: 16356
-      sha256: a2220b64bcb183b32b7f2bbdfdce9feca1ff4e2764f9c7dd4cdd0e0b16fb9456
+      size: 16684
+      sha256: b934a1bd39495ecf358ded5fb5f0e0a8fa168eeed8f94984d5c6969c873442bd
   original:
-    url: https://github.com/matsubara0507/github/archive/0176698f1cce942c3979f3eb798205e7665e7f55.tar.gz
+    url: https://github.com/matsubara0507/github/archive/eaa26ad782cc9d3b19419ba7e2ebf871474eb5a8.tar.gz
 - completed:
-    size: 19650
+    size: 19910
     subdir: elmap
-    url: https://github.com/matsubara0507/elmap.hs/archive/9c9479d3ead6032a0309b5f80f42e94df85da375.tar.gz
+    url: https://github.com/matsubara0507/elmap.hs/archive/3cd415ba620aeb588c5f7217d96a8d6f05cb45f1.tar.gz
     name: elmap
-    version: 0.1.0.0
-    sha256: 2007d3eaf2df739e27533469921a6bc4ece0fc5d7efdc88ff3afa354a44fbafa
+    version: 0.1.0.1
+    sha256: 709e3d7639d0f460dbc8c2ae629ad5f8edb17f22735cda7f79c34a12a30d3375
     pantry-tree:
       size: 476
-      sha256: a59c6ff50ae3f2cecdf16e12fe38f75e00e266a9ded559ef8ca876d05d764abe
+      sha256: b38023fb7e22af9c326855669b51aed720146e2959d44b6abd09571a5046c8d9
   original:
     subdir: elmap
-    url: https://github.com/matsubara0507/elmap.hs/archive/9c9479d3ead6032a0309b5f80f42e94df85da375.tar.gz
+    url: https://github.com/matsubara0507/elmap.hs/archive/3cd415ba620aeb588c5f7217d96a8d6f05cb45f1.tar.gz
 - completed:
-    size: 19650
+    size: 19910
     subdir: servant-elmap
-    url: https://github.com/matsubara0507/elmap.hs/archive/9c9479d3ead6032a0309b5f80f42e94df85da375.tar.gz
+    url: https://github.com/matsubara0507/elmap.hs/archive/3cd415ba620aeb588c5f7217d96a8d6f05cb45f1.tar.gz
     name: servant-elmap
-    version: 0.1.0.0
-    sha256: 2007d3eaf2df739e27533469921a6bc4ece0fc5d7efdc88ff3afa354a44fbafa
+    version: 0.1.0.1
+    sha256: 709e3d7639d0f460dbc8c2ae629ad5f8edb17f22735cda7f79c34a12a30d3375
     pantry-tree:
       size: 614
-      sha256: d423d9bcb549db5c1dfa93276c57bab26f85db79a77da97cea17c1ae97ea78ef
+      sha256: c29a94be05a0f3cc087761f36cee959f17aa4c0d11a43ff18e4e1658478624b3
   original:
     subdir: servant-elmap
-    url: https://github.com/matsubara0507/elmap.hs/archive/9c9479d3ead6032a0309b5f80f42e94df85da375.tar.gz
+    url: https://github.com/matsubara0507/elmap.hs/archive/3cd415ba620aeb588c5f7217d96a8d6f05cb45f1.tar.gz
 - completed:
-    size: 19650
+    size: 19910
     subdir: extensible-elmap
-    url: https://github.com/matsubara0507/elmap.hs/archive/9c9479d3ead6032a0309b5f80f42e94df85da375.tar.gz
+    url: https://github.com/matsubara0507/elmap.hs/archive/3cd415ba620aeb588c5f7217d96a8d6f05cb45f1.tar.gz
     name: extensible-elmap
-    version: 0.1.0.0
-    sha256: 2007d3eaf2df739e27533469921a6bc4ece0fc5d7efdc88ff3afa354a44fbafa
+    version: 0.1.0.1
+    sha256: 709e3d7639d0f460dbc8c2ae629ad5f8edb17f22735cda7f79c34a12a30d3375
     pantry-tree:
       size: 439
-      sha256: 545989814406ca47317920086e82cf54299eff0543516ed854eb99ed0cadf4d4
+      sha256: 25681ca163a6aabe877c08555907b6b04fae34e92ad2ef0e0b91e40c692bd065
   original:
     subdir: extensible-elmap
-    url: https://github.com/matsubara0507/elmap.hs/archive/9c9479d3ead6032a0309b5f80f42e94df85da375.tar.gz
+    url: https://github.com/matsubara0507/elmap.hs/archive/3cd415ba620aeb588c5f7217d96a8d6f05cb45f1.tar.gz
 - completed:
     size: 12036
     subdir: mix
@@ -183,7 +184,7 @@ packages:
     url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
 snapshots:
 - completed:
-    size: 590102
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/27.yaml
-    sha256: 79a786674930a89301b0e908fad2822a48882f3d01486117693c377b8edffdbe
-  original: lts-18.27
+    size: 548274
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2022/4/9.yaml
+    sha256: e8bcfd26c8e645fbefb63c030005e41877a7122940245a20db942acc6ff4d84d
+  original: nightly-2022-04-09

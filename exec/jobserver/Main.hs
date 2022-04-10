@@ -84,7 +84,7 @@ runMigration opts = do
           $ #logger <@=> MixLogger.buildPlugin logConf
          <: #sqlite <@=> MixDB.buildPluginWithoutPool sqlitePath
          <: nil
-  Mix.run plugin (Job.migrate @ (Record '[ "logger" >: LogFunc, "sqlite" >: MixDB.Config ]))
+  Mix.run plugin (Job.migrate @(Record '[ "logger" >: LogFunc, "sqlite" >: MixDB.Config ]))
 
 type Env = Record
   '[ "config"  >: Config

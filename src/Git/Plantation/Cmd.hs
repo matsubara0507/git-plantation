@@ -37,7 +37,7 @@ class Run kv where
   run' :: proxy kv -> TargetOf kv -> RIO Env ()
 
 run :: Forall Run xs => Variant xs -> RIO Env ()
-run = matchField (htabulateFor (Proxy @ Run) $ \m -> Field (Match $ run' m . runIdentity))
+run = matchField (htabulateFor (Proxy @Run) $ \m -> Field (Match $ run' m . runIdentity))
 
 showNotImpl :: MonadIO m => m ()
 showNotImpl = hPutBuilder stdout "not yet implement command."

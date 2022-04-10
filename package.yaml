@@ -21,6 +21,7 @@ ghc-options:
 
 default-extensions:
 - NoImplicitPrelude
+- GHC2021
 
 - ConstraintKinds
 - FlexibleContexts

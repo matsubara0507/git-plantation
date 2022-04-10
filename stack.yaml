@@ -1,18 +1,20 @@
-resolver: lts-18.27
+resolver: nightly-2022-04-09
 packages:
 - .
 extra-deps:
-- binary-instances-1.0.1
-- extensible-0.8.2
+- binary-instances-1.0.2
+# - extensible-0.8.3
+- github: fumieval/extensible
+  commit: 4a1edb50c90d377085fcc3bad4c9f6e9d296b00e
 - fallible-0.1.0
 - incremental-0.3.1
-- github-webhooks-0.15.0
-- membership-0
-- servant-github-webhook-0.4.2.0
+- membership-0.0.1
+- github: tsani/servant-github-webhook
+  commit: f8cb8bc10d3e9d275fa995b0d01ba2d1eeaa700b
 - github: matsubara0507/github
-  commit: 0176698f1cce942c3979f3eb798205e7665e7f55
+  commit: eaa26ad782cc9d3b19419ba7e2ebf871474eb5a8 # myext branch
 - github: matsubara0507/elmap.hs
-  commit: 9c9479d3ead6032a0309b5f80f42e94df85da375
+  commit: 3cd415ba620aeb588c5f7217d96a8d6f05cb45f1
   subdirs:
   - elmap
   - servant-elmap

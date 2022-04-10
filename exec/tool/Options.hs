@@ -119,7 +119,7 @@ variantFrom ::
   Forall (KeyIs KnownSymbol) xs => RecordOf ParserInfo xs -> Parser (Variant xs)
 variantFrom = subparser . subcmdVariant
   where
-    subcmdVariant = hfoldMapWithIndexFor (Proxy @ (KeyIs KnownSymbol)) $ \m x ->
+    subcmdVariant = hfoldMapWithIndexFor (Proxy @(KeyIs KnownSymbol)) $ \m x ->
       command (stringKeyOf m) (EmbedAt m . Field . pure <$> getField x)
 
 instance Wrapper ParserInfo where

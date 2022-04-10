@@ -21,14 +21,14 @@ main =
     ["Generated", "API"]
     defElmImports
     "elm-src"
-    [ DefineElm (Proxy @ Team)
-    , DefineElm (Proxy @ User)
-    , DefineElm (Proxy @ Repo)
-    , DefineElm (Proxy @ Problem)
-    , DefineElm (Proxy @ Config)
-    , DefineElm (Proxy @ ScoreBoardConfig)
-    , DefineElm (Proxy @ Score)
-    , DefineElm (Proxy @ Status)
-    , DefineElm (Proxy @ Link)
+    [ DefineElm (Proxy @Team)
+    , DefineElm (Proxy @User)
+    , DefineElm (Proxy @Repo)
+    , DefineElm (Proxy @Problem)
+    , DefineElm (Proxy @Config)
+    , DefineElm (Proxy @ScoreBoardConfig)
+    , DefineElm (Proxy @Score)
+    , DefineElm (Proxy @Status)
+    , DefineElm (Proxy @Link)
     ]
-    (Proxy @ ("api" :> GetAPI))
+    (Proxy @("api" :> GetAPI))

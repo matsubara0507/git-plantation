@@ -20,11 +20,11 @@ import           Web.HttpApiData
 
 instance Forall (KeyTargetAre KnownSymbol FromHttpApiData) xs => FromForm (Record xs) where
   fromForm form =
-    hgenerateFor (Proxy @ (KeyTargetAre KnownSymbol FromHttpApiData)) $ \m ->
+    hgenerateFor (Proxy @(KeyTargetAre KnownSymbol FromHttpApiData)) $ \m ->
       Field <$> parseUnique (stringKeyOf m) form
 
 instance IsElmType Int64 where
-  compileElmType _ = toElmType (Proxy @ Int)
+  compileElmType _ = toElmType (Proxy @Int)
 
 instance ToJSON (xs :& Field h) => Auth.ToJWT (xs :& Field h)
 instance FromJSON (xs :& Field h) => Auth.FromJWT (xs :& Field h)
