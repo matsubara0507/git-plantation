@@ -17,7 +17,7 @@ import           Crypto.Hash             (Digest, SHA256, digestFromByteString)
 import           Crypto.MAC.HMAC         (HMAC (..), hmac)
 import           Data.ByteArray.Encoding (Base (..), convertFromBase)
 
-newtype SigningSecret = SigningSecret ByteString deriving (IsString)
+newtype SigningSecret = SigningSecret Text deriving (IsString)
 
 type RequestTimestamp = Text
 
@@ -25,7 +25,7 @@ type SignatureHeader = Text
 
 encodeSignature :: SigningSecret -> RequestTimestamp -> ByteString -> Digest SHA256
 encodeSignature (SigningSecret secret) ts body =
-  hmacGetDigest $ hmac secret basestr
+  hmacGetDigest $ hmac (Text.encodeUtf8 secret) basestr
   where
     basestr = B.intercalate ":" [Text.encodeUtf8 version, Text.encodeUtf8 ts, body]
 
