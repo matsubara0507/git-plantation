@@ -55,9 +55,14 @@ verifiedRequest next (body, postData) (Just ts) (Just sign) = do
   let digest = Slack.encodeSignature secret ts (BL.toStrict body)
   if Just digest == Slack.convertSignatureHeader sign then
     next postData
-  else
+  else do
+    logError "invalid signature"
     throwM err401
-verifiedRequest _ _ _ _ =
+verifiedRequest _ _ Nothing _ = do
+  logError "invalid request: Request-Timestamp header is nothing"
+  throwM err401
+verifiedRequest _ _ _ Nothing = do
+  logError "invalid request: Signature header is nothing"
   throwM err401
 
 resetRepo :: SlackAPIEnv env => Slack.SlashCmdData -> RIO env NoContent
@@ -71,18 +76,14 @@ resetRepo postData = do
     Right _  -> (logError . display) `handleIO` resetRepo' (postData ^. #text)
   pure NoContent
   where
-    returnMessage :: MonadIO m => Text -> m Slack.Message
-    returnMessage txt = pure $ #text @= txt <: nil
-
     resetRepo' :: SlackAPIEnv env => Text -> RIO env ()
     resetRepo' text = do
       logDebug "reset-cmd: find repository by message"
       Slack.respondMessage postData $ Slack.mkMessage "リポジトリをリセットするね！"
       config  <- Mix.askConfig
       message <- case findInfos config text of
-        Nothing   -> returnMessage "うーん、リポジトリが見つからなーい..."
-        Just info -> returnMessage =<< reset info
-      logDebug $ display ("reset-cmd: response: " <> message ^. #text)
+        Nothing   -> pure $ Slack.mkMessage "うーん、リポジトリが見つからなーい..."
+        Just info -> Slack.mkMessage <$> reset info
       slackConfig <- Slack.askSlashCmdConfig
       case slackConfig ^. #webhook of
         Just url -> Slack.sendWebhook url message
@@ -93,7 +94,7 @@ resetRepo postData = do
       let success = [coerce $ team ^. #name, " の ", coerce $ problem ^. #name, " をリセットしました！"]
       tryIO (Cmd.resetRepo $ #repo @= repo <: #team @= team <: nil) >>= \case
         Left err -> logError (display err) >> pure "うーん、なんか失敗したみたい..."
-        Right _  -> pure $ mconcat success
+        Right _  -> pure (mconcat success)
 
 findInfos :: Config -> Text -> Maybe (Team, Problem, Repo)
 findInfos config txt = do
