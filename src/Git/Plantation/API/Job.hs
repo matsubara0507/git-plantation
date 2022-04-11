@@ -96,4 +96,5 @@ kickJob host pid tid uid = do
   resp <- W.asJSON =<< liftIO (W.post url ("" :: ByteString))
   pure $ resp ^. W.responseBody
   where
-    url = List.intercalate "/" $ [host, show pid, Text.unpack (coerce tid)] ++ maybeToList (Text.unpack . coerce <$> uid)
+    url = List.intercalate "/" $
+      [ host, "jobs", "kick", show pid, Text.unpack (coerce tid)] ++ maybeToList (Text.unpack . coerce <$> uid)
