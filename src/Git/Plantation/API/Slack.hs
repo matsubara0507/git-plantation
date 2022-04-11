@@ -102,5 +102,5 @@ findInfos config txt = do
   problem      <- L.find (\p -> p ^. #id == repo ^. #problem) $ config ^. #problems
   pure (team, problem, repo)
   where
-    ghPath = Text.dropPrefix "https://github.com/" txt
+    ghPath = Text.dropSuffix "/" $ Text.dropPrefix "https://github.com/" txt
     repos  = concatMap (\t -> (t,) <$> t ^. #repos) $ config ^. #teams
