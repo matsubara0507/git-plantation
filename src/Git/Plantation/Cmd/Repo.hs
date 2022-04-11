@@ -100,7 +100,6 @@ createRepo flags args = do
   unless (flags ^. #skip_init_repo)            $ initRepoInGitHub args
   unless (flags ^. #skip_setup_default_branch) $ setupDefaultBranch args
   unless (flags ^. #skip_setup_webhook)        $ setupWebhook args
-  unless (flags ^. #skip_init_ci)              $ initProblemCI args
 
 createRepoInGitHub :: CmdEnv env => RepoArg -> RIO env ()
 createRepoInGitHub args = do
