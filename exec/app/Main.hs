@@ -89,7 +89,8 @@ runServer opts config = do
   slashTeam     <- liftIO $ fromString  <$> getEnv "SLACK_SLASH_TEAM_ID"
   slashChannels <- liftIO $ readListEnv <$> getEnv "SLACK_SLASH_CHANNEL_IDS"
   sResetRepoCmd <- liftIO $ fromString  <$> getEnv "SLACK_SLASH_RESET_REPO_CMD"
-  slackWebhook  <- liftIO $ fromString  <$> getEnv "SLACK_WEBHOOK"
+  slashWebhook  <- liftIO $ fromString  <$> getEnv "SLACK_SLASH_WEBHOOK"
+  sPushWebhook  <- liftIO $ fromString  <$> getEnv "SLACK_PUSH_NOTIFY_WEBHOOK"
   clientId      <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_ID"
   clientSecret  <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_SECRET"
   jobserverHost <- liftIO $ getEnv "JOBSERVER_HOST"
@@ -101,7 +102,7 @@ runServer opts config = do
          <: #team_id        @= slashTeam
          <: #channel_ids    @= slashChannels
          <: #reset_repo_cmd @= sResetRepoCmd
-         <: #webhook        @= Just slackWebhook
+         <: #webhook        @= Just slashWebhook
          <: nil
       oauthConf
           = #client_id     @= clientId
@@ -112,7 +113,7 @@ runServer opts config = do
       plugin = hsequence
           $ #config    <@=> pure config
          <: #github    <@=> MixGitHub.buildPlugin token
-         <: #slack     <@=> pure slackWebhook
+         <: #slack     <@=> pure sPushWebhook
          <: #slash     <@=> pure slashConf
          <: #work      <@=> MixShell.buildPlugin (opts ^. #work)
          <: #webhook   <@=> pure mempty
