@@ -5,186 +5,241 @@
 
 packages:
 - completed:
-    hackage: binary-instances-1.0.2@sha256:287a09f72d02d9733c6cec7e7d585d151777cfc27cc10e91b5eb1a4350582db9,2753
+    hackage: binary-instances-1.0.4@sha256:97b8d6ccf5c111f41fd8bc2026ac683ae6999a730844ac5440ba9ff56d95d70f,2913
     pantry-tree:
-      size: 1036
-      sha256: 4c163bb98f333b1963f26fdfbc8332c2a1a6e1e2fd05692476d321264c9e23d8
+      sha256: 9830c749da36cd66b383a5bca7afa76f5ef5512fa5d5b2da26e57d54d2a99241
+      size: 1114
   original:
-    hackage: binary-instances-1.0.2
+    hackage: binary-instances-1.0.4
 - completed:
-    size: 374222
-    url: https://github.com/fumieval/extensible/archive/4a1edb50c90d377085fcc3bad4c9f6e9d296b00e.tar.gz
-    name: extensible
-    version: '0.9'
-    sha256: 8005a29db91b0a67018162b69c913ddf722bdc527f5565caef2644f6ffcd0c95
+    hackage: extensible-0.9@sha256:a93b7e55ccf0407915a2a60944b73577c50377f75de2c28d5a3acac96d231fcd,3344
     pantry-tree:
-      size: 2982
-      sha256: 77c619f82592a969dbb6a7f5e303063678feeb965b085b9c926e6887621521af
+      sha256: aa0afe76b3c419438d09d173ac6080916d40bdcb6749dc2c7693983840a8f00e
+      size: 2040
   original:
-    url: https://github.com/fumieval/extensible/archive/4a1edb50c90d377085fcc3bad4c9f6e9d296b00e.tar.gz
+    hackage: extensible-0.9
 - completed:
     hackage: fallible-0.1.0@sha256:0e0032c34120a43bf1d446172162b546e36441c38f620afb24e9d447ed7ce6b6,1312
     pantry-tree:
-      size: 369
       sha256: 7de6ccd3ae9fa01eafdb02afdd5a50f1f6babf48aeb31afa21d0329f0fdd19d1
+      size: 369
   original:
     hackage: fallible-0.1.0
 - completed:
     hackage: incremental-0.3.1@sha256:9c697bae4f7e5ceb144bde13e03ca2f36b4bc2d0c92bbc02e0a604231ee279c2,1153
     pantry-tree:
-      size: 370
       sha256: fd5f40352dbf1602babd2c5db2a120c26e57bbd5ad30b19ce24d04189f6a18d1
+      size: 370
   original:
     hackage: incremental-0.3.1
 - completed:
     hackage: membership-0.0.1@sha256:6c4d4ab6e3fb3253c6c670e8a63f74454dc91be50b9f292d0b1355792190aee5,999
     pantry-tree:
-      size: 408
       sha256: b918a1a207108313b2bf453b0d9aa65122d9845c4b360c8ade46d3429ff1107a
+      size: 408
   original:
     hackage: membership-0.0.1
 - completed:
+    name: servant-github-webhook
+    pantry-tree:
+      sha256: dc8e86b7e441351496ede201fcc6dc3fcfb96862d2be7559ecf72ed9f11a3c99
+      size: 730
+    sha256: 61ccafa1759b4df214265ada0555ecdf95b0b02473cdf12f86b3f0c128048445
     size: 10360
     url: https://github.com/tsani/servant-github-webhook/archive/f8cb8bc10d3e9d275fa995b0d01ba2d1eeaa700b.tar.gz
-    name: servant-github-webhook
     version: 0.4.2.0
-    sha256: 61ccafa1759b4df214265ada0555ecdf95b0b02473cdf12f86b3f0c128048445
-    pantry-tree:
-      size: 730
-      sha256: dc8e86b7e441351496ede201fcc6dc3fcfb96862d2be7559ecf72ed9f11a3c99
   original:
     url: https://github.com/tsani/servant-github-webhook/archive/f8cb8bc10d3e9d275fa995b0d01ba2d1eeaa700b.tar.gz
 - completed:
-    size: 92004
-    url: https://github.com/matsubara0507/github/archive/eaa26ad782cc9d3b19419ba7e2ebf871474eb5a8.tar.gz
+    name: servant
+    pantry-tree:
+      sha256: f49cc9bb3f65cc9ce7bf64b6978ac3c09a2cf3bd03462dc27082f4c016b91e8e
+      size: 3020
+    sha256: 30d8ba6b3c0ef09ab3613312b6b84837c3d86ea0412a20b722d1e41b5acd143f
+    size: 409224
+    subdir: servant
+    url: https://github.com/haskell-servant/servant/archive/a082794a48546ffd681f4206436c59b9c1f901e1.tar.gz
+    version: 0.19.1
+  original:
+    subdir: servant
+    url: https://github.com/haskell-servant/servant/archive/a082794a48546ffd681f4206436c59b9c1f901e1.tar.gz
+- completed:
+    name: servant-auth
+    pantry-tree:
+      sha256: 5a89f680a57fcebc5a6901d4bed45536e7ba297482e462234803f99c69a6a5ea
+      size: 426
+    sha256: 30d8ba6b3c0ef09ab3613312b6b84837c3d86ea0412a20b722d1e41b5acd143f
+    size: 409224
+    subdir: servant-auth/servant-auth
+    url: https://github.com/haskell-servant/servant/archive/a082794a48546ffd681f4206436c59b9c1f901e1.tar.gz
+    version: 0.4.1.0
+  original:
+    subdir: servant-auth/servant-auth
+    url: https://github.com/haskell-servant/servant/archive/a082794a48546ffd681f4206436c59b9c1f901e1.tar.gz
+- completed:
+    name: servant-auth-server
+    pantry-tree:
+      sha256: d5b050ec7b8b22e07d6d4f9987e25b789a7dd616ecac4812dcc1488feb0c2184
+      size: 1469
+    sha256: 30d8ba6b3c0ef09ab3613312b6b84837c3d86ea0412a20b722d1e41b5acd143f
+    size: 409224
+    subdir: servant-auth/servant-auth-server
+    url: https://github.com/haskell-servant/servant/archive/a082794a48546ffd681f4206436c59b9c1f901e1.tar.gz
+    version: 0.4.7.0
+  original:
+    subdir: servant-auth/servant-auth-server
+    url: https://github.com/haskell-servant/servant/archive/a082794a48546ffd681f4206436c59b9c1f901e1.tar.gz
+- completed:
+    name: servant-foreign
+    pantry-tree:
+      sha256: 0e6c55e22eb56501b6da5e8290c41bd25c0adb825cf0ac401e081b9f247053d9
+      size: 590
+    sha256: 30d8ba6b3c0ef09ab3613312b6b84837c3d86ea0412a20b722d1e41b5acd143f
+    size: 409224
+    subdir: servant-foreign
+    url: https://github.com/haskell-servant/servant/archive/a082794a48546ffd681f4206436c59b9c1f901e1.tar.gz
+    version: 0.15.4
+  original:
+    subdir: servant-foreign
+    url: https://github.com/haskell-servant/servant/archive/a082794a48546ffd681f4206436c59b9c1f901e1.tar.gz
+- completed:
+    hackage: servant-elm-0.7.3@sha256:262f21c7092f7ce7448a9f936d69febe50fdc8c00c21d4c9f1811d8e748a8853,4579
+    pantry-tree:
+      sha256: eb07459399cbe9f7f3d95ba13bec97c71967f5a4df57e862228416a39655b6b1
+      size: 2081
+  original:
+    hackage: servant-elm-0.7.3
+- completed:
     name: github
-    version: 0.27.1
-    sha256: 4a70d152aa4680bc3fe90645213e3c2599a3430eedcbff4307fa0f7b77df5516
     pantry-tree:
-      size: 16684
-      sha256: b934a1bd39495ecf358ded5fb5f0e0a8fa168eeed8f94984d5c6969c873442bd
+      sha256: adcf2ac3bf9ddee24522d8d239792b02ba140753b6bcbfbef31ac18b0b09b2c9
+      size: 16819
+    sha256: 5e607797c11b67703907fe15f0480dc6f129e501aa2d38d68426e3fdd20dcba5
+    size: 95015
+    url: https://github.com/matsubara0507/github/archive/521ee92de8811cad022b5924e3be5c668d5b7b73.tar.gz
+    version: 0.28.0.1
   original:
-    url: https://github.com/matsubara0507/github/archive/eaa26ad782cc9d3b19419ba7e2ebf871474eb5a8.tar.gz
+    url: https://github.com/matsubara0507/github/archive/521ee92de8811cad022b5924e3be5c668d5b7b73.tar.gz
 - completed:
-    size: 19910
-    subdir: elmap
-    url: https://github.com/matsubara0507/elmap.hs/archive/3cd415ba620aeb588c5f7217d96a8d6f05cb45f1.tar.gz
     name: elmap
-    version: 0.1.0.1
-    sha256: 709e3d7639d0f460dbc8c2ae629ad5f8edb17f22735cda7f79c34a12a30d3375
     pantry-tree:
-      size: 476
       sha256: b38023fb7e22af9c326855669b51aed720146e2959d44b6abd09571a5046c8d9
+      size: 476
+    sha256: 709e3d7639d0f460dbc8c2ae629ad5f8edb17f22735cda7f79c34a12a30d3375
+    size: 19910
+    subdir: elmap
+    url: https://github.com/matsubara0507/elmap.hs/archive/3cd415ba620aeb588c5f7217d96a8d6f05cb45f1.tar.gz
+    version: 0.1.0.1
   original:
     subdir: elmap
     url: https://github.com/matsubara0507/elmap.hs/archive/3cd415ba620aeb588c5f7217d96a8d6f05cb45f1.tar.gz
 - completed:
-    size: 19910
-    subdir: servant-elmap
-    url: https://github.com/matsubara0507/elmap.hs/archive/3cd415ba620aeb588c5f7217d96a8d6f05cb45f1.tar.gz
     name: servant-elmap
-    version: 0.1.0.1
-    sha256: 709e3d7639d0f460dbc8c2ae629ad5f8edb17f22735cda7f79c34a12a30d3375
     pantry-tree:
-      size: 614
       sha256: c29a94be05a0f3cc087761f36cee959f17aa4c0d11a43ff18e4e1658478624b3
+      size: 614
+    sha256: 709e3d7639d0f460dbc8c2ae629ad5f8edb17f22735cda7f79c34a12a30d3375
+    size: 19910
+    subdir: servant-elmap
+    url: https://github.com/matsubara0507/elmap.hs/archive/3cd415ba620aeb588c5f7217d96a8d6f05cb45f1.tar.gz
+    version: 0.1.0.1
   original:
     subdir: servant-elmap
     url: https://github.com/matsubara0507/elmap.hs/archive/3cd415ba620aeb588c5f7217d96a8d6f05cb45f1.tar.gz
 - completed:
+    name: extensible-elmap
+    pantry-tree:
+      sha256: 25681ca163a6aabe877c08555907b6b04fae34e92ad2ef0e0b91e40c692bd065
+      size: 439
+    sha256: 709e3d7639d0f460dbc8c2ae629ad5f8edb17f22735cda7f79c34a12a30d3375
     size: 19910
     subdir: extensible-elmap
     url: https://github.com/matsubara0507/elmap.hs/archive/3cd415ba620aeb588c5f7217d96a8d6f05cb45f1.tar.gz
-    name: extensible-elmap
     version: 0.1.0.1
-    sha256: 709e3d7639d0f460dbc8c2ae629ad5f8edb17f22735cda7f79c34a12a30d3375
-    pantry-tree:
-      size: 439
-      sha256: 25681ca163a6aabe877c08555907b6b04fae34e92ad2ef0e0b91e40c692bd065
   original:
     subdir: extensible-elmap
     url: https://github.com/matsubara0507/elmap.hs/archive/3cd415ba620aeb588c5f7217d96a8d6f05cb45f1.tar.gz
 - completed:
-    size: 12036
-    subdir: mix
-    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
     name: mix
-    version: 0.1.1
-    sha256: 2c9640592d44d865663a1d8814e90efb48fadb7d2ee4fea1781784c7a55b2a89
     pantry-tree:
-      size: 598
       sha256: 934c2b8605c35e49d36c87c3c41dc0459e399919cf12161e16cc0d82340251b5
+      size: 598
+    sha256: 2c9640592d44d865663a1d8814e90efb48fadb7d2ee4fea1781784c7a55b2a89
+    size: 12036
+    subdir: mix
+    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
+    version: 0.1.1
   original:
     subdir: mix
     url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
 - completed:
-    size: 12036
-    subdir: mix-json-logger
-    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
     name: mix-json-logger
-    version: 0.1.0
-    sha256: 2c9640592d44d865663a1d8814e90efb48fadb7d2ee4fea1781784c7a55b2a89
     pantry-tree:
-      size: 334
       sha256: 7dcec7237b58fc21fd53b19a88c37a680fdd16cc2994e7bb90ed38e83b3d8768
+      size: 334
+    sha256: 2c9640592d44d865663a1d8814e90efb48fadb7d2ee4fea1781784c7a55b2a89
+    size: 12036
+    subdir: mix-json-logger
+    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
+    version: 0.1.0
   original:
     subdir: mix-json-logger
     url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
 - completed:
-    size: 12036
-    subdir: mix-plugin-github
-    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
     name: mix-plugin-github
-    version: 0.3.0
-    sha256: 2c9640592d44d865663a1d8814e90efb48fadb7d2ee4fea1781784c7a55b2a89
     pantry-tree:
-      size: 458
       sha256: c12925af9288415df9626130d555a09b2b27e26a04ecf1530ce65cff704cfdc4
+      size: 458
+    sha256: 2c9640592d44d865663a1d8814e90efb48fadb7d2ee4fea1781784c7a55b2a89
+    size: 12036
+    subdir: mix-plugin-github
+    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
+    version: 0.3.0
   original:
     subdir: mix-plugin-github
     url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
 - completed:
-    size: 12036
-    subdir: mix-plugin-persistent-sqlite
-    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
     name: mix-plugin-persistent-sqlite
-    version: 0.1.0
-    sha256: 2c9640592d44d865663a1d8814e90efb48fadb7d2ee4fea1781784c7a55b2a89
     pantry-tree:
-      size: 357
       sha256: 8ba3753486908e267620ff8c32c6799d703dfa80395f14a94e957a9728da6002
+      size: 357
+    sha256: 2c9640592d44d865663a1d8814e90efb48fadb7d2ee4fea1781784c7a55b2a89
+    size: 12036
+    subdir: mix-plugin-persistent-sqlite
+    url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
+    version: 0.1.0
   original:
     subdir: mix-plugin-persistent-sqlite
     url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
 - completed:
+    name: mix-plugin-shell
+    pantry-tree:
+      sha256: 2c30acc53ef040b03bdacf6275dc225c07f01a05fa67b5872b0fcf05c8e8b72c
+      size: 383
+    sha256: 2c9640592d44d865663a1d8814e90efb48fadb7d2ee4fea1781784c7a55b2a89
     size: 12036
     subdir: mix-plugin-shell
     url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
-    name: mix-plugin-shell
     version: 0.1.0
-    sha256: 2c9640592d44d865663a1d8814e90efb48fadb7d2ee4fea1781784c7a55b2a89
-    pantry-tree:
-      size: 383
-      sha256: 2c30acc53ef040b03bdacf6275dc225c07f01a05fa67b5872b0fcf05c8e8b72c
   original:
     subdir: mix-plugin-shell
     url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
 - completed:
+    name: rio-logger-ext
+    pantry-tree:
+      sha256: 6610dacdf9c92484902401f6303863c28afa54e6e385d89584889226dc01a741
+      size: 275
+    sha256: 2c9640592d44d865663a1d8814e90efb48fadb7d2ee4fea1781784c7a55b2a89
     size: 12036
     subdir: helper/rio-logger-ext
     url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
-    name: rio-logger-ext
     version: 0.1.0
-    sha256: 2c9640592d44d865663a1d8814e90efb48fadb7d2ee4fea1781784c7a55b2a89
-    pantry-tree:
-      size: 275
-      sha256: 6610dacdf9c92484902401f6303863c28afa54e6e385d89584889226dc01a741
   original:
     subdir: helper/rio-logger-ext
     url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
 snapshots:
 - completed:
-    size: 548274
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2022/4/9.yaml
-    sha256: e8bcfd26c8e645fbefb63c030005e41877a7122940245a20db942acc6ff4d84d
-  original: nightly-2022-04-09
+    sha256: cbf721fafa21237e4999d83cfd27137f440ae0e3032ff18fa96e8148d9bf5ce1
+    size: 604108
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2023/4/9.yaml
+  original: nightly-2023-04-09

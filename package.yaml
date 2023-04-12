@@ -56,7 +56,7 @@ dependencies:
 - exceptions
 - fallible
 - github
-- github-webhooks
+- github-webhooks >= 0.17.0
 - http-media
 - persistent
 - persistent-template
@@ -120,6 +120,7 @@ tests:
     - tasty
     - tasty-hspec
     - th-lift-instances
+    - hspec
   generateElm:
     main:                GenerateElm.hs
     source-dirs:         test

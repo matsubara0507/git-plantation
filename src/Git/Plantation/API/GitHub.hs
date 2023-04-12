@@ -63,13 +63,16 @@ findByPushEvent ev teams problems = do
     repoName = whRepoFullName $ evPushRepository ev
 
 startScoring :: PushEvent -> Team -> Problem -> Plant ()
-startScoring ev team problem = do
-  notifySlack team problem user
-  host <- ask (view #jobserver)
-  _ <- Job.kickJob host (problem ^. #id) (team ^. #id) (view #github <$> user)
-  pure ()
-  where
-    user = Team.lookupUser (coerce $ whUserLogin $ evPushSender ev) team
+startScoring ev team problem =
+  case evPushSender ev of
+    Just sender -> do
+      let user = Team.lookupUser (coerce $ whUserLogin sender) team
+      notifySlack team problem user
+      host <- ask (view #jobserver)
+      _ <- Job.kickJob host (problem ^. #id) (team ^. #id) (view #github <$> user)
+      pure ()
+    Nothing ->
+      logError "push sender is exist in webhook event"
 
 notifySlack :: Team -> Problem -> Maybe User -> Plant ()
 notifySlack team problem user' = do

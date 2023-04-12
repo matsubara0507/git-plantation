@@ -1,18 +1,33 @@
-resolver: nightly-2022-04-09
+resolver: nightly-2023-04-09
 packages:
 - .
 extra-deps:
-- binary-instances-1.0.2
-# - extensible-0.8.3
-- github: fumieval/extensible
-  commit: 4a1edb50c90d377085fcc3bad4c9f6e9d296b00e
+- binary-instances-1.0.4
+- extensible-0.9
+# - github: fumieval/extensible
+#   commit: 4a1edb50c90d377085fcc3bad4c9f6e9d296b00e
 - fallible-0.1.0
 - incremental-0.3.1
 - membership-0.0.1
 - github: tsani/servant-github-webhook
   commit: f8cb8bc10d3e9d275fa995b0d01ba2d1eeaa700b
+
+# - servant-auth-0.4.1.0
+# - servant-auth-server-0.4.7.0
+# - servant-foreign-0.15.4
+- github: haskell-servant/servant
+  commit: a082794a48546ffd681f4206436c59b9c1f901e1
+  subdirs:
+  - servant
+  - servant-auth/servant-auth # for lens-5.2
+  - servant-auth/servant-auth-server # for jose-0.10, NOTE unsuport monad-time-0.4.0.0
+  - servant-foreign # for lens-5.2
+- servant-elm-0.7.3
+
+# - github-0.28.0.1
 - github: matsubara0507/github
-  commit: eaa26ad782cc9d3b19419ba7e2ebf871474eb5a8 # myext branch
+  commit: 521ee92de8811cad022b5924e3be5c668d5b7b73 # myext branch
+
 - github: matsubara0507/elmap.hs
   commit: 3cd415ba620aeb588c5f7217d96a8d6f05cb45f1
   subdirs:
@@ -29,6 +44,8 @@ extra-deps:
   - mix-plugin-shell
   - helper/rio-logger-ext
 
+allow-newer: true
+
 docker:
-  repo: ghcr.io/matsubara0507/stack-build:18.04
+  repo: ghcr.io/matsubara0507/stack-build:22.04
   enable: false
