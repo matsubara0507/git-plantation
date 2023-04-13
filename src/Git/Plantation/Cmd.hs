@@ -28,6 +28,7 @@ import qualified Mix.Plugin.GitHub          as GitHub
 type Env = Record
   '[ "config"  >: Config
    , "github"  >: GitHub.Token
+   , "gh_user" >: Text
    , "work"    >: FilePath
    , "webhook" >: WebhookConfig
    , "logger"  >: LogFunc

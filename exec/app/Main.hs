@@ -84,6 +84,7 @@ versionOpt = optFlag [] ["version"] "Show version"
 runServer :: Options -> Config -> IO ()
 runServer opts config = do
   token         <- liftIO $ fromString  <$> getEnv "GH_TOKEN"
+  ghUser        <- liftIO $ fromString  <$> getEnv "GH_USER"
   sSignSecret   <- liftIO $ fromString  <$> getEnv "SLACK_SIGNING_SECRET"
   sVerifyToken  <- liftIO $ fromString  <$> getEnv "SLACK_VERIFY_TOKEN"
   slashTeam     <- liftIO $ fromString  <$> getEnv "SLACK_SLASH_TEAM_ID"
@@ -113,6 +114,7 @@ runServer opts config = do
       plugin = hsequence
           $ #config    <@=> pure config
          <: #github    <@=> MixGitHub.buildPlugin token
+         <: #gh_user   <@=> pure ghUser
          <: #slack     <@=> pure sPushWebhook
          <: #slash     <@=> pure slashConf
          <: #work      <@=> MixShell.buildPlugin (opts ^. #work)

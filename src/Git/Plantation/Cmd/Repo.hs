@@ -33,7 +33,7 @@ import qualified RIO.Vector                           as V
 import           Data.Coerce                          (coerce)
 import           Data.Extensible
 import           Git.Plantation.Cmd.Arg
-import           Git.Plantation.Cmd.Env               (CmdEnv)
+import           Git.Plantation.Cmd.Env               (CmdEnv, ghUserL)
 import           Git.Plantation.Data                  (Problem, Repo, Team,
                                                        User)
 import qualified Git.Plantation.Data.Problem          as Problem
@@ -41,7 +41,7 @@ import qualified Git.Plantation.Data.Team             as Team
 import qualified Git.Plantation.Data.User             as User
 import           Git.Plantation.Env
 import           GitHub.Data.Name                     (mkName)
-import           GitHub.Data.Repos                    (newRepo, newRepoPrivate)
+import           GitHub.Data.Repos                    (newRepo, newRepoPrivate, newRepoAllowMergeCommit)
 import           GitHub.Data.Webhooks                 (NewRepoWebhook (..),
                                                        RepoWebhookEvent (..))
 import qualified GitHub.Endpoints.Organizations.Teams as GitHub
@@ -106,7 +106,7 @@ createRepoInGitHub args = do
   (owner, repo) <- splitRepoName <$> repoGithub (args ^. #repo)
   logInfo $ "create repo in github: " <> displayShow (owner <> "/" <> repo)
   resp <- MixGitHub.fetch $ request owner
-    ((newRepo $ mkName Proxy repo) { newRepoPrivate = Just (args ^. #repo ^. #private) })
+    ((newRepo $ mkName Proxy repo) { newRepoPrivate = Just (args ^. #repo ^. #private), newRepoAllowMergeCommit = Just True })
   case resp of
     Left err -> logDebug (displayShow err) >> throwIO (mkErr err)
     Right _  -> logInfo "Success: create repository in GitHub"
@@ -121,12 +121,13 @@ createRepoInGitHub args = do
 initRepoInGitHub :: CmdEnv env => RepoArg -> RIO env ()
 initRepoInGitHub args = do
   token   <- MixGitHub.tokenText
+  ghUser  <- view ghUserL
   github  <- repoGithub (args ^. #repo)
   problem <- findProblemWithThrow (args ^. #repo ^. #problem)
   let (owner, repo) = splitRepoName $ problem ^. #repo
       (_, teamRepo) = splitRepoName github
-      teamUrl       = mconcat ["https://", token, "@github.com/", github, ".git"]
-      problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
+      teamUrl       = mconcat ["https://", ghUser, ":", token, "@github.com/", github, ".git"]
+      problemUrl    = mconcat ["https://", ghUser, ":", token, "@github.com/", owner, "/", repo, ".git"]
 
   execGitForTeam (args ^. #team) teamRepo False teamUrl $ do
     Shell.errExit False $ Git.branch ["-D", "temp"]
@@ -179,10 +180,11 @@ setupWebhook args = do
 initProblemCI :: CmdEnv env => RepoArg -> RIO env ()
 initProblemCI args = do
   token   <- MixGitHub.tokenText
+  ghUser  <- view ghUserL
   github  <- repoGithub (args ^. #repo)
   problem <- findProblemWithThrow (args ^. #repo ^. #problem)
   let (owner, repo) = splitRepoName $ problem ^. #repo
-      problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
+      problemUrl    = mconcat ["https://", ghUser, ":", token, "@github.com/", owner, "/", repo, ".git"]
 
   execGitForTeam (args ^. #team) repo True problemUrl $ do
     Git.checkout [problem ^. #ci_branch]
@@ -206,9 +208,10 @@ resetRepo args = do
 
 pushForCI :: CmdEnv env => Team -> Problem -> Maybe User -> RIO env ()
 pushForCI team problem user = do
-  token <- MixGitHub.tokenText
+  token  <- MixGitHub.tokenText
+  ghUser <- view ghUserL
   let (owner, repo) = splitRepoName $ problem ^. #repo
-      problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
+      problemUrl    = mconcat ["https://", ghUser, ":", token, "@github.com/", owner, "/", repo, ".git"]
 
   execGitForTeam team repo True problemUrl $ do
     Git.checkout [coerce $ team ^. #name]
@@ -238,9 +241,10 @@ deleteRepoInGithub info = do
 
 deleteProblemCI :: CmdEnv env => Team -> Problem -> RIO env ()
 deleteProblemCI team problem = do
-  token <- MixGitHub.tokenText
+  token  <- MixGitHub.tokenText
+  ghUser <- view ghUserL
   let (owner, repo) = splitRepoName $ problem ^. #repo
-      problemUrl    = mconcat ["https://", token, "@github.com/", owner, "/", repo, ".git"]
+      problemUrl    = mconcat ["https://", ghUser, ":", token, "@github.com/", owner, "/", repo, ".git"]
   execGitForTeam team repo True problemUrl $
     Shell.errExit False $ Git.push  [ "--delete", "origin", coerce $ team ^. #name]
   logInfo $ "Success: delete ci branch in " <> displayShow (problem ^. #repo)
