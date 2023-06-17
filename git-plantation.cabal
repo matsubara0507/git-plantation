@@ -1,11 +1,11 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.1.
+-- This file has been generated from package.yaml by hpack version 0.35.2.
 --
 -- see: https://github.com/sol/hpack
 
 name:           git-plantation
-version:        0.4.0
+version:        0.5.0
 description:    Please see the README on GitHub at <https://github.com/matsubara0507/git-plantation#readme>
 homepage:       https://github.com/matsubara0507/git-plantation#readme
 bug-reports:    https://github.com/matsubara0507/git-plantation/issues

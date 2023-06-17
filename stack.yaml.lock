@@ -239,7 +239,7 @@ packages:
     url: https://github.com/matsubara0507/mix.hs/archive/da914f3c0ec152e5814ed5495c9c3aef2ceec4ed.tar.gz
 snapshots:
 - completed:
-    sha256: cbf721fafa21237e4999d83cfd27137f440ae0e3032ff18fa96e8148d9bf5ce1
-    size: 604108
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2023/4/9.yaml
-  original: nightly-2023-04-09
+    sha256: a7af444c35e8ccf8cc4dc5f23d3507bbdcc7e6cfd674f0f8b24cdc10474e2b4b
+    size: 632756
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2023/6/16.yaml
+  original: nightly-2023-06-16

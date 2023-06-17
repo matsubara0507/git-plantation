@@ -1,5 +1,9 @@
 # Changelog for git-plantation
 
+## Unreleased changes
+
+## v0.5.0
+
 - スコアボードにグラフを描写するページを追加(#49)
   - `end_time` と `zone` を設定に追加
   - `tesk9/palette` に対応させた `terezka/line-charts` のフォークをローカルで差し替え
@@ -20,12 +24,11 @@
   - extensible を 0.8 に更新
   - github を 0.25 に更新
   - drone を 1.1.0 に更新
-- 採点可能かどうかのフラグを設定に追加(#60)
 - GitHub OAuth 2.0 による認証機能を追加(#59)
 - make 時の stack test で generateElm だけが動作するように変更(#59)
 - elm build 時に optimize オプションを追加(#59)
-
-## Unreleased changes
+- 採点可能かどうかのフラグを設定に追加(#60)
+- Slack Webhook を受けるサーバーを App サーバーに統合(#62)
 
 ## v0.4.0
 
