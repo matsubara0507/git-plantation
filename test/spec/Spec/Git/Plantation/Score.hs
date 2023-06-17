@@ -3,13 +3,13 @@
 
 module Spec.Git.Plantation.Score (spec) where
 
-import           RIO                  hiding (link2)
+import           RIO                     hiding (link2)
 
 import           Data.Extensible
 import qualified Fixture
-import           Git.Plantation.Score (mkScore)
-import           Test.Tasty.Hspec
 import           Git.Plantation.Data.Job (Job)
+import           Git.Plantation.Score    (mkScore)
+import           Test.Hspec
 
 spec :: Spec
 spec = do
@@ -45,23 +45,27 @@ spec = do
       mkScore (Fixture.config ^. #problems) team [job1, job2] `shouldBe` expect
 
 job1, job2 :: Job
-job1 
+job1
     = #id      @= 1
    <: #problem @= 1
    <: #team    @= "alpha"
-   <: #author  @= "matsubara0507"
+   <: #author  @= Just "matsubara0507"
    <: #queuing @= False
    <: #running @= False
    <: #success @= True
+   <: #stdout  @= ""
+   <: #stderr  @= ""
    <: #created @= 1560000000
    <: nil
 job2
     = #id      @= 2
    <: #problem @= 2
    <: #team    @= "alpha"
-   <: #author  @= "matsubara0507"
+   <: #author  @= Just "matsubara0507"
    <: #queuing @= False
    <: #running @= True
    <: #success @= False
+   <: #stdout  @= ""
+   <: #stderr  @= ""
    <: #created @= 1560000000
    <: nil

@@ -27,6 +27,7 @@ type Plant = RIO Env
 type Env = Record
   '[ "config"    >: Config
    , "github"    >: GitHub.Token
+   , "gh_user"   >: Text
    , "slack"     >: Text -- slack webhook url
    , "slash"     >: Slack.SlashCmdConfig
    , "work"      >: FilePath

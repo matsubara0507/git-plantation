@@ -25,12 +25,14 @@ main = execParser parser >>= \opts -> do
   _ <- tryIO $ loadFile defaultConfig
   config <- readConfig (opts ^. #config)
   token  <- liftIO $ fromString <$> getEnv "GH_TOKEN"
+  ghUser <- liftIO $ fromString <$> getEnv "GH_USER"
   secret <- liftIO $ fromString <$> getEnv "GH_SECRET"
   appUrl <- liftIO $ fromString <$> getEnv "APP_SERVER"
   let logConf = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
       plugin  = hsequence
           $ #config  <@=> pure config
          <: #github  <@=> MixGitHub.buildPlugin token
+         <: #gh_user <@=> pure ghUser
          <: #work    <@=> MixShell.buildPlugin (opts ^. #work)
          <: #webhook <@=> pure (mkWebhookConf (appUrl <> "/hook") secret)
          <: #logger  <@=> MixLogger.buildPlugin logConf

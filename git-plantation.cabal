@@ -1,0 +1,542 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.1.
+--
+-- see: https://github.com/sol/hpack
+
+name:           git-plantation
+version:        0.4.0
+description:    Please see the README on GitHub at <https://github.com/matsubara0507/git-plantation#readme>
+homepage:       https://github.com/matsubara0507/git-plantation#readme
+bug-reports:    https://github.com/matsubara0507/git-plantation/issues
+author:         MATSUBARA Nobutada
+maintainer:     t12307043@gunma-u.ac.jp
+copyright:      2018 MATSUBARA Nobutada
+license:        MIT
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    CHANGELOG.md
+
+source-repository head
+  type: git
+  location: https://github.com/matsubara0507/git-plantation
+
+library
+  exposed-modules:
+      Git.Cmd
+      Git.Plantation
+      Git.Plantation.API
+      Git.Plantation.API.CRUD
+      Git.Plantation.API.GitHub
+      Git.Plantation.API.Job
+      Git.Plantation.API.Slack
+      Git.Plantation.Auth.GitHub
+      Git.Plantation.Cmd
+      Git.Plantation.Cmd.Arg
+      Git.Plantation.Cmd.Arg.Internal
+      Git.Plantation.Cmd.Arg.Problem
+      Git.Plantation.Cmd.Arg.Team
+      Git.Plantation.Cmd.Env
+      Git.Plantation.Cmd.Member
+      Git.Plantation.Cmd.Org
+      Git.Plantation.Cmd.Problem
+      Git.Plantation.Cmd.Repo
+      Git.Plantation.Config
+      Git.Plantation.Data
+      Git.Plantation.Data.Job
+      Git.Plantation.Data.Problem
+      Git.Plantation.Data.Repo
+      Git.Plantation.Data.Slack
+      Git.Plantation.Data.Slack.Verification
+      Git.Plantation.Data.Team
+      Git.Plantation.Data.User
+      Git.Plantation.Env
+      Git.Plantation.Job.Client
+      Git.Plantation.Job.Docker
+      Git.Plantation.Job.Protocol
+      Git.Plantation.Job.Server
+      Git.Plantation.Job.Store
+      Git.Plantation.Job.Worker
+      Git.Plantation.Score
+      Orphans
+  other-modules:
+      Paths_git_plantation
+  hs-source-dirs:
+      src
+  default-extensions:
+      NoImplicitPrelude
+      GHC2021
+      ConstraintKinds
+      FlexibleContexts
+      FlexibleInstances
+      GeneralizedNewtypeDeriving
+      OverloadedStrings
+      PolyKinds
+      RankNTypes
+      StandaloneDeriving
+      TypeFamilies
+      TypeSynonymInstances
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , binary
+    , blaze-html
+    , containers
+    , cryptonite
+    , dotenv
+    , elmap
+    , esqueleto
+    , exceptions
+    , extensible >=0.6
+    , extensible-elmap
+    , fallible
+    , github
+    , github-webhooks >=0.17.0
+    , http-api-data
+    , http-media
+    , memory
+    , mix
+    , mix-json-logger
+    , mix-plugin-github
+    , mix-plugin-persistent-sqlite
+    , mix-plugin-shell
+    , mtl
+    , persistent
+    , persistent-template
+    , random
+    , req >=2.0
+    , rio >=0.1.1.0
+    , servant
+    , servant-auth-server
+    , servant-blaze
+    , servant-elmap
+    , servant-github-webhook
+    , servant-server
+    , shelly
+    , template-haskell
+    , time
+    , unliftio
+    , websockets
+    , wreq
+    , yaml >=0.8.31
+  default-language: Haskell2010
+
+executable git-plantation-app
+  main-is: Main.hs
+  other-modules:
+      Paths_git_plantation
+  hs-source-dirs:
+      exec/app
+  default-extensions:
+      NoImplicitPrelude
+      GHC2021
+      ConstraintKinds
+      FlexibleContexts
+      FlexibleInstances
+      GeneralizedNewtypeDeriving
+      OverloadedStrings
+      PolyKinds
+      RankNTypes
+      StandaloneDeriving
+      TypeFamilies
+      TypeSynonymInstances
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , binary
+    , blaze-html
+    , containers
+    , cryptonite
+    , dotenv
+    , elmap
+    , esqueleto
+    , exceptions
+    , extensible >=0.6
+    , extensible-elmap
+    , fallible
+    , git-plantation
+    , github
+    , github-webhooks >=0.17.0
+    , gitrev
+    , http-api-data
+    , http-media
+    , memory
+    , mix
+    , mix-json-logger
+    , mix-plugin-github
+    , mix-plugin-persistent-sqlite
+    , mix-plugin-shell
+    , mtl
+    , persistent
+    , persistent-template
+    , random
+    , req >=2.0
+    , rio >=0.1.1.0
+    , servant
+    , servant-auth-server
+    , servant-blaze
+    , servant-elmap
+    , servant-github-webhook
+    , servant-server
+    , shelly
+    , template-haskell
+    , time
+    , unliftio
+    , warp
+    , websockets
+    , wreq
+    , yaml >=0.8.31
+  default-language: Haskell2010
+
+executable git-plantation-job-runner
+  main-is: Main.hs
+  other-modules:
+      Paths_git_plantation
+  hs-source-dirs:
+      exec/jobrunner
+  default-extensions:
+      NoImplicitPrelude
+      GHC2021
+      ConstraintKinds
+      FlexibleContexts
+      FlexibleInstances
+      GeneralizedNewtypeDeriving
+      OverloadedStrings
+      PolyKinds
+      RankNTypes
+      StandaloneDeriving
+      TypeFamilies
+      TypeSynonymInstances
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , binary
+    , blaze-html
+    , containers
+    , cryptonite
+    , dotenv
+    , elmap
+    , esqueleto
+    , exceptions
+    , extensible >=0.6
+    , extensible-elmap
+    , fallible
+    , git-plantation
+    , github
+    , github-webhooks >=0.17.0
+    , gitrev
+    , http-api-data
+    , http-media
+    , memory
+    , mix
+    , mix-json-logger
+    , mix-plugin-github
+    , mix-plugin-persistent-sqlite
+    , mix-plugin-shell
+    , mtl
+    , persistent
+    , persistent-template
+    , random
+    , req >=2.0
+    , rio >=0.1.1.0
+    , servant
+    , servant-auth-server
+    , servant-blaze
+    , servant-elmap
+    , servant-github-webhook
+    , servant-server
+    , shelly
+    , template-haskell
+    , time
+    , unliftio
+    , websockets
+    , wreq
+    , yaml >=0.8.31
+  default-language: Haskell2010
+
+executable git-plantation-job-server
+  main-is: Main.hs
+  other-modules:
+      Paths_git_plantation
+  hs-source-dirs:
+      exec/jobserver
+  default-extensions:
+      NoImplicitPrelude
+      GHC2021
+      ConstraintKinds
+      FlexibleContexts
+      FlexibleInstances
+      GeneralizedNewtypeDeriving
+      OverloadedStrings
+      PolyKinds
+      RankNTypes
+      StandaloneDeriving
+      TypeFamilies
+      TypeSynonymInstances
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , binary
+    , blaze-html
+    , containers
+    , cryptonite
+    , dotenv
+    , elmap
+    , esqueleto
+    , exceptions
+    , extensible >=0.6
+    , extensible-elmap
+    , fallible
+    , git-plantation
+    , github
+    , github-webhooks >=0.17.0
+    , gitrev
+    , http-api-data
+    , http-media
+    , memory
+    , mix
+    , mix-json-logger
+    , mix-plugin-github
+    , mix-plugin-persistent-sqlite
+    , mix-plugin-shell
+    , mtl
+    , persistent
+    , persistent-template
+    , random
+    , req >=2.0
+    , rio >=0.1.1.0
+    , servant
+    , servant-auth-server
+    , servant-blaze
+    , servant-elmap
+    , servant-github-webhook
+    , servant-server
+    , shelly
+    , template-haskell
+    , time
+    , unliftio
+    , wai-websockets
+    , warp
+    , websockets
+    , wreq
+    , yaml >=0.8.31
+  default-language: Haskell2010
+
+executable git-plantation-tool
+  main-is: Main.hs
+  other-modules:
+      Options
+      SubCmd
+      SubCmd.Config
+      SubCmd.Member
+      SubCmd.Org
+      SubCmd.Problem
+      SubCmd.Repo
+      Paths_git_plantation
+  hs-source-dirs:
+      exec/tool
+  default-extensions:
+      NoImplicitPrelude
+      GHC2021
+      ConstraintKinds
+      FlexibleContexts
+      FlexibleInstances
+      GeneralizedNewtypeDeriving
+      OverloadedStrings
+      PolyKinds
+      RankNTypes
+      StandaloneDeriving
+      TypeFamilies
+      TypeSynonymInstances
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , binary
+    , blaze-html
+    , containers
+    , cryptonite
+    , dotenv
+    , elmap
+    , esqueleto
+    , exceptions
+    , extensible >=0.6
+    , extensible-elmap
+    , fallible
+    , git-plantation
+    , github
+    , github-webhooks >=0.17.0
+    , gitrev
+    , http-api-data
+    , http-media
+    , memory
+    , mix
+    , mix-json-logger
+    , mix-plugin-github
+    , mix-plugin-persistent-sqlite
+    , mix-plugin-shell
+    , mtl
+    , optparse-applicative
+    , persistent
+    , persistent-template
+    , random
+    , req >=2.0
+    , rio >=0.1.1.0
+    , servant
+    , servant-auth-server
+    , servant-blaze
+    , servant-elmap
+    , servant-github-webhook
+    , servant-server
+    , shelly
+    , template-haskell
+    , time
+    , unliftio
+    , websockets
+    , wreq
+    , yaml >=0.8.31
+  default-language: Haskell2010
+
+test-suite generateElm
+  type: exitcode-stdio-1.0
+  main-is: GenerateElm.hs
+  hs-source-dirs:
+      test
+  default-extensions:
+      NoImplicitPrelude
+      GHC2021
+      ConstraintKinds
+      FlexibleContexts
+      FlexibleInstances
+      GeneralizedNewtypeDeriving
+      OverloadedStrings
+      PolyKinds
+      RankNTypes
+      StandaloneDeriving
+      TypeFamilies
+      TypeSynonymInstances
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , binary
+    , blaze-html
+    , containers
+    , cryptonite
+    , dotenv
+    , elmap
+    , esqueleto
+    , exceptions
+    , extensible >=0.6
+    , extensible-elmap
+    , fallible
+    , git-plantation
+    , github
+    , github-webhooks >=0.17.0
+    , http-api-data
+    , http-media
+    , memory
+    , mix
+    , mix-json-logger
+    , mix-plugin-github
+    , mix-plugin-persistent-sqlite
+    , mix-plugin-shell
+    , mtl
+    , persistent
+    , persistent-template
+    , random
+    , req >=2.0
+    , rio >=0.1.1.0
+    , servant
+    , servant-auth-server
+    , servant-blaze
+    , servant-elmap
+    , servant-github-webhook
+    , servant-server
+    , shelly
+    , template-haskell
+    , time
+    , unliftio
+    , websockets
+    , wreq
+    , yaml >=0.8.31
+  default-language: Haskell2010
+
+test-suite spec
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Fixture
+      Spec.Git.Plantation.Score
+      Paths_git_plantation
+  hs-source-dirs:
+      test/spec
+  default-extensions:
+      NoImplicitPrelude
+      GHC2021
+      ConstraintKinds
+      FlexibleContexts
+      FlexibleInstances
+      GeneralizedNewtypeDeriving
+      OverloadedStrings
+      PolyKinds
+      RankNTypes
+      StandaloneDeriving
+      TypeFamilies
+      TypeSynonymInstances
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , binary
+    , blaze-html
+    , containers
+    , cryptonite
+    , dotenv
+    , elmap
+    , esqueleto
+    , exceptions
+    , extensible >=0.6
+    , extensible-elmap
+    , fallible
+    , git-plantation
+    , github
+    , github-webhooks >=0.17.0
+    , hspec
+    , http-api-data
+    , http-media
+    , memory
+    , mix
+    , mix-json-logger
+    , mix-plugin-github
+    , mix-plugin-persistent-sqlite
+    , mix-plugin-shell
+    , mtl
+    , persistent
+    , persistent-template
+    , random
+    , req >=2.0
+    , rio >=0.1.1.0
+    , servant
+    , servant-auth-server
+    , servant-blaze
+    , servant-elmap
+    , servant-github-webhook
+    , servant-server
+    , shelly
+    , tasty
+    , tasty-hspec
+    , template-haskell
+    , th-lift-instances
+    , time
+    , unliftio
+    , websockets
+    , wreq
+    , yaml >=0.8.31
+  default-language: Haskell2010

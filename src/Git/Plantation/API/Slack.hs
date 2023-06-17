@@ -69,7 +69,7 @@ resetRepo :: SlackAPIEnv env => Slack.SlashCmdData -> RIO env NoContent
 resetRepo postData = do
   logInfo $ fromString $ mconcat
     [ "[POST] /slack/reset-repo "
-    , TL.unpack $ Json.encodeToLazyText (shrink postData :: Slack.DisplayLogData)
+    -- , TL.unpack $ Json.encodeToLazyText (shrink postData :: Slack.DisplayLogData)
     ]
   _ <- forkIO $ Slack.verifySlashCmd postData >>= \case
     Left err -> logError $ display err
