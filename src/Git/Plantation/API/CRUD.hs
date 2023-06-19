@@ -6,15 +6,21 @@
 module Git.Plantation.API.CRUD where
 
 import           RIO
-import qualified RIO.List                 as L
+import qualified RIO.List                    as L
 
-import qualified Git.Plantation.API.Job   as Job
-import           Git.Plantation.Data      (Problem, Team)
-import qualified Git.Plantation.Data.Team as Team
-import qualified Git.Plantation.Data.User as User
-import           Git.Plantation.Env       (Plant)
-import           Git.Plantation.Score     (Score, mkPlayerScore, mkScore)
+import           Data.Extensible
+import qualified Git.Plantation.API.Job      as Job
+import qualified Git.Plantation.Cmd          as Cmd
+import           Git.Plantation.Config       (Config)
+import           Git.Plantation.Data         (Problem, Repo, Team)
+import qualified Git.Plantation.Data.Problem as Problem
+import qualified Git.Plantation.Data.Team    as Team
+import qualified Git.Plantation.Data.User    as User
+import           Git.Plantation.Env          (Plant)
+import           Git.Plantation.Score        (Score, mkPlayerScore, mkScore)
+import qualified Mix.Plugin.Config           as Mix
 import           Servant
+import           UnliftIO.Concurrent         (forkIO)
 
 type GetAPI
      = "teams"    :> Get '[JSON] [Team]
@@ -76,3 +82,36 @@ getPlayerScore teamID userID = do
     Just team -> pure [team]
   pure . catMaybes $
     liftA2 fmap (\t u -> mkPlayerScore (config ^. #problems) t u jobs) (Team.lookupUser userID) <$> teams
+
+type ResetAPI
+     = "reset" :> Capture "team" Team.Id :> Capture "probrem" Problem.Id :> Post '[JSON] ()
+
+resetAPI :: User.GitHubId -> ServerT ResetAPI Plant
+resetAPI = resetRepo
+
+resetRepo :: User.GitHubId -> Team.Id -> Problem.Id -> Plant ()
+resetRepo userID teamID problemID = do
+  logInfo $ "[POST] /reset/" <> display teamID <> "/" <> display problemID <> " from " <> display userID
+  config <- Mix.askConfig
+  case findInfos config (teamID, problemID) of
+    Nothing ->
+      logError "team and problem not found."
+    Just (team, _, repo) ->
+      if isNothing (Team.lookupUser userID team) then
+        logError "user not found."
+      else do
+        forkIO ((logError . display) `handleIO` reset team repo) >> pure ()
+  pure ()
+  where
+    reset :: Team -> Repo -> Plant ()
+    reset team repo =
+      tryIO (Cmd.resetRepo $ #repo @= repo <: #team @= team <: nil) >>= \case
+        Left err -> logError (display err)
+        Right _  -> pure ()
+
+findInfos :: Config -> (Team.Id, Problem.Id) -> Maybe (Team, Problem, Repo)
+findInfos config (teamID, problemID) = do
+  team <- L.find (\t -> t ^. #id == teamID) $ config ^. #teams
+  problem <- L.find (\p -> p ^. #id == problemID) $ config ^. #problems
+  repo <- Team.lookupRepo problem team
+  pure (team, problem, repo)

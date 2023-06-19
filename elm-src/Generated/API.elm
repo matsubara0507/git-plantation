@@ -432,3 +432,44 @@ getApiScoresByTeamByPlayer capture_team capture_player toMsg =
         , tracker =
             Nothing
         }
+
+
+postApiResetByTeamByProbrem : String -> Int -> (Result Http.Error () -> msg) -> Cmd msg
+postApiResetByTeamByProbrem capture_team capture_probrem toMsg =
+    let
+        params =
+            List.filterMap identity
+                (List.concat
+                    []
+                )
+    in
+    Http.request
+        { method =
+            "POST"
+        , headers =
+            []
+        , url =
+            Url.Builder.crossOrigin ""
+                [ "api"
+                , "reset"
+                , capture_team
+                , capture_probrem |> String.fromInt
+                ]
+                params
+        , body =
+            Http.emptyBody
+        , expect =
+            Http.expectString
+                (\x ->
+                    case x of
+                        Err e ->
+                            toMsg (Err e)
+
+                        Ok _ ->
+                            toMsg (Ok ())
+                )
+        , timeout =
+            Nothing
+        , tracker =
+            Nothing
+        }

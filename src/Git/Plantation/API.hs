@@ -17,7 +17,7 @@ import qualified Data.Aeson.Text             as Json
 import           Data.Coerce                 (coerce)
 import           Data.Extensible
 import           Data.Fallible
-import           Git.Plantation.API.CRUD     (GetAPI, getAPI)
+import           Git.Plantation.API.CRUD     (GetAPI, getAPI, ResetAPI, resetAPI)
 import qualified Git.Plantation.API.GitHub   as GitHub
 import qualified Git.Plantation.API.Slack    as Slack
 import qualified Git.Plantation.Auth.GitHub  as Auth
@@ -25,11 +25,11 @@ import qualified Git.Plantation.Data.User    as User
 import           Git.Plantation.Env          (Plant)
 import qualified GitHub
 import           Servant
-import           Servant.Auth.Server         (Auth)
 import qualified Servant.Auth.Server         as Auth
+import           Servant.Auth.Server         (Auth)
 import           Servant.HTML.Blaze
-import           Text.Blaze.Html5            ((!))
 import qualified Text.Blaze.Html5            as H
+import           Text.Blaze.Html5            ((!))
 import qualified Text.Blaze.Html5.Attributes as H
 
 type LoginPageSession = Record
@@ -72,7 +72,7 @@ type LoginCollback
      :> QueryParam "state" String
      :> GetRedirected JWTCookieHeaders
 
-type Protected = "api" :> GetAPI :<|> Index
+type Protected = "api" :> (GetAPI :<|> ResetAPI) :<|> Index
 
 type Index
       = Get '[HTML] H.Html
@@ -153,9 +153,9 @@ callback auth code state =
 protected :: LoginConfig -> Auth.AuthResult Account -> ServerT Protected Plant
 protected config = \case
   Auth.Authenticated a | a ^. #login `elem` config ^. #whitelist ->
-      getAPI :<|> index
+      (getAPI :<|> resetAPI (a  ^. #login)) :<|> index
   Auth.Indefinite | config ^. #allow_guest ->
-      getAPI :<|> index
+      (getAPI :<|> resetAPI "") :<|> index
   Auth.Indefinite ->
       Auth.throwAll login
   _ ->
@@ -169,7 +169,7 @@ indexHtml = do
   config <- asks (view #config)
   pure $ H.docTypeHtml $ do
     H.head $ do
-      stylesheet "https://unpkg.com/@primer/css@13.2.0/dist/primer.css"
+      stylesheet "https://unpkg.com/@primer/css@^20.2.4/dist/primer.css"
       stylesheet "https://use.fontawesome.com/releases/v5.2.0/css/all.css"
     H.div ! H.id "main" $ H.text ""
     H.script ! H.type_ "application/json" ! H.id "config" $

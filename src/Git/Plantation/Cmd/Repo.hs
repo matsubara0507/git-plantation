@@ -41,7 +41,9 @@ import qualified Git.Plantation.Data.Team             as Team
 import qualified Git.Plantation.Data.User             as User
 import           Git.Plantation.Env
 import           GitHub.Data.Name                     (mkName)
-import           GitHub.Data.Repos                    (newRepo, newRepoPrivate, newRepoAllowMergeCommit)
+import           GitHub.Data.Repos                    (newRepo,
+                                                       newRepoAllowMergeCommit,
+                                                       newRepoPrivate)
 import           GitHub.Data.Webhooks                 (NewRepoWebhook (..),
                                                        RepoWebhookEvent (..))
 import qualified GitHub.Endpoints.Organizations.Teams as GitHub

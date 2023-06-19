@@ -1,6 +1,6 @@
 module Main exposing (main)
 
-import Browser as Browser
+import Browser
 import Browser.Navigation as Nav
 import Generated.API as API exposing (..)
 import Html exposing (..)

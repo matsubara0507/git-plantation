@@ -51,7 +51,7 @@ viewScore idx score =
         [ class "border-top"
         , class
             (if modBy 2 idx == 0 then
-                "bg-gray-light"
+                "color-bg-inset"
 
              else
                 ""
@@ -59,7 +59,7 @@ viewScore idx score =
         ]
         (List.concat
             [ [ th [ class "text-right p-2 f" ]
-                    [ a [ class "link-gray-dark", href ("/teams/" ++ score.team.id) ]
+                    [ a [ class "Link--primary", href ("/teams/" ++ score.team.id) ]
                         [ text score.team.name ]
                     ]
               ]
@@ -85,13 +85,13 @@ statBadge state =
             span [ class "State State--small" ] [ text "未提出" ]
 
         Score.Pending ->
-            span [ class "State State--small bg-yellow" ] [ text "採点中" ]
+            span [ class "State State--small color-bg-attention-emphasis" ] [ text "採点中" ]
 
         Score.Incorrect ->
-            span [ class "State State--small bg-red" ] [ text "不正解" ]
+            span [ class "State State--small color-bg-danger-emphasis" ] [ text "不正解" ]
 
         Score.Correct ->
-            span [ class "State State--small bg-green" ] [ text "正解" ]
+            span [ class "State State--small color-bg-success-emphasis" ] [ text "正解" ]
 
 
 stars : Int -> Html msg

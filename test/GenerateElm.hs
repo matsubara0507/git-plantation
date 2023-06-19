@@ -9,8 +9,8 @@ import           RIO
 import           Elm.Mapping
 import           Git.Plantation          (Config, Link, Problem, Repo, Score,
                                           ScoreBoardConfig, Status, Team, User)
-import           Git.Plantation.API.CRUD (GetAPI)
-import           Servant                 ((:>))
+import           Git.Plantation.API.CRUD (GetAPI, ResetAPI)
+import           Servant                 ((:>), (:<|>))
 import           Servant.Elm.Mapping     (defElmImports, defElmOptions,
                                           generateElmModuleWith)
 
@@ -31,4 +31,4 @@ main =
     , DefineElm (Proxy @Status)
     , DefineElm (Proxy @Link)
     ]
-    (Proxy @("api" :> GetAPI))
+    (Proxy @("api" :> (GetAPI :<|> ResetAPI)))
