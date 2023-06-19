@@ -4,7 +4,7 @@ import Generated.API as API exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (class, href, id, style, target)
 import Score exposing (Score)
-
+import Octicons.Medium as Octicons
 
 type alias Model a =
     { a
@@ -98,10 +98,10 @@ stars : Int -> Html msg
 stars n =
     let
         star =
-            i [ class "fas fa-star" ] []
+            Octicons.starFill [ style "width" "14px", style "vertical-align" "text-bottom" ]
     in
     if n < 4 then
-        div [ class "f6" ] (List.repeat n star)
+        div [] (List.repeat n star)
 
     else
-        div [ class "f6" ] [ star, text ("x" ++ String.fromInt n) ]
+        div [] [ star, text ("x" ++ String.fromInt n) ]

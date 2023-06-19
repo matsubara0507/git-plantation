@@ -170,7 +170,6 @@ indexHtml = do
   pure $ H.docTypeHtml $ do
     H.head $ do
       stylesheet "https://unpkg.com/@primer/css@^20.2.4/dist/primer.css"
-      stylesheet "https://use.fontawesome.com/releases/v5.2.0/css/all.css"
     H.div ! H.id "main" $ H.text ""
     H.script ! H.type_ "application/json" ! H.id "config" $
       H.preEscapedLazyText (Json.encodeToLazyText config)
