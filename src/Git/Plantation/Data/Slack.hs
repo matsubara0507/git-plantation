@@ -34,6 +34,7 @@ import           Control.Arrow                          ((+++))
 import qualified Data.Aeson                             as J
 import           Data.Extensible
 import           Git.Plantation.Data.Slack.Verification as Slack
+import           Git.Plantation.Data.Team               (Team)
 import qualified Network.HTTP.Media                     as M
 import qualified Network.Wreq                           as W
 import           Servant.API.ContentTypes               (Accept (..),
@@ -115,8 +116,9 @@ sendWebhook url msg =
   liftIO (W.post (Text.unpack url) $ J.toJSON msg) >> pure ()
 
 type NotifyConfig = Record
-  '[ "api_token"  >: ByteString
-   , "channel_id" >: Text
+  '[ "api_token"    >: ByteString
+   , "channel_id"   >: Text
+   , "team_channel" >: Bool
    ]
 
 class HasSlackNotifyConfig env where
@@ -135,18 +137,19 @@ type SnipetMessage = Record
    , "initial_comment" >: Text
    ]
 
-uploadFile :: (HasLogFunc env, HasSlackNotifyConfig env) => SnipetMessage -> RIO env ()
-uploadFile msg = do
+uploadFile :: (HasLogFunc env, HasSlackNotifyConfig env) => Team -> SnipetMessage -> RIO env ()
+uploadFile team msg = do
   config <- askNotifyConfig
   let opts = W.defaults
            & W.header "Content-Type" .~ ["application/x-www-form-urlencoded"]
            & W.header "Authorization" .~ ["Bearer " <> config ^. #api_token]
+      channelId = if config ^. #team_channel then config ^. #channel_id else team ^. #channel_id
       dat =
         [ "content" W.:= msg ^. #content
         , "filename" W.:= msg ^. #filename
         , "filetype" W.:= msg ^. #filetype
         , "initial_comment" W.:= msg ^. #initial_comment
-        , "channels" W.:= config ^. #channel_id
+        , "channels" W.:= channelId
         ]
   _ <- liftIO (W.postWith opts "https://slack.com/api/files.upload" dat)
   pure ()

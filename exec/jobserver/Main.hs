@@ -34,7 +34,7 @@ import qualified Network.Wai.Handler.Warp       as Warp
 import           Network.Wai.Handler.WebSockets (websocketsOr)
 import qualified Network.WebSockets             as WS
 import           Servant
-import           System.Environment             (getEnv)
+import           System.Environment             (getEnv, lookupEnv)
 
 import           Orphans                        ()
 
@@ -98,10 +98,13 @@ type Env = Record
 runServer :: Options -> Config -> IO ()
 runServer opts config = do
   slackToken   <- liftIO $ fromString <$> getEnv "SLACK_API_TOKEN"
-  slackChannel <- liftIO $ fromString <$> getEnv "SLACK_NOTIFY_CHANNEL"
+  slackChannel <- liftIO $ fmap fromString <$> lookupEnv "SLACK_NOTIFY_CHANNEL"
   sqlitePath   <- liftIO $ fromString <$> getEnv "SQLITE_PATH"
   let logConf     = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
-      slackConfig = #api_token @= slackToken <: #channel_id @= slackChannel <: nil
+      slackConfig = #api_token @= slackToken
+                 <: #channel_id @= fromMaybe "" slackChannel
+                 <: #team_channel @= isNothing slackChannel
+                 <: nil
       plugin      = hsequence
           $ #config  <@=> pure config
          <: #logger  <@=> MixLogger.buildPlugin logConf

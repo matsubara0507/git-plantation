@@ -126,7 +126,7 @@ notifySlack job = do
   config <- askConfig
   case (findProblem config $ job ^. #problem, findTeam config $ job ^. #team) of
     (Just problem, Just team) ->
-        Slack.uploadFile
+        Slack.uploadFile team
             $ #content         @= job ^. #stdout
            <: #filename        @= coerce (team ^. #name) <> "-" <> coerce (problem ^. #name) <> "-log.txt"
            <: #filetype        @= "text"

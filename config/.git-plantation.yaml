@@ -68,3 +68,4 @@ teams:
     problem: 3
     private: false
     only: alpha
+  channel_id: ""

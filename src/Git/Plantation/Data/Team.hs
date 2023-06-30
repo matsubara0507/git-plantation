@@ -33,12 +33,13 @@ newtype Name = Name Text
   deriving (Lift)
 
 type Team = Record
-  '[ "id"       >: Id
-   , "name"     >: Name
-   , "repos"    >: [Repo]
-   , "member"   >: [User]
-   , "org"      >: Maybe Text
-   , "gh_teams" >: [Text]
+  '[ "id"         >: Id
+   , "name"       >: Name
+   , "repos"      >: [Repo]
+   , "member"     >: [User]
+   , "org"        >: Maybe Text
+   , "gh_teams"   >: [Text]
+   , "channel_id" >: Text
    ]
 
 instance IsElmType Team where
