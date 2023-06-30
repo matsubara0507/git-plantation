@@ -33,7 +33,7 @@ import qualified Network.Wai.Handler.Warp as Warp
 import           Servant
 import qualified Servant.Auth.Server      as Auth
 import qualified Servant.GitHub.Webhook   (GitHubKey, gitHubKey)
-import           System.Environment       (getEnv)
+import           System.Environment       (getEnv, lookupEnv)
 
 import           Orphans                  ()
 
@@ -83,19 +83,21 @@ versionOpt = optFlag [] ["version"] "Show version"
 
 runServer :: Options -> Config -> IO ()
 runServer opts config = do
-  token         <- liftIO $ fromString  <$> getEnv "GH_TOKEN"
-  ghUser        <- liftIO $ fromString  <$> getEnv "GH_USER"
-  sSignSecret   <- liftIO $ fromString  <$> getEnv "SLACK_SIGNING_SECRET"
-  sVerifyToken  <- liftIO $ fromString  <$> getEnv "SLACK_VERIFY_TOKEN"
-  slashTeam     <- liftIO $ fromString  <$> getEnv "SLACK_SLASH_TEAM_ID"
-  slashChannels <- liftIO $ readListEnv <$> getEnv "SLACK_SLASH_CHANNEL_IDS"
-  sResetRepoCmd <- liftIO $ fromString  <$> getEnv "SLACK_SLASH_RESET_REPO_CMD"
-  slashWebhook  <- liftIO $ fromString  <$> getEnv "SLACK_SLASH_WEBHOOK"
-  sPushWebhook  <- liftIO $ fromString  <$> getEnv "SLACK_PUSH_NOTIFY_WEBHOOK"
-  clientId      <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_ID"
-  clientSecret  <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_SECRET"
-  jobserverHost <- liftIO $ getEnv "JOBSERVER_HOST"
-  jwtSettings   <- Auth.defaultJWTSettings <$> Auth.generateKey
+  token          <- liftIO $ fromString  <$> getEnv "GH_TOKEN"
+  ghUser         <- liftIO $ fromString  <$> getEnv "GH_USER"
+  sSignSecret    <- liftIO $ fromString  <$> getEnv "SLACK_SIGNING_SECRET"
+  sVerifyToken   <- liftIO $ fromString  <$> getEnv "SLACK_VERIFY_TOKEN"
+  slashTeam      <- liftIO $ fromString  <$> getEnv "SLACK_SLASH_TEAM_ID"
+  slashChannels  <- liftIO $ readListEnv <$> getEnv "SLACK_SLASH_CHANNEL_IDS"
+  sResetRepoCmd  <- liftIO $ fromString  <$> getEnv "SLACK_SLASH_RESET_REPO_CMD"
+  slashWebhook   <- liftIO $ fromString  <$> getEnv "SLACK_SLASH_WEBHOOK"
+  sPushWebhook   <- liftIO $ fromString  <$> getEnv "SLACK_PUSH_NOTIFY_WEBHOOK"
+  sNotifyToken   <- liftIO $ fromString  <$> getEnv "SLACK_API_TOKEN"
+  sNotifyChannel <- liftIO $ fmap fromString <$> lookupEnv "SLACK_NOTIFY_CHANNEL"
+  clientId       <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_ID"
+  clientSecret   <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_SECRET"
+  jobserverHost  <- liftIO $ getEnv "JOBSERVER_HOST"
+  jwtSettings    <- Auth.defaultJWTSettings <$> Auth.generateKey
   let logConf = #handle @= stdout <: #verbose @= (opts ^. #verbose) <: nil
       slashConf
           = #signing_secret @= sSignSecret
@@ -111,12 +113,18 @@ runServer opts config = do
          <: #cookie        @= cookieSettings
          <: #jwt           @= jwtSettings
          <: nil
+      notifyConf
+          = #api_token    @= sNotifyToken
+         <: #channel_id   @= fromMaybe "" sNotifyChannel
+         <: #team_channel @= isNothing sNotifyChannel
+         <: nil
       plugin = hsequence
           $ #config    <@=> pure config
          <: #github    <@=> MixGitHub.buildPlugin token
          <: #gh_user   <@=> pure ghUser
          <: #slack     <@=> pure sPushWebhook
          <: #slash     <@=> pure slashConf
+         <: #notify    <@=> pure notifyConf
          <: #work      <@=> MixShell.buildPlugin (opts ^. #work)
          <: #webhook   <@=> pure mempty
          <: #jobserver <@=> pure jobserverHost

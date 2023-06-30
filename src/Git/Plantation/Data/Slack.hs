@@ -25,6 +25,7 @@ module Git.Plantation.Data.Slack
   , askNotifyConfig
   , SnipetMessage
   , uploadFile
+  , sendMessage
   ) where
 
 import           RIO
@@ -152,4 +153,18 @@ uploadFile team msg = do
         , "channels" W.:= channelId
         ]
   _ <- liftIO (W.postWith opts "https://slack.com/api/files.upload" dat)
+  pure ()
+
+sendMessage :: (HasLogFunc env, HasSlackNotifyConfig env) => Team -> Text -> RIO env ()
+sendMessage team msg = do
+  config <- askNotifyConfig
+  let opts = W.defaults
+           & W.header "Content-Type" .~ ["application/x-www-form-urlencoded"]
+           & W.header "Authorization" .~ ["Bearer " <> config ^. #api_token]
+      channelId = if config ^. #team_channel then config ^. #channel_id else team ^. #channel_id
+      dat =
+        [ "text" W.:= msg
+        , "channel" W.:= channelId
+        ]
+  _ <- liftIO (W.postWith opts "https://slack.com/api/chat.postMessage" dat)
   pure ()

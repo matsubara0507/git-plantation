@@ -8,12 +8,14 @@ module Git.Plantation.API.CRUD where
 import           RIO
 import qualified RIO.List                    as L
 
+import           Data.Coerce                 (coerce)
 import           Data.Extensible
 import qualified Git.Plantation.API.Job      as Job
 import qualified Git.Plantation.Cmd          as Cmd
 import           Git.Plantation.Config       (Config)
 import           Git.Plantation.Data         (Problem, Repo, Team)
 import qualified Git.Plantation.Data.Problem as Problem
+import qualified Git.Plantation.Data.Slack   as Slack
 import qualified Git.Plantation.Data.Team    as Team
 import qualified Git.Plantation.Data.User    as User
 import           Git.Plantation.Env          (Plant)
@@ -96,18 +98,19 @@ resetRepo userID teamID problemID = do
   case findInfos config (teamID, problemID) of
     Nothing ->
       logError "team and problem not found."
-    Just (team, _, repo) ->
+    Just (team, problem, repo) ->
       if isNothing (Team.lookupUser userID team) then
         logError "user not found."
       else do
-        forkIO ((logError . display) `handleIO` reset team repo) >> pure ()
+        Slack.sendMessage team $ (coerce $ team ^. #name) <> "の" <> (coerce $ problem ^. #name)  <> "をリセットするね！"
+        forkIO ((logError . display) `handleIO` reset team problem repo) >> pure ()
   pure ()
   where
-    reset :: Team -> Repo -> Plant ()
-    reset team repo =
+    reset :: Team -> Problem -> Repo -> Plant ()
+    reset team problem repo =
       tryIO (Cmd.resetRepo $ #repo @= repo <: #team @= team <: nil) >>= \case
         Left err -> logError (display err)
-        Right _  -> pure ()
+        Right _  -> Slack.sendMessage team $ (coerce $ team ^. #name) <> " の " <> (coerce $ problem ^. #name)  <> " をリセットした！"
 
 findInfos :: Config -> (Team.Id, Problem.Id) -> Maybe (Team, Problem, Repo)
 findInfos config (teamID, problemID) = do

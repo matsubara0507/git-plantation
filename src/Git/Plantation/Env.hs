@@ -30,6 +30,7 @@ type Env = Record
    , "gh_user"   >: Text
    , "slack"     >: Text -- slack webhook url
    , "slash"     >: Slack.SlashCmdConfig
+   , "notify"    >: Slack.NotifyConfig
    , "work"      >: FilePath
    , "webhook"   >: WebhookConfig
    , "jobserver" >: String -- URL for jobserver
