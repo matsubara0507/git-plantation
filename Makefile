@@ -10,4 +10,4 @@ app:
 image:
 	stack --docker build --test --skip spec --copy-bins --local-bin-path=./bin
 	elm-format --yes elm-src/Generated
-	docker build -t ${tag} . --build-arg local_bin_path=./bin
+	docker build --platform=linux/amd64 -t ${tag} . --build-arg local_bin_path=./bin

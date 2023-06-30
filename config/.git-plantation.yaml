@@ -22,7 +22,7 @@ problems:
 - id: 2
   name: is-order-an-adding
   repo: matsubara0507/git-challenge-is-order-an-adding
-  difficulty: 1
+  difficulty: 3
   challenge_branches:
   - readme
   - master
@@ -33,7 +33,7 @@ problems:
 - id: 3
   name: minesweeper
   repo: matsubara0507/git-challenge-minesweeper
-  difficulty: 1
+  difficulty: 10
   challenge_branches:
   - readme
   - master
