@@ -19,18 +19,20 @@ type alias Team =
     , member : List User
     , org : Maybe String
     , gh_teams : List String
+    , channel_id : String
     }
 
 
 jsonDecTeam : Json.Decode.Decoder Team
 jsonDecTeam =
-    Json.Decode.succeed (\pid pname prepos pmember porg pgh_teams -> { id = pid, name = pname, repos = prepos, member = pmember, org = porg, gh_teams = pgh_teams })
+    Json.Decode.succeed (\pid pname prepos pmember porg pgh_teams pchannel_id -> { id = pid, name = pname, repos = prepos, member = pmember, org = porg, gh_teams = pgh_teams, channel_id = pchannel_id })
         |> required "id" Json.Decode.string
         |> required "name" Json.Decode.string
         |> required "repos" (Json.Decode.list jsonDecRepo)
         |> required "member" (Json.Decode.list jsonDecUser)
         |> fnullable "org" Json.Decode.string
         |> required "gh_teams" (Json.Decode.list Json.Decode.string)
+        |> required "channel_id" Json.Decode.string
 
 
 jsonEncTeam : Team -> Value
@@ -42,6 +44,7 @@ jsonEncTeam val =
         , ( "member", Json.Encode.list jsonEncUser val.member )
         , ( "org", maybeEncode Json.Encode.string val.org )
         , ( "gh_teams", Json.Encode.list Json.Encode.string val.gh_teams )
+        , ( "channel_id", Json.Encode.string val.channel_id )
         ]
 
 
