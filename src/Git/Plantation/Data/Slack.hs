@@ -144,7 +144,7 @@ uploadFile team msg = do
   let opts = W.defaults
            & W.header "Content-Type" .~ ["application/x-www-form-urlencoded"]
            & W.header "Authorization" .~ ["Bearer " <> config ^. #api_token]
-      channelId = if config ^. #team_channel then config ^. #channel_id else team ^. #channel_id
+      channelId = if config ^. #team_channel then team ^. #channel_id else config ^. #channel_id
       dat =
         [ "content" W.:= msg ^. #content
         , "filename" W.:= msg ^. #filename
@@ -161,7 +161,7 @@ sendMessage team msg = do
   let opts = W.defaults
            & W.header "Content-Type" .~ ["application/x-www-form-urlencoded"]
            & W.header "Authorization" .~ ["Bearer " <> config ^. #api_token]
-      channelId = if config ^. #team_channel then config ^. #channel_id else team ^. #channel_id
+      channelId = if config ^. #team_channel then team ^. #channel_id else config ^. #channel_id
       dat =
         [ "text" W.:= msg
         , "channel" W.:= channelId
