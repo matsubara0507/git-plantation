@@ -29,6 +29,7 @@ type ScoreBoardConfig = Record
    , "end_time"   >: Maybe Int64  -- unix time
    , "zone"       >: Maybe Text
    , "scoring"    >: Maybe Bool
+   , "resetable"  >: Maybe Bool
    ]
 
 askConfig :: MixConfig.HasConfig Config env => RIO env Config

@@ -95,15 +95,18 @@ resetRepo :: User.GitHubId -> Team.Id -> Problem.Id -> Plant ()
 resetRepo userID teamID problemID = do
   logInfo $ "[POST] /reset/" <> display teamID <> "/" <> display problemID <> " from " <> display userID
   config <- Mix.askConfig
-  case findInfos config (teamID, problemID) of
-    Nothing ->
-      logError "team and problem not found."
-    Just (team, problem, repo) ->
-      if isNothing (Team.lookupUser userID team) then
-        logError "user not found."
-      else do
-        Slack.sendMessage team $ (coerce $ team ^. #name) <> "の" <> (coerce $ problem ^. #name)  <> "をリセットするね！"
-        forkIO ((logError . display) `handleIO` reset team problem repo) >> pure ()
+  if (fromMaybe True $ config ^. #scoreboard ^. #resetable) then
+    case findInfos config (teamID, problemID) of
+      Nothing ->
+        logError "team and problem not found."
+      Just (team, problem, repo) ->
+        if isNothing (Team.lookupUser userID team) then
+          logError "user not found."
+        else do
+          Slack.sendMessage team $ (coerce $ team ^. #name) <> "の" <> (coerce $ problem ^. #name)  <> "をリセットするね！"
+          forkIO ((logError . display) `handleIO` reset team problem repo) >> pure ()
+  else
+    logInfo "cannot reset"
   pure ()
   where
     reset :: Team -> Problem -> Repo -> Plant ()
