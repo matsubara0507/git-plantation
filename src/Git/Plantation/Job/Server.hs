@@ -125,13 +125,16 @@ notifySlack :: ServerEnv env => Job -> RIO env ()
 notifySlack job = do
   config <- askConfig
   case (findProblem config $ job ^. #problem, findTeam config $ job ^. #team) of
-    (Just problem, Just team) ->
-        Slack.uploadFile team
+    (Just problem, Just team) -> do
+        Slack.uploadFile (team ^. #channel_id)
             $ #content         @= job ^. #stdout
            <: #filename        @= coerce (team ^. #name) <> "-" <> coerce (problem ^. #name) <> "-log.txt"
            <: #filetype        @= "text"
            <: #initial_comment @= mkMessage problem team
            <: nil
+        notifyConfig <- Slack.askNotifyConfig
+        when (not (Text.null $ notifyConfig ^. #channel_id) && job ^. #success) $
+          Slack.sendMessage (notifyConfig ^. #channel_id) (mkMessage problem team)
     (Nothing, _) ->
         logWarn "problem is not found when notify slack"
     (_, Nothing) ->

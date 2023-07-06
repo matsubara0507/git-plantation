@@ -103,7 +103,7 @@ resetRepo userID teamID problemID = do
         if isNothing (Team.lookupUser userID team) then
           logError "user not found."
         else do
-          Slack.sendMessage team $ (coerce $ team ^. #name) <> "の" <> (coerce $ problem ^. #name)  <> "をリセットするね！"
+          Slack.sendMessage (team ^. #channel_id) $ (coerce $ team ^. #name) <> "の" <> (coerce $ problem ^. #name)  <> "をリセットするね！"
           forkIO ((logError . display) `handleIO` reset team problem repo) >> pure ()
   else
     logInfo "cannot reset"
@@ -113,7 +113,7 @@ resetRepo userID teamID problemID = do
     reset team problem repo =
       tryIO (Cmd.resetRepo $ #repo @= repo <: #team @= team <: nil) >>= \case
         Left err -> logError (display err)
-        Right _  -> Slack.sendMessage team $ (coerce $ team ^. #name) <> " の " <> (coerce $ problem ^. #name)  <> " をリセットした！"
+        Right _  -> Slack.sendMessage (team ^. #channel_id) $ (coerce $ team ^. #name) <> " の " <> (coerce $ problem ^. #name)  <> " をリセットした！"
 
 findInfos :: Config -> (Team.Id, Problem.Id) -> Maybe (Team, Problem, Repo)
 findInfos config (teamID, problemID) = do

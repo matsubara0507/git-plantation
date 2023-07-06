@@ -35,7 +35,6 @@ import           Control.Arrow                          ((+++))
 import qualified Data.Aeson                             as J
 import           Data.Extensible
 import           Git.Plantation.Data.Slack.Verification as Slack
-import           Git.Plantation.Data.Team               (Team)
 import qualified Network.HTTP.Media                     as M
 import qualified Network.Wreq                           as W
 import           Servant.API.ContentTypes               (Accept (..),
@@ -118,8 +117,7 @@ sendWebhook url msg =
 
 type NotifyConfig = Record
   '[ "api_token"    >: ByteString
-   , "channel_id"   >: Text
-   , "team_channel" >: Bool
+   , "channel_id"   >: Text -- channel for notify everyone
    ]
 
 class HasSlackNotifyConfig env where
@@ -138,13 +136,12 @@ type SnipetMessage = Record
    , "initial_comment" >: Text
    ]
 
-uploadFile :: (HasLogFunc env, HasSlackNotifyConfig env) => Team -> SnipetMessage -> RIO env ()
-uploadFile team msg = do
+uploadFile :: (HasLogFunc env, HasSlackNotifyConfig env) => Text -> SnipetMessage -> RIO env ()
+uploadFile channelId msg = do
   config <- askNotifyConfig
   let opts = W.defaults
            & W.header "Content-Type" .~ ["application/x-www-form-urlencoded"]
            & W.header "Authorization" .~ ["Bearer " <> config ^. #api_token]
-      channelId = if config ^. #team_channel then team ^. #channel_id else config ^. #channel_id
       dat =
         [ "content" W.:= msg ^. #content
         , "filename" W.:= msg ^. #filename
@@ -155,13 +152,12 @@ uploadFile team msg = do
   _ <- liftIO (W.postWith opts "https://slack.com/api/files.upload" dat)
   pure ()
 
-sendMessage :: (HasLogFunc env, HasSlackNotifyConfig env) => Team -> Text -> RIO env ()
-sendMessage team msg = do
+sendMessage :: (HasLogFunc env, HasSlackNotifyConfig env) => Text -> Text -> RIO env ()
+sendMessage channelId msg = do
   config <- askNotifyConfig
   let opts = W.defaults
            & W.header "Content-Type" .~ ["application/x-www-form-urlencoded"]
            & W.header "Authorization" .~ ["Bearer " <> config ^. #api_token]
-      channelId = if config ^. #team_channel then team ^. #channel_id else config ^. #channel_id
       dat =
         [ "text" W.:= msg
         , "channel" W.:= channelId

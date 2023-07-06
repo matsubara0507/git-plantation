@@ -33,7 +33,7 @@ import qualified Network.Wai.Handler.Warp as Warp
 import           Servant
 import qualified Servant.Auth.Server      as Auth
 import qualified Servant.GitHub.Webhook   (GitHubKey, gitHubKey)
-import           System.Environment       (getEnv, lookupEnv)
+import           System.Environment       (getEnv)
 
 import           Orphans                  ()
 
@@ -93,7 +93,7 @@ runServer opts config = do
   slashWebhook   <- liftIO $ fromString  <$> getEnv "SLACK_SLASH_WEBHOOK"
   sPushWebhook   <- liftIO $ fromString  <$> getEnv "SLACK_PUSH_NOTIFY_WEBHOOK"
   sNotifyToken   <- liftIO $ fromString  <$> getEnv "SLACK_API_TOKEN"
-  sNotifyChannel <- liftIO $ fmap fromString <$> lookupEnv "SLACK_NOTIFY_CHANNEL"
+  sNotifyChannel <- liftIO $ fromString  <$> getEnv "SLACK_SUCCESS_NOTIFY_CHANNEL"
   clientId       <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_ID"
   clientSecret   <- liftIO $ fromString  <$> getEnv "AUTHN_CLIENT_SECRET"
   jobserverHost  <- liftIO $ getEnv "JOBSERVER_HOST"
@@ -115,8 +115,7 @@ runServer opts config = do
          <: nil
       notifyConf
           = #api_token    @= sNotifyToken
-         <: #channel_id   @= fromMaybe "" sNotifyChannel
-         <: #team_channel @= isNothing sNotifyChannel
+         <: #channel_id   @= sNotifyChannel
          <: nil
       plugin = hsequence
           $ #config    <@=> pure config
