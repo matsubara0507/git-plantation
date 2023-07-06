@@ -79,7 +79,10 @@ view global model =
     in
     Html.div []
         [ Board.view filtered
-        , viewReset global.problems model
+        , if Maybe.withDefault True global.config.resetable then
+            viewReset global.problems model
+          else
+            div [] []
         , viewFilters filtered model
         , Html.map GraphMsg (Graph.view filtered model.graph)
         ]
